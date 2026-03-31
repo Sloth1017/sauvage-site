@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <script>window._svSkipNavInject = true;</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sauvage · Amsterdam</title>
+  <style>
+    @font-face {
+      font-family: 'Plein';
+      src: url('./fonts/Plein-Variable.ttf') format('truetype');
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Plein';
+      src: url('./fonts/Plein-VariableItalic.ttf') format('truetype');
+      font-weight: 100 900;
+      font-style: italic;
+      font-display: swap;
+    }
+  </style>
+  <style>
+    /* ── Reset & Base ─────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --cream:   #f7f4ef;
+      --white:   #ffffff;
+      --ink:     #1a1a18;
+      --warm:    #8b6f47;
+      --gold:    #F5F1E6;
+      --muted:   #6b6560;
+      --border:  rgba(26,26,24,0.12);
+      --serif:   'Plein', Georgia, serif;
+      --sans:    'Plein', system-ui, sans-serif;
+      --grain:   url('media/grain-bg.svg');
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--sans);
+      background: var(--cream);
+      color: var(--ink);
+      font-size: 16px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ── Nav ──────────────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem 4rem;
+      transition: background 0.4s, backdrop-filter 0.4s;
+    }
+    nav.scrolled {
+      background: rgba(247,244,239,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: var(--serif);
+      font-size: 1.6rem;
+      font-weight: 300;
+      letter-spacing: 0.12em;
+      color: var(--white);
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: color 0.3s;
+    }
+    nav.scrolled .nav-logo { color: var(--ink); }
+    .nav-links {
+      display: flex;
+      gap: 2.5rem;
+      list-style: none;
+    }
+    .nav-links a {
+      font-size: 0.72rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.85);
+      text-decoration: none;
+      transition: color 0.3s;
+      font-weight: 400;
+    }
+    nav.scrolled .nav-links a { color: var(--muted); }
+    .nav-links a:hover { color: var(--gold); }
+    .nav-cta {
+      font-size: 0.72rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      padding: 0.6rem 1.6rem;
+      border: 1px solid rgba(255,255,255,0.6);
+      color: var(--white);
+      text-decoration: none;
+      transition: all 0.3s;
+      background: transparent;
+      cursor: pointer;
+    }
+    nav.scrolled .nav-cta {
+      border-color: var(--ink);
+      color: var(--ink);
+    }
+    .nav-cta:hover {
+      background: var(--gold);
+      border-color: var(--gold);
+      color: var(--white);
+    }
+
+    /* ── Hero ─────────────────────────────────────── */
+    .hero {
+      position: relative;
+      height: 100vh;
+      min-height: 640px;
+      overflow: hidden;
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-start;
+    }
+    .hero-video {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      z-index: 0;
+      pointer-events: none;
+    }
+    video::-webkit-media-controls {
+      display: none !important;
+    }
+    video {
+      -webkit-appearance: none;
+    }
+    /* Background image + overlay */
+    .hero-bg-fallback {
+      position: absolute;
+      inset: 0;
+      background: url('media/hero-bg.jpg') center / cover no-repeat;
+      z-index: -1;
+    }
+    .hero-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to top,
+        rgba(20,16,12,0.4) 0%,
+        rgba(20,16,12,0.15) 50%,
+        rgba(20,16,12,0) 100%
+      );
+      z-index: 1;
+    }
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      padding: 0 4rem 6rem;
+      max-width: 820px;
+    }
+    .hero-eyebrow {
+      font-size: 0.7rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 0.6rem;
+      font-weight: 400;
+    }
+    .hero-title {
+      font-family: var(--serif);
+      font-size: clamp(3.5rem, 7vw, 6.5rem);
+      font-weight: 300;
+      line-height: 0.82;
+      color: var(--white);
+      letter-spacing: -0.03em;
+      margin-bottom: 1rem;
+    }
+    .hero-title em {
+      font-style: italic;
+      color: var(--gold);
+    }
+    .hero-sub {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.7);
+      font-weight: 300;
+      max-width: 420px;
+      line-height: 1.55;
+      margin-bottom: 2rem;
+      margin-top: 0.8rem;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .btn-primary {
+      display: inline-block;
+      padding: 0.9rem 2.4rem;
+      background: var(--gold);
+      color: var(--ink);
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      text-decoration: none;
+      transition: all 0.3s;
+      font-weight: 600;
+      border: none;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+    }
+    .btn-primary:hover { background: var(--warm); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+    .btn-ghost {
+      display: inline-block;
+      padding: 0.9rem 2.4rem;
+      border: 1px solid rgba(255,255,255,0.5);
+      color: var(--white);
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      text-decoration: none;
+      transition: all 0.3s;
+      font-weight: 400;
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,0.12); }
+    .hero-scroll {
+      position: absolute;
+      bottom: 2rem;
+      right: 4rem;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+      color: rgba(255,255,255,0.5);
+      font-size: 0.62rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+    .hero-scroll::after {
+      content: '';
+      display: block;
+      width: 1px;
+      height: 48px;
+      background: rgba(255,255,255,0.3);
+    }
+
+    /* ── Section Base ─────────────────────────────── */
+    section { padding: 7rem 4rem; }
+    .section-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.26em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 0.8rem;
+      font-weight: 400;
+    }
+    .section-title {
+      font-family: var(--serif);
+      font-size: clamp(2.2rem, 4vw, 3.6rem);
+      font-weight: 300;
+      line-height: 1.15;
+      color: var(--ink);
+      margin-bottom: 1.5rem;
+    }
+    .section-title em { font-style: italic; color: var(--warm); }
+    .section-body {
+      font-size: 1rem;
+      color: var(--muted);
+      line-height: 1.8;
+      max-width: 560px;
+      font-weight: 300;
+    }
+    hr.divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 0 4rem;
+    }
+
+    /* ── About / Space ────────────────────────────── */
+    #space {
+      background: var(--white);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5rem;
+      align-items: center;
+    }
+    .space-images {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto;
+      gap: 0.75rem;
+    }
+    .space-images img {
+      width: 100%;
+      height: 260px;
+      object-fit: cover;
+      display: block;
+    }
+    .space-images img:first-child {
+      grid-column: 1 / -1;
+      height: 340px;
+    }
+
+    /* ── What We Offer (grid cards) ───────────────── */
+    #offers {
+      background: var(--cream);
+    }
+    .offers-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 4rem;
+    }
+    .offers-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+      position: relative;
+      z-index: 1;
+    }
+    .offer-card {
+      background: var(--white);
+      padding: 2.5rem 2rem;
+      border-top: 2px solid var(--gold);
+      transition: transform 0.3s;
+    }
+    .offer-card:hover { transform: translateY(-4px); }
+    .offer-icon {
+      font-size: 1.8rem;
+      margin-bottom: 1.2rem;
+    }
+    .offer-title {
+      font-family: var(--serif);
+      font-size: 1.5rem;
+      font-weight: 400;
+      margin-bottom: 0.8rem;
+      color: var(--ink);
+    }
+    .offer-body {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.75;
+      font-weight: 300;
+    }
+    .offer-link {
+      display: inline-block;
+      margin-top: 1.5rem;
+      font-size: 0.7rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--warm);
+      text-decoration: none;
+      border-bottom: 1px solid var(--gold);
+      padding-bottom: 2px;
+      transition: color 0.2s;
+    }
+    .offer-link:hover { color: var(--gold); }
+
+    /* ── Events ───────────────────────────────────── */
+    #events {
+      background: var(--ink);
+      color: var(--white);
+    }
+    #events .section-title { color: var(--white); }
+    #events .section-body { color: rgba(255,255,255,0.6); }
+    .events-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      margin-top: 3.5rem;
+    }
+    .event-card {
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 2rem;
+      transition: border-color 0.3s;
+      cursor: pointer;
+    }
+    .event-card:hover { border-color: var(--gold); }
+    .event-date {
+      font-size: 0.68rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 0.8rem;
+    }
+    .event-name {
+      font-family: var(--serif);
+      font-size: 1.4rem;
+      font-weight: 300;
+      color: var(--white);
+      margin-bottom: 0.6rem;
+    }
+    .event-desc {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.5);
+      font-weight: 300;
+      line-height: 1.65;
+    }
+    .event-type {
+      display: inline-block;
+      margin-top: 1.2rem;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.62rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      border: 1px solid rgba(201,169,110,0.4);
+      color: var(--gold);
+    }
+
+    /* ── Wine ─────────────────────────────────────── */
+    #wine {
+      background: var(--cream);
+      min-height: 480px;
+      display: flex;
+      align-items: center;
+    }
+    .wine-visual {
+      position: relative;
+    }
+    .wine-visual img {
+      width: 100%;
+      height: 580px;
+      object-fit: cover;
+    }
+    .wine-badge {
+      position: absolute;
+      bottom: -1.5rem;
+      right: -1.5rem;
+      width: 120px; height: 120px;
+      background: var(--gold);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-family: var(--serif);
+      font-size: 0.9rem;
+      font-style: italic;
+      color: var(--white);
+      line-height: 1.3;
+      padding: 1rem;
+    }
+    .wine-list {
+      margin-top: 2.5rem;
+      list-style: none;
+    }
+    .wine-list li {
+      padding: 1rem 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+    }
+    .wine-list li span:first-child { color: var(--ink); font-weight: 400; }
+    .wine-list li span:last-child { color: var(--muted); font-size: 0.82rem; }
+    .aaj-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 2rem;
+      font-size: 0.72rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--warm);
+      text-decoration: none;
+      border-bottom: 1px solid var(--gold);
+      padding-bottom: 3px;
+    }
+
+    /* ── DAO ──────────────────────────────────────── */
+    #dao {
+      background: #1e1a15;
+      color: var(--white);
+      text-align: center;
+    }
+    #dao .section-title { color: var(--white); }
+    #dao .section-body {
+      color: rgba(255,255,255,0.55);
+      margin: 0 auto 4rem;
+      max-width: 640px;
+      font-size: 1rem;
+    }
+    .dao-principles {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      max-width: 960px;
+      margin: 0 auto 4rem;
+    }
+    .dao-principle {
+      background: rgba(255,255,255,0.04);
+      padding: 2.5rem 2rem;
+      text-align: left;
+    }
+    .dao-num {
+      font-family: var(--serif);
+      font-size: 3rem;
+      font-weight: 300;
+      color: rgba(201,169,110,0.3);
+      line-height: 1;
+      margin-bottom: 1rem;
+    }
+    .dao-principle h4 {
+      font-family: var(--serif);
+      font-size: 1.2rem;
+      font-weight: 400;
+      color: var(--white);
+      margin-bottom: 0.6rem;
+    }
+    @media (max-width: 768px) {
+      .dao-principles {
+        grid-template-columns: 1fr;
+        gap: 1px;
+        padding: 0 1rem;
+      }
+      .dao-principle {
+        padding: 1.5rem 1.2rem;
+      }
+      .dao-num {
+        font-size: 2rem;
+        margin-bottom: 0.8rem;
+      }
+      .dao-principle h4 {
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+      }
+      .dao-principle p {
+        font-size: 0.75rem !important;
+        line-height: 1.5;
+      }
+      .dao-principle a {
+        font-size: 0.65rem !important;
+      }
+    }
+    .dao-principle p {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.45);
+      line-height: 1.7;
+      font-weight: 300;
+    }
+
+    /* ── Team / Founders ──────────────────────────── */
+    #team {
+      background: var(--white);
+      text-align: center;
+    }
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3rem;
+      max-width: 900px;
+      margin: 4rem auto 0;
+    }
+    .founder-card { text-align: center; }
+    .founder-avatar {
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin: 0 auto 1.2rem;
+      background: var(--cream);
+      display: block;
+    }
+    .founder-avatar.placeholder {
+      background: linear-gradient(135deg, var(--gold), var(--warm));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--serif);
+      font-size: 2rem;
+      color: var(--white);
+      font-style: italic;
+    }
+    .founder-name {
+      font-family: var(--serif);
+      font-size: 1.3rem;
+      font-weight: 400;
+      color: var(--ink);
+      margin-bottom: 0.3rem;
+    }
+    .founder-role {
+      font-size: 0.72rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 0.8rem;
+    }
+    .founder-bio {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.7;
+      font-weight: 300;
+    }
+    .founder-email {
+      display: inline-block;
+      margin-top: 0.8rem;
+      font-size: 0.78rem;
+      color: var(--warm);
+      text-decoration: none;
+    }
+    .founder-email:hover { color: var(--gold); }
+
+    /* ── Chatbot · handled by widget.js ──────────── */
+
+    /* ── Contact ──────────────────────────────────── */
+    #contact {
+      background: var(--cream);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6rem;
+    }
+    .contact-info h3 {
+      font-family: var(--serif);
+      font-size: 1.8rem;
+      font-weight: 300;
+      margin-bottom: 1.2rem;
+    }
+    .contact-detail {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    .contact-item {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    .contact-item strong {
+      color: var(--ink);
+      font-weight: 500;
+      min-width: 80px;
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding-top: 2px;
+    }
+    .contact-form { display: flex; flex-direction: column; gap: 1rem; }
+    .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+    .form-group label {
+      font-size: 0.68rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      border: 1px solid var(--border);
+      background: var(--white);
+      padding: 0.85rem 1rem;
+      font-size: 0.9rem;
+      font-family: var(--sans);
+      color: var(--ink);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus { border-color: var(--gold); }
+    .form-group textarea { resize: vertical; min-height: 100px; }
+    .form-submit {
+      background: var(--ink);
+      color: var(--white);
+      border: none;
+      padding: 1rem 2rem;
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-family: var(--sans);
+      cursor: pointer;
+      transition: background 0.2s;
+      align-self: flex-start;
+      margin-top: 0.5rem;
+    }
+    .form-submit:hover { background: var(--gold); }
+
+    /* ── Footer ───────────────────────────────────── */
+    footer {
+      background: var(--ink);
+      color: rgba(255,255,255,0.4);
+      padding: 3rem 4rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .footer-logo {
+      font-family: var(--serif);
+      font-size: 1.4rem;
+      font-weight: 300;
+      letter-spacing: 0.1em;
+      color: var(--white);
+      text-transform: uppercase;
+    }
+    .footer-links { display: flex; gap: 2rem; flex-wrap: wrap; }
+    .footer-links a {
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--gold); }
+    .footer-copy { font-size: 0.75rem; width: 100%; text-align: center; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.06); }
+
+    /* ── Responsive ───────────────────────────────── */
+    @media (max-width: 900px) {
+      nav { padding: 1.2rem 2rem; }
+      .nav-links { display: none; }
+      section { padding: 5rem 2rem; }
+      hr.divider { margin: 0 2rem; }
+      #space, #wine, #contact { grid-template-columns: 1fr; gap: 3rem; }
+      .offers-grid, .events-grid, .dao-principles, .team-grid {
+        grid-template-columns: 1fr;
+      }
+      .hero-content { padding: 0 2rem 4rem; }
+      footer { padding: 2.5rem 2rem; }
+      .contact-detail {
+        grid-template-columns: 1fr !important;
+        gap: 2rem !important;
+      }
+      .contact-detail img {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Navigation ────────────────────────────── -->
+  <nav id="navbar">
+    <a href="#" class="nav-logo">Sauvage</a>
+    <ul class="nav-links">
+      <li><a href="#space">The Space</a></li>
+      <li><a href="#offers">Offerings</a></li>
+      <li><a href="#events">Events</a></li>
+      <li><a href="#wine">Wine</a></li>
+      <li><a href="#exhibition">Exhibition</a></li>
+      <li><a href="#dao">DAO & Web3</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+    <button class="nav-cta" onclick="if(window.SauvageChat){SauvageChat.open()}else{document.getElementById('contact').scrollIntoView({behavior:'smooth'})}">Book a Space</button>
+  </nav>
+
+  <!-- ── Hero ──────────────────────────────────── -->
+  <section class="hero" id="hero">
+    <video class="hero-video" autoplay muted loop playsinline preload="none" poster="./media/hero-poster.jpg" style="pointer-events:none;">
+      <source src="./media/hero-web.mp4" type="video/mp4" />
+    </video>
+    <div class="hero-bg-fallback"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+
+      <h1 class="hero-title">Sauvage</h1>
+      <p class="hero-sub" style="font-size:1.1rem; font-weight:300; margin-top:1rem; margin-bottom:2rem;">A place where <em style="color:var(--gold);">community</em><br>comes alive</p>
+      <p class="hero-sub">Sauvage is a cultural hub in the heart of Amsterdam · café, exhibition space, event venue, and the home of natural wine.</p>
+      <div class="hero-actions">
+        <a href="#events" class="btn-primary">Explore Events</a>
+      </div>
+    </div>
+    <div class="hero-scroll">Scroll</div>
+  </section>
+
+  <!-- ── The Space ──────────────────────────────── -->
+  <section id="space">
+    <div>
+      <p class="section-label">The Space</p>
+      <h2 class="section-title">Multi-Purpose<br><em>Culture Center</em></h2>
+      <p class="section-body">
+        A shape-shifting space in Amsterdam West. Part gallery, part café, part wine cave, part stage, part whatever the night demands. The furniture moves. The walls change. The natural wines are alive and so is everything that happens around them.
+      </p>
+      <p class="section-body" style="margin-top:1rem;">
+        Morning coffee becomes an afternoon exhibition becomes an evening of live music becomes a late-night glass of something unfiltered. Nothing here is precious. Everything is welcome.
+      </p>
+      <a href="#contact" class="btn-primary" style="margin-top:2.2rem; display:inline-block;">Enquire About the Space</a>
+    </div>
+    <div class="space-images">
+      <img src="./media/photos/event-gathering-01.jpg" alt="Sauvage · community gathering" />
+      <img src="./media/photos/entrance-01.jpg" alt="Sauvage · entrance & bar" />
+      <img src="./media/photos/mezzanine-01.jpg" alt="Sauvage · mezzanine" />
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ── Offerings ──────────────────────────────── -->
+  <section id="offers" style="background-image:url('./media/offerings-bg.jpg'); background-size:auto; background-repeat:repeat; background-position:0 0; position:relative;">
+    <div style="position:absolute;inset:0;background:rgba(247,244,239,0.92);z-index:0;"></div>
+    <div class="offers-header" style="position:relative;z-index:1;">
+      <div>
+        <p class="section-label">What We Offer</p>
+        <h2 class="section-title">Everything<br>in one <em>place</em></h2>
+      </div>
+      <a href="#contact" class="btn-primary">Get in Touch</a>
+    </div>
+    <div class="offers-grid" style="position:relative;z-index:1;">
+      <div class="offer-card">
+        <div class="offer-icon"></div>
+        <h3 class="offer-title">Café</h3>
+        <p class="offer-body">Specialty coffee and food — open Wednesday to Sunday, 08:00–15:00.</p>
+        <div style="display:flex; flex-direction:column; gap:0.8rem;">
+          <a href="https://www.instagram.com/ikinaricoffee/" target="_blank" rel="noopener" class="offer-link">Ikinari Coffee →</a>
+          <a href="https://www.thefento.com/" target="_blank" rel="noopener" class="offer-link">Fento Food →</a>
+        </div>
+      </div>
+      <div class="offer-card">
+        <div class="offer-icon"></div>
+        <h3 class="offer-title">Exhibition Space</h3>
+        <p class="offer-body">Currently showing: <em>Kinship</em> by Angela Huizer — photography, cyanotypes, and installation exploring identity and belonging.</p>
+        <a href="#exhibition" class="offer-link">View current show →</a>
+      </div>
+      <div class="offer-card">
+        <div class="offer-icon"></div>
+        <h3 class="offer-title">Natural Wine</h3>
+        <p class="offer-body">A curated selection of low-intervention, biodynamic and natural wines · guided by Selection Sauvage, our wine importing arm.</p>
+        <div style="display:flex; flex-direction:column; gap:0.8rem;">
+          <a href="https://www.selectionsauvage.nl" target="_blank" rel="noopener" class="offer-link">Explore the cellar →</a>
+          <a href="javascript:if(window.SauvageChat){SauvageChat.open();setTimeout(function(){var e=document.getElementById('sv-input');var send=document.getElementById('sv-send');if(e&&send){e.value='I would like to book a wine tasting';send.click();}},800);}" class="offer-link">Book a wine tasting →</a>
+        </div>
+      </div>
+      <div class="offer-card">
+        <div class="offer-icon"></div>
+        <h3 class="offer-title">Events & Performances</h3>
+        <p class="offer-body">From intimate wine tastings to art openings, DJ nights to community gatherings · something is always happening here.</p>
+        <a href="#events" class="offer-link">See upcoming →</a>
+      </div>
+      <div class="offer-card">
+        <div class="offer-icon"></div>
+        <h3 class="offer-title">Private Hire</h3>
+        <p class="offer-body">Hire Sauvage for your next gathering. Dinners, launches, workshops, photoshoots · we adapt to your vision.</p>
+        <a href="javascript:if(window.SauvageChat){SauvageChat.open();}" class="offer-link">Request a quote →</a>
+      </div>
+      <div class="offer-card">
+        <div class="offer-icon"></div>
+        <h3 class="offer-title">Community DAO</h3>
+        <p class="offer-body">Sauvage is governed by its community. Join the DAO to shape programming, access member benefits, and invest in the space.</p>
+        <a href="#dao" class="offer-link">Learn how →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Events ──────────────────────────────────── -->
+  <section id="events">
+    <p class="section-label">Events</p>
+    <h2 class="section-title" style="color:var(--white);">What's<br><em style="color:var(--gold)">on</em></h2>
+    <p class="section-body">From intimate tastings to full-venue takeovers · the Sauvage calendar is always moving. All events are open to the public unless marked private.</p>
+    <div class="events-grid" id="luma-events-grid">
+      <div class="event-card" style="opacity:0.5;">
+        <p class="event-date">Loading events…</p>
+        <h3 class="event-name">Fetching from Lu.ma</h3>
+        <p class="event-desc">Just a moment while we pull the latest from our calendar.</p>
+      </div>
+    </div>
+    <div style="text-align:center; margin-top:3rem;">
+      <a href="https://lu.ma/cal-hcUHpXdDwYPQGdm" target="_blank" rel="noopener" class="btn-primary">View Full Calendar on Lu.ma</a>
+    </div>
+  </section>
+
+  <!-- ── Wine ────────────────────────────────────── -->
+  <section id="wine" style="background-image:url('./media/photos/wine-portfolio.jpg'); background-size:cover; background-position:center; position:relative; display:block;">
+    <div style="position:absolute;inset:0;background:rgba(247,244,239,0.94);z-index:0;"></div>
+    <!-- Drag guide lines -->
+    <div class="drag-line-x" style="position:absolute; width:300px; height:1px; border-top:1px dashed rgba(255,255,255,0.3); z-index:5; opacity:0.3; transition:opacity 0.1s; left:50%; top:50%; transform:translate(-50%, -50%);"></div>
+    <div class="drag-line-y" style="position:absolute; width:1px; height:300px; border-left:1px dashed rgba(255,255,255,0.3); z-index:5; opacity:0.3; transition:opacity 0.1s; left:50%; top:50%; transform:translate(-50%, -50%);"></div>
+    
+
+    <style>
+      @media (min-width: 1024px) {
+        .draggable-bottle {
+          display:block !important;
+        }
+      }
+    </style>
+    <div style="position:relative;z-index:1;max-width:580px;">
+      <p class="section-label">Wine</p>
+      <h2 class="section-title">Honest wine,<br><em>honest makers</em></h2>
+      <p class="section-body" style="color:var(--muted);">
+        Every bottle on our list is a low-intervention natural wine · no additives, minimal sulphites, nothing that doesn't belong. Imported and distributed across the Netherlands by <strong style="color:var(--ink);">Selection Sauvage BV</strong> — working directly with small producers in France and Germany.
+      </p>
+      <p class="section-body" style="color:var(--muted); margin-top:0.8rem;">
+        Our wines are available to drink in the space, take home, or include in your event. Private tastings, wine pairings, and curated selections for events can all be arranged through us.
+      </p>
+
+      <div style="margin-top:1.5rem; display:grid; grid-template-columns:1fr 1fr; gap:1.2rem;">
+        <a href="https://www.selectionsauvage.nl" target="_blank" rel="noopener" class="btn-primary" style="background:var(--warm); color:var(--ink); text-decoration:none; text-align:center; display:flex; align-items:center; justify-content:center;">
+          Shop Wine
+        </a>
+        <button class="btn-primary" onclick="if(window.SauvageChat){SauvageChat.open();setTimeout(function(){var e=document.getElementById('sv-input');var send=document.getElementById('sv-send');if(e&&send){e.value='I would like to book a wine tasting';send.click();}},800);}">
+          🍷 Book a Wine Tasting
+        </button>
+      </div>
+    </div>
+    <script>
+      const bottle = document.querySelector('.draggable-bottle');
+      const wineSection = document.getElementById('wine');
+      const lineX = document.querySelector('.drag-line-x');
+      const lineY = document.querySelector('.drag-line-y');
+      
+      let isDragging = false;
+      let startX = 0, startY = 0;
+      let translateX = 0, translateY = 0;
+      let activeDirection = null;
+      let velocityX = 0, velocityY = 0;
+      
+      bottle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        isDragging = true;
+        activeDirection = null;
+        startX = e.clientX;
+        startY = e.clientY;
+        bottle.style.cursor = 'grabbing';
+      });
+      
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+        
+        const wineRect = wineSection.getBoundingClientRect();
+        const bottleRect = bottle.getBoundingClientRect();
+        
+        // Move immediately, detect direction for visual feedback
+        let newX = translateX + deltaX;
+        let newY = translateY + deltaY;
+        
+        const maxX = wineRect.width - bottleRect.width;
+        const maxY = wineRect.height - bottleRect.height;
+        
+        newX = Math.max(0, Math.min(newX, maxX));
+        newY = Math.max(0, Math.min(newY, maxY));
+        
+        // Detect direction for line highlighting
+        if (!activeDirection) {
+          if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 5) {
+            activeDirection = 'x';
+          } else if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 5) {
+            activeDirection = 'y';
+          }
+        }
+        
+        // Update line visibility
+        if (activeDirection === 'x') {
+          lineX.style.opacity = '1';
+          lineY.style.opacity = '0.3';
+        } else if (activeDirection === 'y') {
+          lineX.style.opacity = '0.3';
+          lineY.style.opacity = '1';
+        }
+        
+        velocityX = deltaX;
+        velocityY = deltaY;
+        
+        bottle.style.right = 'auto';
+        bottle.style.left = newX + 'px';
+        bottle.style.top = newY + 'px';
+        bottle.style.transform = 'none';
+      });
+      
+      document.addEventListener('mouseup', () => {
+        if (isDragging) {
+          const newPos = bottle.getBoundingClientRect();
+          const wineRect = wineSection.getBoundingClientRect();
+          translateX = newPos.left - wineRect.left;
+          translateY = newPos.top - wineRect.top;
+          isDragging = false;
+          activeDirection = null;
+          bottle.style.cursor = 'grab';
+          lineX.style.opacity = '0.3';
+          lineY.style.opacity = '0.3';
+        }
+      });
+    </script>
+  </section>
+
+  <!-- ── Photo Carousel ──────────────────────────────── -->
+  <div style="background:var(--ink); overflow:hidden; position:relative;">
+    <div id="carousel" style="display:flex; gap:4px; padding:4px; cursor:grab; user-select:none; overflow-x:auto; scroll-behavior:smooth; scroll-snap-type:x mandatory;">
+      <img src="./media/photos/gallery-02.jpg"       alt="Gallery"   style="min-width:calc(20% - 3.2px); height:280px; object-fit:cover; flex-shrink:0; scroll-snap-align:start;" />
+      <img src="./media/photos/cave-01.jpg"          alt="Wine Cave" style="min-width:calc(20% - 3.2px); height:280px; object-fit:cover; flex-shrink:0; scroll-snap-align:start;" />
+      <img src="./media/photos/music-01.jpg"         alt="Music"     style="min-width:calc(20% - 3.2px); height:280px; object-fit:cover; flex-shrink:0; scroll-snap-align:start;" />
+      <img src="./media/photos/kitchen-01.jpg"       alt="Kitchen"   style="min-width:calc(20% - 3.2px); height:280px; object-fit:cover; flex-shrink:0; scroll-snap-align:start;" />
+      <img src="./media/photos/gallery-yoga-01.jpg"  alt="Events"    style="min-width:calc(20% - 3.2px); height:280px; object-fit:cover; flex-shrink:0; scroll-snap-align:start;" />
+      <img src="./media/photos/venue-gathering-01.jpg" alt="Gathering" style="min-width:calc(20% - 3.2px); height:280px; object-fit:cover; flex-shrink:0; scroll-snap-align:start;" />
+      <img src="./media/photos/carousel-wine-display.jpg" alt="Wine Display" style="min-width:calc(20% - 3.2px); height:280px; object-fit:cover; flex-shrink:0; scroll-snap-align:start;" />
+      <img src="./media/photos/carousel-art-installation.jpg" alt="Art Installation" style="min-width:calc(20% - 3.2px); height:280px; object-fit:cover; flex-shrink:0; scroll-snap-align:start;" />
+      <img src="./media/photos/carousel-event-performance.jpg" alt="Event Performance" style="min-width:calc(20% - 3.2px); height:280px; object-fit:cover; flex-shrink:0; scroll-snap-align:start;" />
+    </div>
+    <script>
+      const carousel = document.getElementById('carousel');
+      let isDown = false;
+      let startX;
+      let scrollLeft;
+      let autoScrollInterval;
+      let hasInteracted = false;
+      
+      // Auto-scroll function
+      function startAutoScroll() {
+        autoScrollInterval = setInterval(() => {
+          carousel.scrollLeft += 2;
+          // Loop back to start when reaching end
+          if (carousel.scrollLeft >= carousel.scrollWidth - carousel.clientWidth - 10) {
+            carousel.scrollLeft = 0;
+          }
+        }, 30); // Continuous smooth scroll
+      }
+      
+      function stopAutoScroll() {
+        clearInterval(autoScrollInterval);
+      }
+      
+      // Start auto-scroll on load
+      setTimeout(startAutoScroll, 500); // Start after 500ms
+      
+      carousel.addEventListener('mousedown', (e) => {
+        stopAutoScroll();
+        isDown = true;
+        startX = e.pageX - carousel.offsetLeft;
+        scrollLeft = carousel.scrollLeft;
+        carousel.style.cursor = 'grabbing';
+      });
+      
+      carousel.addEventListener('mouseleave', () => {
+        isDown = false;
+        carousel.style.cursor = 'grab';
+      });
+      
+      carousel.addEventListener('mouseup', () => {
+        isDown = false;
+        carousel.style.cursor = 'grab';
+        // Resume auto-scroll after drag
+        setTimeout(startAutoScroll, 2000);
+      });
+      
+      carousel.addEventListener('mousemove', (e) => {
+        if (!isDown) return;
+        const x = e.pageX - carousel.offsetLeft;
+        const walk = (x - startX) * 1;
+        carousel.scrollLeft = scrollLeft - walk;
+      });
+    </script>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ── DAO & Web3 (combined) ──────────────────────── -->
+  <section id="dao" style="background:#0f0d0a; color:#fff;">
+    <div style="position:relative; z-index:2; text-align:center; margin-bottom:4rem; padding:4rem 2rem;">
+      <p class="section-label">Community & Governance</p>
+      <h2 class="section-title" style="color:#fff;">Owned by the <em>people who use it</em></h2>
+      <p class="section-body" style="color:rgba(255,255,255,0.55); margin:0 auto; max-width:600px;">
+        Sauvage is a shared experiment in collective ownership. The DAO gives our community 
+        a real voice · from programming to partnerships, on-chain and in person.
+      </p>
+    </div>
+
+    <!-- DAO Principles -->
+    <div class="dao-principles" style="margin-bottom:4rem;">
+      <div class="dao-principle">
+        <div class="dao-num">01</div>
+        <h4>Collective Governance</h4>
+        <p>Members vote on programming, partnerships, and major decisions. Every voice has weight.</p>
+      </div>
+      <div class="dao-principle">
+        <div class="dao-num">02</div>
+        <h4>Transparent Operations</h4>
+        <p>Finances and decisions are documented on-chain. No black boxes · full visibility for all members.</p>
+      </div>
+      <div class="dao-principle">
+        <div class="dao-num">03</div>
+        <h4>Member Benefits</h4>
+        <p>Priority event access, member pricing on wine, exhibition submissions, and more.</p>
+      </div>
+    </div>
+
+    <!-- Web3 pillars -->
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:2px; margin-bottom:4rem; position:relative; z-index:2;">
+      <div style="background:rgba(255,255,255,0.04); padding:2.5rem 2rem;">
+        <div style="font-size:2rem; margin-bottom:1rem;">🪙</div>
+        <h4 style="font-family:var(--serif); font-size:1.3rem; font-weight:400; color:#fff; margin-bottom:0.6rem;">DAO Tokens</h4>
+        <p style="font-size:0.85rem; color:rgba(255,255,255,0.45); line-height:1.7; font-weight:300;">
+          Token holders shape what happens at Sauvage. Governance is on-chain. Every member has a voice.
+        </p>
+        <a href="#contact" style="display:inline-block; margin-top:1.2rem; font-size:0.7rem; letter-spacing:0.16em; text-transform:uppercase; color:var(--gold); text-decoration:none; border-bottom:1px solid var(--gold); padding-bottom:2px;">Get tokens →</a>
+      </div>
+
+      <div style="background:rgba(255,255,255,0.04); padding:2.5rem 2rem;">
+        <div style="font-size:2rem; margin-bottom:1rem;">🔄</div>
+        <h4 style="font-family:var(--serif); font-size:1.3rem; font-weight:400; color:#fff; margin-bottom:0.6rem;">Circles Currency</h4>
+        <p style="font-size:0.85rem; color:rgba(255,255,255,0.45); line-height:1.7; font-weight:300;">
+          Sauvage accepts Circles (CRC) · community money built on Gnosis. Spend your CRC at the café, events, and wine tastings.
+        </p>
+        <a href="https://aboutcircles.com" target="_blank" rel="noopener" style="display:inline-block; margin-top:1.2rem; font-size:0.7rem; letter-spacing:0.16em; text-transform:uppercase; color:var(--gold); text-decoration:none; border-bottom:1px solid var(--gold); padding-bottom:2px;">Learn about Circles →</a>
+      </div>
+      <div style="background:rgba(255,255,255,0.04); padding:2.5rem 2rem;">
+        <div style="font-size:2rem; margin-bottom:1rem;">⛓</div>
+        <h4 style="font-family:var(--serif); font-size:1.3rem; font-weight:400; color:#fff; margin-bottom:0.6rem;">Web3 Events</h4>
+        <p style="font-size:0.85rem; color:rgba(255,255,255,0.45); line-height:1.7; font-weight:300;">
+          Regular workshops, builder sessions, and cultural events at the intersection of crypto, art, and community. IRL, Amsterdam.
+        </p>
+        <a href="#events" style="display:inline-block; margin-top:1.2rem; font-size:0.7rem; letter-spacing:0.16em; text-transform:uppercase; color:var(--gold); text-decoration:none; border-bottom:1px solid var(--gold); padding-bottom:2px;">See events →</a>
+      </div>
+    </div>
+
+    <!-- Transparency Statement -->
+    <div style="margin:4rem auto 0; max-width:700px; padding:3rem; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); border-radius:4px; text-align:center; position:relative; z-index:2;">
+      <h4 style="color:#fff; font-family:var(--serif); font-size:1.1rem; font-weight:400; margin-bottom:1rem;">Transparency First</h4>
+      <p style="font-size:0.9rem; color:rgba(255,255,255,0.6); line-height:1.8; margin-bottom:1.5rem;">
+        The DAO values complete transparency. All financial operations are visible on-chain. Our Monerium public account handles all treasuries and distributions · no hidden movements, no private accounts.
+      </p>
+      <a href="https://gnosis.monerium.io/address/0x479C1B4eCaA892CE9FAa0978f7faf7117a379A9e" target="_blank" rel="noopener" style="display:inline-block; font-size:0.8rem; color:rgba(255,255,255,0.5); font-family:monospace; word-break:break-all; padding:1rem; background:rgba(0,0,0,0.2); border-radius:3px; margin-bottom:1rem; text-decoration:none; transition:all 0.3s; border:1px solid rgba(255,255,255,0.1);">
+        0x479C1B4eCaA892CE9FAa0978f7faf7117a379A9e
+      </a>
+      <p style="font-size:0.75rem; color:rgba(255,255,255,0.4); letter-spacing:0.08em;">MONERIUM PUBLIC KEY ACCOUNT</p>
+    </div>
+
+    <div style="text-align:center; margin-top:3rem; position:relative; z-index:2;">
+      <a href="#contact" class="btn-primary">Join the DAO</a>
+    </div>
+  </section>
+
+  <!-- ── Exhibition ───────────────────────────────── -->
+  <section id="exhibition" style="background:var(--white);">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:5rem; align-items:start;">
+      <style>
+        @media (max-width: 768px) {
+          #exhibition > div {
+            grid-template-columns: 1fr !important;
+            gap: 2rem !important;
+          }
+          #exhibition .exhibit-images {
+            grid-template-columns: 1fr !important;
+          }
+          #exhibition .exhibit-images img {
+            height: auto !important;
+            aspect-ratio: 4/3 !important;
+          }
+        }
+      </style>
+      <div>
+        <p class="section-label" style="color:var(--muted);">Current Exhibition</p>
+        <h2 class="section-title"><em>Kinship</em></h2>
+        <p style="font-size:0.75rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); margin-bottom:1.5rem; font-weight:400;">Angela Huizer · Photography</p>
+        <p class="section-body">
+          Kinship questions identity beyond bloodlines or geography. Born in the Netherlands and shaped by Javanese-Surinamese heritage, rooted in forced migration, Angela explores culture as lived and shared — allowing multiple answers to exist without resolution.
+        </p>
+        <p class="section-body" style="margin-top:1rem;">
+          Through photography, archival materials, cyanotypes, and an installation, the work traces family histories, cultural rituals, and the ways memory and belonging move across generations and continents.
+        </p>
+        <p class="section-body" style="margin-top:1rem;">
+          For this exhibition, Sauvage transforms into an intimate environment — a place where visitors can slow down and gather. The space will feel a bit like a living room, so we'll invite everyone to take off their shoes when entering.
+        </p>
+        <div style="margin-top:1.5rem; padding:1.2rem 1.5rem; border-left:2px solid var(--gold); background:var(--cream);">
+          <p style="font-size:0.8rem; color:var(--muted); line-height:1.7;">
+            <strong style="color:var(--ink);">Presented by</strong> Wisse Kodde<br>
+            <strong style="color:var(--ink);">Location</strong> Sauvage · Potgieterstraat 47H, Amsterdam<br>
+            <strong style="color:var(--ink);">Prints</strong> Fotolab kiekie
+          </p>
+        </div>
+        <div style="margin-top:2rem; display:flex; gap:1rem; flex-wrap:wrap;">
+          <a href="#events" class="btn-primary">Join the Opening</a>
+          <a href="#contact" style="display:inline-block; padding:0.9rem 2.4rem; border:1px solid var(--ink); font-size:0.72rem; letter-spacing:0.18em; text-transform:uppercase; text-decoration:none; color:var(--ink); transition:all 0.3s;">Submit Your Work</a>
+        </div>
+      </div>
+      <div class="exhibit-images" style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+        <img src="./media/photos/kinship-exhibition-01.jpg" alt="Kinship · Angela Huizer" style="width:100%;height:300px;object-fit:cover;grid-column:1/-1;" />
+        <img src="./media/photos/kinship-exhibition-02.jpg" alt="Exhibition detail" style="width:100%;height:200px;object-fit:cover;" />
+        <img src="./media/photos/kinship-exhibition-03.jpg" alt="Sauvage gallery space" style="width:100%;height:200px;object-fit:cover;" />
+      </div>
+    </div>
+  </section>
+
+
+
+  <!-- ── Contact ─────────────────────────────────── -->
+  <section id="contact" style="background:var(--cream);">
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:3rem;">
+      <!-- Left: Title -->
+      <div>
+        <p class="section-label">Find Us</p>
+        <h2 class="section-title">Come <em>visit</em></h2>
+        <a href="https://maps.app.goo.gl/kWFVVUJkQLWJamhMA" target="_blank" rel="noopener" style="display:inline-block; margin-top:1rem; font-size:0.7rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--gold); text-decoration:none; border-bottom:1px solid var(--gold); padding-bottom:2px;">Open in Maps →</a>
+      </div>
+
+      <!-- Center: Address & Hours -->
+      <div>
+        <div style="margin-bottom:2rem;">
+          <p style="font-size:0.65rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); margin-bottom:0.4rem; font-weight:600;">Address</p>
+          <p class="section-body"><a href="https://maps.app.goo.gl/VdSa6n3AaE9SkuXd9" target="_blank" rel="noopener" style="color:inherit; text-decoration:none; border-bottom:1px solid var(--gold);">Potgieterstraat 47-H<br>Amsterdam, Netherlands</a></p>
+        </div>
+        <div>
+          <p style="font-size:0.65rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); margin-bottom:0.4rem; font-weight:600;">Hours</p>
+          <p class="section-body">☕ Ikinari Coffee · Wed–Sun 08:00–15:00<br>🌮 The Fento · Wed–Sun 08:00–15:00<br>🍷 Events & bar · Check calendar</p>
+        </div>
+      </div>
+
+      <!-- Right: Contact -->
+      <div>
+        <p style="font-size:0.65rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); margin-bottom:0.4rem; font-weight:600;">Contact</p>
+        <p class="section-body"><a href="mailto:contact@selectionsauvage.nl" style="color:inherit; text-decoration:none; border-bottom:1px solid var(--gold);">contact@selectionsauvage.nl</a><br><a href="tel:+31634742988" style="color:inherit; text-decoration:none; border-bottom:1px solid var(--gold);">+31 634 742 988</a></p>
+      </div>
+    </div>
+    
+    <style>
+      @media (max-width: 768px) {
+        #contact > div { grid-template-columns: 1fr !important; gap: 1.5rem !important; }
+      }
+    </style>
+  </section>
+
+  <!-- ── Footer ──────────────────────────────────── -->
+  <footer>
+    <div class="footer-logo">Sauvage</div>
+    <div class="footer-links">
+      <a href="#space">The Space</a>
+      <a href="#events">Events</a>
+      <a href="#wine">Wine</a>
+      <a href="#exhibition">Exhibition</a>
+      <a href="#dao">DAO & Web3</a>
+      <a href="https://www.selectionsauvage.nl" target="_blank">Selection Sauvage</a>
+      <a href="#contact">Contact</a>
+    </div>
+    <p class="footer-copy">© 2020–2026 Sauvage Amsterdam · All rights reserved</p>
+  </footer>
+
+  <!-- ── Sauvage Booking Chatbot ───────────────────── -->
+  <script src="https://booking.selectionsauvage.nl/widget.js" defer></script>
+
+  <!-- ── Scripts ──────────────────────────────────── -->
+  <script>
+    // Nav scroll behaviour
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 60);
+    });
+
+    // Booking chatbot handled by widget.js (booking.selectionsauvage.nl)
+
+    // ── Lu.ma ICS Feed ─────────────────────────────
+    (function() {
+      const ICS_URL = 'https://api.lu.ma/ics/get?entity=calendar&id=cal-hcUHpXdDwYPQGdm';
+      const PROXY   = 'https://corsproxy.io/?' + encodeURIComponent(ICS_URL);
+
+      function parseICS(text) {
+        var events = [];
+        var blocks = text.split('BEGIN:VEVENT');
+        blocks.shift();
+        blocks.forEach(function(block) {
+          var get = function(key) {
+            var m = block.match(new RegExp(key + '[^:]*:([\\s\\S]*?)(?=\\r?\\n[A-Z]|\\r?\\nEND:VEVENT)'));
+            return m ? m[1].replace(/\r?\n[ \t]/g, '').trim() : '';
+          };
+          var summary  = get('SUMMARY');
+          var dtstart  = get('DTSTART');
+          var desc     = get('DESCRIPTION');
+          var url      = (desc.match(/https?:\/\/luma\.com\/\S+/) || [])[0] || '';
+          if (!summary || !dtstart) return;
+          var year  = dtstart.substr(0,4);
+          var month = dtstart.substr(4,2);
+          var day   = dtstart.substr(6,2);
+          var hour  = dtstart.length >= 13 ? dtstart.substr(9,2) : '00';
+          var min   = dtstart.length >= 15 ? dtstart.substr(11,2) : '00';
+          var date  = new Date(year+'-'+month+'-'+day+'T'+hour+':'+min+':00Z');
+          if (date < new Date()) return; // skip past events
+          events.push({ summary: summary, date: date, url: url, desc: '' });
+        });
+        events.sort(function(a,b){ return a.date - b.date; });
+        return events.slice(0, 6);
+      }
+
+      function typeLabel(title) {
+        var t = title.toLowerCase();
+        if (t.includes('wine') || t.includes('jazz')) return 'Wine';
+        if (t.includes('exhibit') || t.includes('gallery') || t.includes('art') || t.includes('kinship')) return 'Exhibition';
+        if (t.includes('music') || t.includes('dj') || t.includes('session')) return 'Music';
+        if (t.includes('web3') || t.includes('block') || t.includes('robot') || t.includes('crypto')) return 'Web3';
+        if (t.includes('workshop') || t.includes('club')) return 'Workshop';
+        return 'Event';
+      }
+
+      function formatDate(d) {
+        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        var h = d.getUTCHours().toString().padStart(2,'0');
+        var m = d.getUTCMinutes().toString().padStart(2,'0');
+        return months[d.getUTCMonth()] + ' ' + d.getUTCDate() + ', ' + d.getUTCFullYear() + ' · ' + h + ':' + m;
+      }
+
+      function renderEvents(events) {
+        var grid = document.getElementById('luma-events-grid');
+        if (!grid) return;
+        if (!events.length) {
+          grid.innerHTML = '<div class="event-card"><p class="event-date">Check back soon</p><h3 class="event-name">No upcoming events</h3><p class="event-desc">Follow us on Lu.ma to be the first to know when new events are added.</p></div>';
+          return;
+        }
+        grid.innerHTML = events.map(function(ev) {
+          var label = typeLabel(ev.summary);
+          var link  = ev.url ? ' onclick="window.open(\'' + ev.url + '\',\'_blank\')"' : '';
+          return '<div class="event-card"' + link + ' style="cursor:' + (ev.url ? 'pointer' : 'default') + '">' +
+            '<p class="event-date">' + formatDate(ev.date) + '</p>' +
+            '<h3 class="event-name">' + ev.summary + '</h3>' +
+            '<p class="event-desc">At Sauvage Space · Potgieterstraat 47H, Amsterdam</p>' +
+            '<span class="event-type">' + label + '</span>' +
+            '</div>';
+        }).join('');
+      }
+
+      fetch(PROXY)
+        .then(function(r){ return r.text(); })
+        .then(function(text){ renderEvents(parseICS(text)); })
+        .catch(function(){ 
+          // Fallback: link to Lu.ma directly
+          var grid = document.getElementById('luma-events-grid');
+          if (grid) grid.innerHTML = '<div class="event-card"><p class="event-date">Live calendar</p><h3 class="event-name">View all events on Lu.ma</h3><p class="event-desc">Click below to see the full Sauvage calendar with all upcoming events.</p></div>';
+        });
+    })();
+  </script>
+
+</body>
+</html>
