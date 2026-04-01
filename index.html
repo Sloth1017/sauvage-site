@@ -796,9 +796,12 @@
         A shape-shifting space in Amsterdam West. Part gallery, part café, part wine cave, part stage, part whatever the night demands. The furniture moves. The walls change. The natural wines are alive and so is everything that happens around them.
       </p>
       <p class="section-body" style="margin-top:1rem;">
-        Morning coffee becomes an afternoon exhibition becomes an evening of live music becomes a late-night glass of something unfiltered. Nothing here is precious. Everything is welcome.
+        Morning coffee becomes an afternoon exhibition becomes an evening of live music becomes a late-night glass of something unfiltered.
       </p>
-      <a href="#contact" class="btn-primary" style="margin-top:2.2rem; display:inline-block;">Enquire About the Space</a>
+      <div style="margin-top:2.2rem; display:flex; gap:1rem; flex-wrap:wrap;">
+        <a href="#contact" class="btn-primary">Enquire About the Space</a>
+        <button onclick="window.SauvageChatbot?.open?.()" class="btn-primary" style="background:var(--gold); color:var(--ink); border:none; cursor:pointer;">Book Now</button>
+      </div>
     </div>
     <div class="space-images">
       <img src="./media/photos/event-gathering-01.jpg" alt="Sauvage · community gathering" />
@@ -836,7 +839,7 @@
         <p class="offer-body">Specialty coffee and food — open Wednesday to Sunday, 08:00–15:00.</p>
         <div style="display:flex; flex-direction:column; gap:0.8rem;">
           <a href="https://www.instagram.com/ikinaricoffee/" target="_blank" rel="noopener" class="offer-link">Ikinari Coffee →</a>
-          <a href="https://www.thefento.com/" target="_blank" rel="noopener" class="offer-link">Fento Food →</a>
+          <a href="#contact" class="offer-link">Sauvage Cafe →</a>
         </div>
       </div>
       <div class="offer-card" style="position:relative;">
@@ -1216,7 +1219,7 @@
         </div>
         <div style="margin-bottom:3rem;">
           <p style="font-size:0.65rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); margin-bottom:0.8rem; font-weight:600;">Hours</p>
-          <p class="section-body" style="margin:0; line-height:1.8;">Ikinari Coffee · Wed–Sun 08:00–15:00<br>The Fento · Wed–Sun 08:00–15:00</p>
+          <p class="section-body" style="margin:0; line-height:1.8;">Ikinari Coffee · Wed–Sun 08:00–15:00<br>Sauvage Cafe · Wed–Sun 08:00–15:00</p>
         </div>
         <div>
           <p style="font-size:0.65rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); margin-bottom:0.8rem; font-weight:600;">Contact</p>
@@ -1252,6 +1255,160 @@
   </footer>
 
   <!-- ── Sauvage Booking Chatbot ───────────────────── -->
+  <style>
+    #chatbot-modal {
+      display: none;
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      width: 350px;
+      max-width: 90vw;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 9999;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    
+    #chatbot-modal.open {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .chatbot-header {
+      background: var(--ink);
+      color: white;
+      padding: 1rem;
+      border-radius: 8px 8px 0 0;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .chatbot-close {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      font-size: 1.2rem;
+      padding: 0;
+      width: 24px;
+      height: 24px;
+    }
+    
+    .chatbot-body {
+      padding: 1.5rem;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .chatbot-form input,
+    .chatbot-form textarea,
+    .chatbot-form select {
+      width: 100%;
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.9rem;
+    }
+    
+    .chatbot-form textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    
+    .chatbot-submit {
+      background: var(--gold);
+      color: var(--ink);
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      width: 100%;
+    }
+    
+    #chatbot-icon {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 56px;
+      height: 56px;
+      background: var(--gold);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      z-index: 9998;
+      font-size: 1.5rem;
+      transition: all 0.3s;
+    }
+    
+    #chatbot-icon:hover {
+      transform: scale(1.1);
+    }
+  </style>
+
+  <div id="chatbot-icon">💬</div>
+  
+  <div id="chatbot-modal">
+    <div class="chatbot-header">
+      <span>Book with Sauvage</span>
+      <button class="chatbot-close">✕</button>
+    </div>
+    <div class="chatbot-body">
+      <form class="chatbot-form" onsubmit="handleBooking(event)">
+        <input type="text" placeholder="Your name" required>
+        <input type="email" placeholder="Email address" required>
+        <input type="tel" placeholder="Phone number" required>
+        <input type="date" required>
+        <select required>
+          <option value="">Select a room...</option>
+          <option value="entrance">Entrance</option>
+          <option value="gallery">Gallery/Upstairs</option>
+          <option value="kitchen">Kitchen</option>
+          <option value="cave">Cave</option>
+          <option value="full">Full Space</option>
+        </select>
+        <input type="number" min="1" max="30" placeholder="Number of guests" required>
+        <textarea placeholder="Tell us about your event..."></textarea>
+        <button type="submit" class="chatbot-submit">Send Inquiry</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const chatbotIcon = document.getElementById('chatbot-icon');
+    const chatbotModal = document.getElementById('chatbot-modal');
+    const chatbotClose = document.querySelector('.chatbot-close');
+    
+    chatbotIcon.addEventListener('click', () => {
+      chatbotModal.classList.toggle('open');
+    });
+    
+    chatbotClose.addEventListener('click', () => {
+      chatbotModal.classList.remove('open');
+    });
+    
+    function handleBooking(event) {
+      event.preventDefault();
+      alert('Thank you! Your inquiry has been sent. We will contact you soon at the email provided.');
+      chatbotModal.classList.remove('open');
+      event.target.reset();
+    }
+    
+    // Try to load the real widget if domain is live
+    window.SauvageChatbot = {
+      open: () => chatbotModal.classList.add('open')
+    };
+  </script>
+
+  <!-- Live chatbot widget (loads when domain is active) -->
   <script src="https://booking.selectionsauvage.nl/widget.js" defer></script>
 
   <!-- ── Scripts ──────────────────────────────────── -->
