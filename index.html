@@ -5,6 +5,7 @@
   <script>window._svSkipNavInject = true;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sauvage · Amsterdam</title>
+  <link rel="icon" type="image/png" href="./media/favicon.png" />
   <style>
     @font-face {
       font-family: 'Plein';
@@ -70,9 +71,18 @@
       color: var(--white);
       text-decoration: none;
       text-transform: uppercase;
-      transition: color 0.3s;
+      transition: color 0.3s, filter 0.3s;
+      display: flex;
+      align-items: center;
+    }
+    .nav-logo img {
+      filter: brightness(1);
+      transition: filter 0.3s;
     }
     nav.scrolled .nav-logo { color: var(--ink); }
+    nav.scrolled .nav-logo img {
+      filter: brightness(0.2);
+    }
     .nav-links {
       display: flex;
       gap: 2.5rem;
@@ -245,7 +255,10 @@
     }
 
     /* ── Section Base ─────────────────────────────── */
-    section { padding: 7rem 4rem; }
+    section { 
+      padding: 7rem 4rem;
+      background-attachment: fixed;
+    }
     .section-label {
       font-size: 0.65rem;
       letter-spacing: 0.26em;
@@ -309,7 +322,7 @@
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      margin-bottom: 4rem;
+      margin-bottom: 2rem;
     }
     .offers-grid {
       display: grid;
@@ -320,9 +333,12 @@
     }
     .offer-card {
       background: var(--white);
-      padding: 2.5rem 2rem;
+      padding: 2rem 1.8rem;
       border-top: 2px solid var(--gold);
       transition: transform 0.3s;
+      display: flex;
+      flex-direction: column;
+      min-height: 420px;
     }
     .offer-card:hover { transform: translateY(-4px); }
     .offer-icon {
@@ -335,16 +351,19 @@
       font-weight: 400;
       margin-bottom: 0.8rem;
       color: var(--ink);
+      text-align: center;
     }
     .offer-body {
       font-size: 0.88rem;
       color: var(--muted);
       line-height: 1.75;
       font-weight: 300;
+      flex: 1;
+      margin-bottom: 1rem;
     }
     .offer-link {
       display: inline-block;
-      margin-top: 1.5rem;
+      margin-top: auto;
       font-size: 0.7rem;
       letter-spacing: 0.16em;
       text-transform: uppercase;
@@ -736,7 +755,7 @@
 
   <!-- ── Navigation ────────────────────────────── -->
   <nav id="navbar">
-    <a href="#" class="nav-logo">Sauvage</a>
+    <a href="#" class="nav-logo"><img src="./media/sauvage-logo.svg" alt="Sauvage" style="height:40px; width:auto;" /></a>
     <ul class="nav-links">
       <li><a href="#space">The Space</a></li>
       <li><a href="#offers">Offerings</a></li>
@@ -758,9 +777,9 @@
     <div class="hero-overlay"></div>
     <div class="hero-content">
 
-      <h1 class="hero-title">Sauvage</h1>
-      <p class="hero-sub" style="font-size:1.1rem; font-weight:300; margin-top:1rem; margin-bottom:2rem;">A place where <em style="color:var(--gold);">community</em><br>comes alive</p>
-      <p class="hero-sub">Sauvage is a cultural hub in the heart of Amsterdam · café, exhibition space, event venue, and the home of natural wine.</p>
+
+      <h1 class="hero-title" style="margin-bottom:1.5rem;">Sauvage</h1>
+      <p class="hero-sub"><strong>Sauvage is a cultural hub in the heart of Amsterdam · café, exhibition space, event venue, and the home of natural wine.</strong></p>
       <div class="hero-actions">
         <a href="#events" class="btn-primary">Explore Events</a>
       </div>
@@ -777,9 +796,12 @@
         A shape-shifting space in Amsterdam West. Part gallery, part café, part wine cave, part stage, part whatever the night demands. The furniture moves. The walls change. The natural wines are alive and so is everything that happens around them.
       </p>
       <p class="section-body" style="margin-top:1rem;">
-        Morning coffee becomes an afternoon exhibition becomes an evening of live music becomes a late-night glass of something unfiltered. Nothing here is precious. Everything is welcome.
+        Morning coffee becomes an afternoon exhibition becomes an evening of live music becomes a late-night glass of something unfiltered.
       </p>
-      <a href="#contact" class="btn-primary" style="margin-top:2.2rem; display:inline-block;">Enquire About the Space</a>
+      <div style="margin-top:2.2rem; display:flex; gap:1rem; flex-wrap:wrap;">
+        <a href="#contact" class="btn-primary">Enquire About the Space</a>
+        <button onclick="window.SauvageChatbot?.open?.()" class="btn-primary" style="background:var(--gold); color:var(--ink); border:none; cursor:pointer;">Book Now</button>
+      </div>
     </div>
     <div class="space-images">
       <img src="./media/photos/event-gathering-01.jpg" alt="Sauvage · community gathering" />
@@ -791,12 +813,19 @@
   <hr class="divider" />
 
   <!-- ── Offerings ──────────────────────────────── -->
-  <section id="offers" style="background-image:url('./media/offerings-bg.jpg'); background-size:auto; background-repeat:repeat; background-position:0 0; position:relative;">
-    <div style="position:absolute;inset:0;background:rgba(247,244,239,0.92);z-index:0;"></div>
+  <section id="offers" style="background-image:url('./media/offerings-bg.jpg'); background-size:auto; background-repeat:repeat; background-attachment:fixed; background-position:0 0; position:relative;">
+    <div style="position:absolute;inset:0;background:transparent;z-index:0;"></div>
     <div class="offers-header" style="position:relative;z-index:1;">
-      <div>
-        <p class="section-label">What We Offer</p>
-        <h2 class="section-title">Everything<br>in one <em>place</em></h2>
+      <style>
+        .rotating-starburst {
+          transition: transform 2s ease-in-out;
+        }
+        .rotating-starburst:hover {
+          transform: rotate(360deg);
+        }
+      </style>
+      <div style="display:flex; flex-direction:column; align-items:flex-start;">
+        <h2 class="section-title rotating-starburst" style="background-image:url('./media/starburst-bg.webp'); background-size:110%; background-repeat:no-repeat; background-position:center; position:relative; padding:5rem 4rem; margin:0; font-size:2rem; color:white;">Our<br>Activities</h2>
       </div>
       <a href="#contact" class="btn-primary">Get in Touch</a>
     </div>
@@ -804,62 +833,54 @@
       <div class="offer-card">
         <div class="offer-icon"></div>
         <h3 class="offer-title">Café</h3>
+        <div style="display:flex; justify-content:center;">
+          <img src="./media/ikinari-barista.png" alt="Ikinari barista" style="width:60%; height:220px; object-fit:cover; margin:0.6rem 0; border-radius:4px;" />
+        </div>
         <p class="offer-body">Specialty coffee and food — open Wednesday to Sunday, 08:00–15:00.</p>
         <div style="display:flex; flex-direction:column; gap:0.8rem;">
           <a href="https://www.instagram.com/ikinaricoffee/" target="_blank" rel="noopener" class="offer-link">Ikinari Coffee →</a>
-          <a href="https://www.thefento.com/" target="_blank" rel="noopener" class="offer-link">Fento Food →</a>
+          <a href="#contact" class="offer-link">Sauvage Cafe →</a>
+        </div>
+      </div>
+      <div class="offer-card" style="position:relative;">
+        <div class="offer-icon"></div>
+        <h3 class="offer-title">Exhibition Space</h3>
+        <div style="display:flex; justify-content:center;">
+          <img src="./media/kinship-gallery.jpg" alt="Kinship exhibition" style="width:60%; height:220px; object-fit:cover; margin:0.6rem 0; border-radius:4px;" />
+        </div>
+        <p class="offer-body">Currently showing: <em>Kinship</em> by Angela Huizer · photography, cyanotypes, and installation exploring identity and belonging.</p>
+        <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; width:100%;">
+          <a href="#exhibition" class="offer-link">View current show →</a>
+          <p style="font-size:0.75rem; color:var(--muted); margin:0; text-align:right;">On view until<br>April 16th</p>
         </div>
       </div>
       <div class="offer-card">
         <div class="offer-icon"></div>
-        <h3 class="offer-title">Exhibition Space</h3>
-        <p class="offer-body">Currently showing: <em>Kinship</em> by Angela Huizer — photography, cyanotypes, and installation exploring identity and belonging.</p>
-        <a href="#exhibition" class="offer-link">View current show →</a>
-      </div>
-      <div class="offer-card">
-        <div class="offer-icon"></div>
         <h3 class="offer-title">Natural Wine</h3>
+        <div style="display:flex; justify-content:center;">
+          <img src="./media/wine-bottles.jpg" alt="Natural wines" style="width:60%; height:220px; object-fit:cover; margin:0.6rem 0; border-radius:4px;" />
+        </div>
         <p class="offer-body">A curated selection of low-intervention, biodynamic and natural wines · guided by Selection Sauvage, our wine importing arm.</p>
         <div style="display:flex; flex-direction:column; gap:0.8rem;">
           <a href="https://www.selectionsauvage.nl" target="_blank" rel="noopener" class="offer-link">Explore the cellar →</a>
           <a href="javascript:if(window.SauvageChat){SauvageChat.open();setTimeout(function(){var e=document.getElementById('sv-input');var send=document.getElementById('sv-send');if(e&&send){e.value='I would like to book a wine tasting';send.click();}},800);}" class="offer-link">Book a wine tasting →</a>
         </div>
       </div>
-      <div class="offer-card">
-        <div class="offer-icon"></div>
-        <h3 class="offer-title">Events & Performances</h3>
-        <p class="offer-body">From intimate wine tastings to art openings, DJ nights to community gatherings · something is always happening here.</p>
-        <a href="#events" class="offer-link">See upcoming →</a>
-      </div>
-      <div class="offer-card">
-        <div class="offer-icon"></div>
-        <h3 class="offer-title">Private Hire</h3>
-        <p class="offer-body">Hire Sauvage for your next gathering. Dinners, launches, workshops, photoshoots · we adapt to your vision.</p>
-        <a href="javascript:if(window.SauvageChat){SauvageChat.open();}" class="offer-link">Request a quote →</a>
-      </div>
-      <div class="offer-card">
-        <div class="offer-icon"></div>
-        <h3 class="offer-title">Community DAO</h3>
-        <p class="offer-body">Sauvage is governed by its community. Join the DAO to shape programming, access member benefits, and invest in the space.</p>
-        <a href="#dao" class="offer-link">Learn how →</a>
-      </div>
+
     </div>
   </section>
 
   <!-- ── Events ──────────────────────────────────── -->
   <section id="events">
-    <p class="section-label">Events</p>
-    <h2 class="section-title" style="color:var(--white);">What's<br><em style="color:var(--gold)">on</em></h2>
-    <p class="section-body">From intimate tastings to full-venue takeovers · the Sauvage calendar is always moving. All events are open to the public unless marked private.</p>
-    <div class="events-grid" id="luma-events-grid">
-      <div class="event-card" style="opacity:0.5;">
-        <p class="event-date">Loading events…</p>
-        <h3 class="event-name">Fetching from Lu.ma</h3>
-        <p class="event-desc">Just a moment while we pull the latest from our calendar.</p>
+    <div>
+      <div>
+        <p class="section-label">Events</p>
+        <h2 class="section-title" style="color:var(--white);">What's<br><em style="color:var(--gold)">on</em></h2>
+        <p class="section-body">From intimate tastings to full-venue takeovers · the Sauvage calendar is always moving. All events are open to the public unless marked private.</p>
+        <div style="margin-top:2rem; display:flex; justify-content:center;">
+          <iframe src="https://luma.com/embed/calendar/cal-hcUHpXdDwYPQGdm/events" width="100%" height="450" frameborder="0" style="border: 1px solid #bfcbda88; border-radius: 4px; max-width:600px;" allowfullscreen="" aria-hidden="false" tabindex="0"></iframe>
+        </div>
       </div>
-    </div>
-    <div style="text-align:center; margin-top:3rem;">
-      <a href="https://lu.ma/cal-hcUHpXdDwYPQGdm" target="_blank" rel="noopener" class="btn-primary">View Full Calendar on Lu.ma</a>
     </div>
   </section>
 
@@ -878,23 +899,29 @@
         }
       }
     </style>
-    <div style="position:relative;z-index:1;max-width:580px;">
-      <p class="section-label">Wine</p>
-      <h2 class="section-title">Honest wine,<br><em>honest makers</em></h2>
-      <p class="section-body" style="color:var(--muted);">
-        Every bottle on our list is a low-intervention natural wine · no additives, minimal sulphites, nothing that doesn't belong. Imported and distributed across the Netherlands by <strong style="color:var(--ink);">Selection Sauvage BV</strong> — working directly with small producers in France and Germany.
-      </p>
-      <p class="section-body" style="color:var(--muted); margin-top:0.8rem;">
-        Our wines are available to drink in the space, take home, or include in your event. Private tastings, wine pairings, and curated selections for events can all be arranged through us.
-      </p>
+    <div style="position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:start;">
+      <div>
+        <p class="section-label">Wine</p>
+        <h2 class="section-title"><em>Honest wine</em>,<br>honest makers</h2>
+        <p class="section-body" style="color:var(--muted);">
+          Every bottle on our list is a low-intervention natural wine · no additives, minimal sulphites, nothing that doesn't belong. Imported and distributed across the Netherlands by <strong style="color:var(--ink);">Selection Sauvage BV</strong> — working directly with small producers in France and Germany.
+        </p>
+        <p class="section-body" style="color:var(--muted); margin-top:0.8rem;">
+          Our wines are available to drink in the space, take home, or include in your event. Private tastings, wine pairings, and curated selections for events can all be arranged through us.
+        </p>
 
-      <div style="margin-top:1.5rem; display:grid; grid-template-columns:1fr 1fr; gap:1.2rem;">
-        <a href="https://www.selectionsauvage.nl" target="_blank" rel="noopener" class="btn-primary" style="background:var(--warm); color:var(--ink); text-decoration:none; text-align:center; display:flex; align-items:center; justify-content:center;">
-          Shop Wine
-        </a>
-        <button class="btn-primary" onclick="if(window.SauvageChat){SauvageChat.open();setTimeout(function(){var e=document.getElementById('sv-input');var send=document.getElementById('sv-send');if(e&&send){e.value='I would like to book a wine tasting';send.click();}},800);}">
-          🍷 Book a Wine Tasting
-        </button>
+        <div style="margin-top:1.5rem; display:grid; grid-template-columns:1fr 1fr; gap:1.2rem;">
+          <a href="https://www.selectionsauvage.nl" target="_blank" rel="noopener" class="btn-primary" style="background:var(--warm); color:var(--ink); text-decoration:none; text-align:center; display:flex; align-items:center; justify-content:center;">
+            Shop Wine
+          </a>
+          <button class="btn-primary" onclick="if(window.SauvageChat){SauvageChat.open();setTimeout(function(){var e=document.getElementById('sv-input');var send=document.getElementById('sv-send');if(e&&send){e.value='I would like to book a wine tasting';send.click();}},800);}">
+            🍷 Book a Wine Tasting
+          </button>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:4px;">
+        <img src="./media/wine-section-main.jpg" alt="Natural wines" style="width:110%; height:auto; object-position:left; border-radius:4px;" />
       </div>
     </div>
     <script>
@@ -982,16 +1009,16 @@
 
   <!-- ── Photo Carousel ──────────────────────────────── -->
   <div style="background:var(--ink); overflow:hidden; position:relative;">
-    <div id="carousel" style="display:flex; gap:4px; padding:4px; cursor:grab; user-select:none; overflow-x:auto; scroll-behavior:smooth; scroll-snap-type:x mandatory;">
-      <img src="./media/photos/gallery-02.jpg"       alt="Gallery"   style="min-width:calc(20% - 3.2px); height:280px; object-fit:cover; flex-shrink:0; scroll-snap-align:start;" />
-      <img src="./media/photos/cave-01.jpg"          alt="Wine Cave" style="min-width:calc(20% - 3.2px); height:280px; object-fit:cover; flex-shrink:0; scroll-snap-align:start;" />
-      <img src="./media/photos/music-01.jpg"         alt="Music"     style="min-width:calc(20% - 3.2px); height:280px; object-fit:cover; flex-shrink:0; scroll-snap-align:start;" />
-      <img src="./media/photos/kitchen-01.jpg"       alt="Kitchen"   style="min-width:calc(20% - 3.2px); height:280px; object-fit:cover; flex-shrink:0; scroll-snap-align:start;" />
-      <img src="./media/photos/gallery-yoga-01.jpg"  alt="Events"    style="min-width:calc(20% - 3.2px); height:280px; object-fit:cover; flex-shrink:0; scroll-snap-align:start;" />
-      <img src="./media/photos/venue-gathering-01.jpg" alt="Gathering" style="min-width:calc(20% - 3.2px); height:280px; object-fit:cover; flex-shrink:0; scroll-snap-align:start;" />
-      <img src="./media/photos/carousel-wine-display.jpg" alt="Wine Display" style="min-width:calc(20% - 3.2px); height:280px; object-fit:cover; flex-shrink:0; scroll-snap-align:start;" />
-      <img src="./media/photos/carousel-art-installation.jpg" alt="Art Installation" style="min-width:calc(20% - 3.2px); height:280px; object-fit:cover; flex-shrink:0; scroll-snap-align:start;" />
-      <img src="./media/photos/carousel-event-performance.jpg" alt="Event Performance" style="min-width:calc(20% - 3.2px); height:280px; object-fit:cover; flex-shrink:0; scroll-snap-align:start;" />
+    <div id="carousel" style="display:flex; gap:4px; padding:4px; cursor:grab; user-select:none; overflow-x:auto; scroll-behavior:smooth; scroll-snap-type:x mandatory; width:100%;">
+      <img src="./media/photos/gallery-02.jpg"       alt="Gallery"   style="width:400px; height:220px; object-fit:cover; flex-shrink:0; scroll-snap-align:start;" />
+      <img src="./media/photos/cave-01.jpg"          alt="Wine Cave" style="width:400px; height:220px; object-fit:cover; flex-shrink:0; scroll-snap-align:start;" />
+      <img src="./media/photos/music-01.jpg"         alt="Music"     style="width:400px; height:220px; object-fit:cover; object-position:center 75%; flex-shrink:0; scroll-snap-align:start;" />
+      <img src="./media/photos/kitchen-01.jpg"       alt="Kitchen"   style="width:400px; height:220px; object-fit:cover; object-position:center 25%; flex-shrink:0; scroll-snap-align:start;" />
+      <img src="./media/photos/gallery-yoga-01.jpg"  alt="Events"    style="width:400px; height:220px; object-fit:cover; flex-shrink:0; scroll-snap-align:start;" />
+      <img src="./media/photos/venue-gathering-01.jpg" alt="Gathering" style="width:400px; height:220px; object-fit:cover; flex-shrink:0; scroll-snap-align:start;" />
+      <img src="./media/photos/carousel-wine-display.jpg" alt="Wine Display" style="width:400px; height:220px; object-fit:cover; flex-shrink:0; scroll-snap-align:start;" />
+      <img src="./media/photos/carousel-art-installation.jpg" alt="Art Installation" style="width:400px; height:220px; object-fit:cover; flex-shrink:0; scroll-snap-align:start;" />
+      <img src="./media/photos/carousel-event-performance.jpg" alt="Event Performance" style="width:400px; height:220px; object-fit:cover; flex-shrink:0; scroll-snap-align:start;" />
     </div>
     <script>
       const carousel = document.getElementById('carousel');
@@ -999,25 +1026,21 @@
       let startX;
       let scrollLeft;
       let autoScrollInterval;
-      let hasInteracted = false;
       
-      // Auto-scroll function
       function startAutoScroll() {
         autoScrollInterval = setInterval(() => {
           carousel.scrollLeft += 2;
-          // Loop back to start when reaching end
           if (carousel.scrollLeft >= carousel.scrollWidth - carousel.clientWidth - 10) {
             carousel.scrollLeft = 0;
           }
-        }, 30); // Continuous smooth scroll
+        }, 30);
       }
       
       function stopAutoScroll() {
         clearInterval(autoScrollInterval);
       }
       
-      // Start auto-scroll on load
-      setTimeout(startAutoScroll, 500); // Start after 500ms
+      setTimeout(startAutoScroll, 500);
       
       carousel.addEventListener('mousedown', (e) => {
         stopAutoScroll();
@@ -1030,12 +1053,12 @@
       carousel.addEventListener('mouseleave', () => {
         isDown = false;
         carousel.style.cursor = 'grab';
+        setTimeout(startAutoScroll, 2000);
       });
       
       carousel.addEventListener('mouseup', () => {
         isDown = false;
         carousel.style.cursor = 'grab';
-        // Resume auto-scroll after drag
         setTimeout(startAutoScroll, 2000);
       });
       
@@ -1082,27 +1105,26 @@
 
     <!-- Web3 pillars -->
     <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:2px; margin-bottom:4rem; position:relative; z-index:2;">
-      <div style="background:rgba(255,255,255,0.04); padding:2.5rem 2rem;">
+      <div style="background:rgba(255,255,255,0.04); padding:2.5rem 2rem; display:flex; flex-direction:column;">
         <div style="font-size:2rem; margin-bottom:1rem;">🪙</div>
         <h4 style="font-family:var(--serif); font-size:1.3rem; font-weight:400; color:#fff; margin-bottom:0.6rem;">DAO Tokens</h4>
-        <p style="font-size:0.85rem; color:rgba(255,255,255,0.45); line-height:1.7; font-weight:300;">
+        <p style="font-size:0.85rem; color:rgba(255,255,255,0.45); line-height:1.7; font-weight:300; flex:1; min-height:60px; display:flex; align-items:center;">
           Token holders shape what happens at Sauvage. Governance is on-chain. Every member has a voice.
         </p>
         <a href="#contact" style="display:inline-block; margin-top:1.2rem; font-size:0.7rem; letter-spacing:0.16em; text-transform:uppercase; color:var(--gold); text-decoration:none; border-bottom:1px solid var(--gold); padding-bottom:2px;">Get tokens →</a>
       </div>
 
-      <div style="background:rgba(255,255,255,0.04); padding:2.5rem 2rem;">
-        <div style="font-size:2rem; margin-bottom:1rem;">🔄</div>
-        <h4 style="font-family:var(--serif); font-size:1.3rem; font-weight:400; color:#fff; margin-bottom:0.6rem;">Circles Currency</h4>
-        <p style="font-size:0.85rem; color:rgba(255,255,255,0.45); line-height:1.7; font-weight:300;">
+      <div style="background:rgba(255,255,255,0.04); padding:2.5rem 2rem; display:flex; flex-direction:column; align-items:center;">
+        <img src="./media/circles-logo.svg" alt="Circles" style="width:100%; max-width:220px; margin-bottom:1.5rem;" />
+        <p style="font-size:0.85rem; color:rgba(255,255,255,0.45); line-height:1.7; font-weight:300; text-align:center; flex:1; min-height:60px; display:flex; align-items:center; justify-content:center; padding-top:1.5rem;">
           Sauvage accepts Circles (CRC) · community money built on Gnosis. Spend your CRC at the café, events, and wine tastings.
         </p>
-        <a href="https://aboutcircles.com" target="_blank" rel="noopener" style="display:inline-block; margin-top:1.2rem; font-size:0.7rem; letter-spacing:0.16em; text-transform:uppercase; color:var(--gold); text-decoration:none; border-bottom:1px solid var(--gold); padding-bottom:2px;">Learn about Circles →</a>
+        <a href="https://aboutcircles.com" target="_blank" rel="noopener" style="display:inline-block; margin-top:1.2rem; font-size:0.7rem; letter-spacing:0.16em; text-transform:uppercase; color:var(--gold); text-decoration:none; border-bottom:1px solid var(--gold); padding-bottom:2px; white-space:nowrap;">Learn about Circles →</a>
       </div>
-      <div style="background:rgba(255,255,255,0.04); padding:2.5rem 2rem;">
+      <div style="background:rgba(255,255,255,0.04); padding:2.5rem 2rem; display:flex; flex-direction:column;">
         <div style="font-size:2rem; margin-bottom:1rem;">⛓</div>
         <h4 style="font-family:var(--serif); font-size:1.3rem; font-weight:400; color:#fff; margin-bottom:0.6rem;">Web3 Events</h4>
-        <p style="font-size:0.85rem; color:rgba(255,255,255,0.45); line-height:1.7; font-weight:300;">
+        <p style="font-size:0.85rem; color:rgba(255,255,255,0.45); line-height:1.7; font-weight:300; flex:1; min-height:60px; display:flex; align-items:center;">
           Regular workshops, builder sessions, and cultural events at the intersection of crypto, art, and community. IRL, Amsterdam.
         </p>
         <a href="#events" style="display:inline-block; margin-top:1.2rem; font-size:0.7rem; letter-spacing:0.16em; text-transform:uppercase; color:var(--gold); text-decoration:none; border-bottom:1px solid var(--gold); padding-bottom:2px;">See events →</a>
@@ -1159,14 +1181,14 @@
         </p>
         <div style="margin-top:1.5rem; padding:1.2rem 1.5rem; border-left:2px solid var(--gold); background:var(--cream);">
           <p style="font-size:0.8rem; color:var(--muted); line-height:1.7;">
-            <strong style="color:var(--ink);">Presented by</strong> Wisse Kodde<br>
+            <strong style="color:var(--ink);">Curated by</strong> <a href="mailto:wissekodde@gmail.com" style="color:var(--gold); text-decoration:none; border-bottom:1px solid var(--gold);">Wisse Kodde</a><br>
             <strong style="color:var(--ink);">Location</strong> Sauvage · Potgieterstraat 47H, Amsterdam<br>
             <strong style="color:var(--ink);">Prints</strong> Fotolab kiekie
           </p>
         </div>
         <div style="margin-top:2rem; display:flex; gap:1rem; flex-wrap:wrap;">
           <a href="#events" class="btn-primary">Join the Opening</a>
-          <a href="#contact" style="display:inline-block; padding:0.9rem 2.4rem; border:1px solid var(--ink); font-size:0.72rem; letter-spacing:0.18em; text-transform:uppercase; text-decoration:none; color:var(--ink); transition:all 0.3s;">Submit Your Work</a>
+          <a href="mailto:wissekodde@gmail.com" style="display:inline-block; padding:0.9rem 2.4rem; border:1px solid var(--ink); font-size:0.72rem; letter-spacing:0.18em; text-transform:uppercase; text-decoration:none; color:var(--ink); transition:all 0.3s;">Submit Your Work</a>
         </div>
       </div>
       <div class="exhibit-images" style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
@@ -1181,31 +1203,33 @@
 
   <!-- ── Contact ─────────────────────────────────── -->
   <section id="contact" style="background:var(--cream);">
-    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:3rem;">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:4rem; position:relative;">
       <!-- Left: Title -->
-      <div>
-        <p class="section-label">Find Us</p>
-        <h2 class="section-title">Come <em>visit</em></h2>
-        <a href="https://maps.app.goo.gl/kWFVVUJkQLWJamhMA" target="_blank" rel="noopener" style="display:inline-block; margin-top:1rem; font-size:0.7rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--gold); text-decoration:none; border-bottom:1px solid var(--gold); padding-bottom:2px;">Open in Maps →</a>
+      <div style="padding-right:2rem;">
+        <p class="section-label" style="margin-bottom:0.5rem;">Find Us</p>
+        <h2 class="section-title" style="margin-bottom:2rem;">Come <em>visit</em></h2>
+        <a href="https://maps.app.goo.gl/kWFVVUJkQLWJamhMA" target="_blank" rel="noopener" style="display:inline-block; font-size:0.7rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--gold); text-decoration:none; border-bottom:1px solid var(--gold); padding-bottom:2px;">Open in Maps →</a>
       </div>
 
-      <!-- Center: Address & Hours -->
-      <div>
-        <div style="margin-bottom:2rem;">
-          <p style="font-size:0.65rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); margin-bottom:0.4rem; font-weight:600;">Address</p>
-          <p class="section-body"><a href="https://maps.app.goo.gl/VdSa6n3AaE9SkuXd9" target="_blank" rel="noopener" style="color:inherit; text-decoration:none; border-bottom:1px solid var(--gold);">Potgieterstraat 47-H<br>Amsterdam, Netherlands</a></p>
+      <!-- Right: Address, Hours, Contact stacked in one column -->
+      <div style="position:relative; padding-left:2rem;">
+        <div style="margin-bottom:3rem;">
+          <p style="font-size:0.65rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); margin-bottom:0.8rem; font-weight:600;">Address</p>
+          <p class="section-body" style="margin:0;"><a href="https://maps.app.goo.gl/VdSa6n3AaE9SkuXd9" target="_blank" rel="noopener" style="color:inherit; text-decoration:none; border-bottom:1px solid var(--gold); line-height:1.8;">Potgieterstraat 47-H<br>Amsterdam, Netherlands</a></p>
+        </div>
+        <div style="margin-bottom:3rem;">
+          <p style="font-size:0.65rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); margin-bottom:0.8rem; font-weight:600;">Hours</p>
+          <p class="section-body" style="margin:0; line-height:1.8;">Ikinari Coffee · Wed–Sun 08:00–15:00<br>Sauvage Cafe · Wed–Sun 08:00–15:00</p>
         </div>
         <div>
-          <p style="font-size:0.65rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); margin-bottom:0.4rem; font-weight:600;">Hours</p>
-          <p class="section-body">☕ Ikinari Coffee · Wed–Sun 08:00–15:00<br>🌮 The Fento · Wed–Sun 08:00–15:00<br>🍷 Events & bar · Check calendar</p>
+          <p style="font-size:0.65rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); margin-bottom:0.8rem; font-weight:600;">Contact</p>
+          <p class="section-body" style="margin:0; line-height:1.8;"><a href="mailto:contact@selectionsauvage.nl" style="color:inherit; text-decoration:none; border-bottom:1px solid var(--gold);">contact@selectionsauvage.nl</a><br><a href="tel:+31634742988" style="color:inherit; text-decoration:none; border-bottom:1px solid var(--gold);">+31 634 742 988</a></p>
         </div>
       </div>
-
-      <!-- Right: Contact -->
-      <div>
-        <p style="font-size:0.65rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); margin-bottom:0.4rem; font-weight:600;">Contact</p>
-        <p class="section-body"><a href="mailto:contact@selectionsauvage.nl" style="color:inherit; text-decoration:none; border-bottom:1px solid var(--gold);">contact@selectionsauvage.nl</a><br><a href="tel:+31634742988" style="color:inherit; text-decoration:none; border-bottom:1px solid var(--gold);">+31 634 742 988</a></p>
-      </div>
+    </div>
+    
+    <!-- Fixed Juustlamp Image -->
+    <img src="./media/favicon.svg" alt="Juustlamp" id="juustlamp" style="position:fixed; top:50%; transform:translateY(-50%); right:0; width:500px; height:auto; opacity:0.6; pointer-events:none; z-index:0; display:none; filter:brightness(0.5);" />
     </div>
     
     <style>
@@ -1217,7 +1241,7 @@
 
   <!-- ── Footer ──────────────────────────────────── -->
   <footer>
-    <div class="footer-logo">Sauvage</div>
+    <div class="footer-logo"><img src="./media/sauvage-logo.svg" alt="Sauvage" style="height:40px; width:auto;" /></div>
     <div class="footer-links">
       <a href="#space">The Space</a>
       <a href="#events">Events</a>
@@ -1230,7 +1254,130 @@
     <p class="footer-copy">© 2020–2026 Sauvage Amsterdam · All rights reserved</p>
   </footer>
 
-  <!-- ── Sauvage Booking Chatbot ───────────────────── -->
+  <!-- ── Sauvage Booking Chatbot (Preview) ────────────────────── -->
+  <style>
+    #sv-bubble {
+      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+      width: 56px; height: 56px; border-radius: 50%;
+      background: #1a1a1a; color: #fff; border: none; cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; transition: transform 0.2s;
+    }
+    #sv-bubble:hover { transform: scale(1.08); }
+
+    #sv-panel {
+      position: fixed; bottom: 92px; right: 24px; z-index: 9998;
+      width: 360px; height: 640px; max-height: 88vh;
+      background: #fff; border-radius: 16px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+      display: flex; flex-direction: column;
+      overflow: hidden; transition: opacity 0.2s, transform 0.2s;
+      opacity: 0; transform: translateY(12px) scale(0.97); pointer-events: none;
+    }
+    #sv-panel.sv-open { opacity: 1; transform: translateY(0) scale(1); pointer-events: all; }
+
+    #sv-header {
+      background: #1a1a1a; color: #fff; padding: 14px 16px 10px;
+      flex-shrink: 0;
+    }
+    #sv-header h3 { margin: 0 0 2px; font-size: 15px; font-weight: 600; color: #fff; }
+    #sv-header p { margin: 0; font-size: 12px; opacity: 0.65; }
+
+    #sv-messages {
+      flex: 1; overflow-y: auto; padding: 14px 14px 8px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+
+    .sv-msg { max-width: 82%; line-height: 1.45; font-size: 14px; word-wrap: break-word; overflow-wrap: break-word; min-width: 0; }
+    .sv-msg-bot {
+      background: #f2f2f2; color: #1a1a1a;
+      padding: 10px 13px; border-radius: 14px 14px 14px 3px;
+      align-self: flex-start;
+    }
+    .sv-msg-user {
+      background: #1a1a1a; color: #fff;
+      padding: 10px 13px; border-radius: 14px 14px 3px 14px;
+      align-self: flex-end;
+    }
+
+    #sv-input-area {
+      padding: 10px 12px 12px; border-top: 1px solid #ececec; flex-shrink: 0;
+      display: flex; gap: 8px; align-items: flex-end;
+    }
+    #sv-input {
+      flex: 1; border: 1px solid #ddd; border-radius: 10px;
+      padding: 9px 12px; font-size: 14px; resize: none;
+      outline: none; line-height: 1.4; max-height: 100px;
+      font-family: inherit;
+    }
+    #sv-input:focus { border-color: #1a1a1a; }
+    #sv-send {
+      background: #1a1a1a; color: #fff; border: none; border-radius: 10px;
+      padding: 9px 14px; cursor: pointer; font-size: 14px; font-weight: 500;
+      white-space: nowrap;
+    }
+    #sv-send:hover { background: #333; }
+  </style>
+
+  <button id="sv-bubble">💬</button>
+  
+  <div id="sv-panel">
+    <div id="sv-header">
+      <h3>Book with Sauvage</h3>
+      <p>Hosting an event? Let's talk.</p>
+    </div>
+    <div id="sv-messages">
+      <div class="sv-msg sv-msg-bot">What type of event are you planning?</div>
+    </div>
+    <div id="sv-input-area">
+      <input id="sv-input" type="text" placeholder="Tell us..." autocomplete="off">
+      <button id="sv-send">Send</button>
+    </div>
+  </div>
+
+  <script>
+    const bubble = document.getElementById('sv-bubble');
+    const panel = document.getElementById('sv-panel');
+    const input = document.getElementById('sv-input');
+    const send = document.getElementById('sv-send');
+    const messages = document.getElementById('sv-messages');
+    
+    bubble.addEventListener('click', () => {
+      panel.classList.toggle('sv-open');
+      if (panel.classList.contains('sv-open')) input.focus();
+    });
+    
+    send.addEventListener('click', () => {
+      if (input.value.trim()) {
+        const msg = document.createElement('div');
+        msg.className = 'sv-msg sv-msg-user';
+        msg.textContent = input.value;
+        messages.appendChild(msg);
+        input.value = '';
+        
+        // Simulate bot response
+        setTimeout(() => {
+          const reply = document.createElement('div');
+          reply.className = 'sv-msg sv-msg-bot';
+          reply.textContent = 'Thanks for letting us know! We\'ll get back to you soon with a quote.';
+          messages.appendChild(reply);
+          messages.scrollTop = messages.scrollHeight;
+        }, 500);
+      }
+    });
+    
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') send.click();
+    });
+    
+    // Try to load the real widget if domain is live
+    window.SauvageChatbot = {
+      open: () => panel.classList.add('sv-open')
+    };
+  </script>
+
+  <!-- Live chatbot widget (loads when domain is active) -->
   <script src="https://booking.selectionsauvage.nl/widget.js" defer></script>
 
   <!-- ── Scripts ──────────────────────────────────── -->
@@ -1322,5 +1469,25 @@
     })();
   </script>
 
+  <script>
+    const juustlamp = document.getElementById('juustlamp');
+    const contactSection = document.getElementById('contact');
+    
+    window.addEventListener('scroll', () => {
+      if (!contactSection) return;
+      
+      const contactRect = contactSection.getBoundingClientRect();
+      
+      // Show lamp only when contact section is well-centered in viewport (cream area only)
+      if (contactRect.top < window.innerHeight * 0.5 && contactRect.bottom > window.innerHeight * 0.5) {
+        juustlamp.style.display = 'block';
+      } else {
+        juustlamp.style.display = 'none';
+      }
+    });
+    
+    // Check on load
+    window.dispatchEvent(new Event('scroll'));
+  </script>
 </body>
 </html>
