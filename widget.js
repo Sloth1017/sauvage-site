@@ -9,6 +9,19 @@
  */
 
 (function () {
+  // Load Flatpickr CSS for calendar widget
+  var flatpickrCss = document.createElement('link');
+  flatpickrCss.rel = 'stylesheet';
+  flatpickrCss.href = 'https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css';
+  document.head.appendChild(flatpickrCss);
+  
+  // Load Flatpickr JS for calendar widget
+  var flatpickrScript = document.createElement('script');
+  flatpickrScript.src = 'https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js';
+  flatpickrScript.onload = function() {
+    window.FlatpickrLoaded = true;
+  };
+  document.head.appendChild(flatpickrScript);
   const API = "https://sauvage.amsterdam";
   const STAGES = ["Event details", "Your info", "Space & add-ons", "Quote", "Payment"];
   let sessionId = null;
@@ -1689,11 +1702,43 @@
     }
   }
 
+  // Show calendar widget when bot asks for dates
+  function showCalendarPicker() {
+    if (typeof window.flatpickr === 'undefined') {
+      console.log('Flatpickr not loaded yet');
+      return;
+    }
+    
+    var input = document.getElementById('sv-input');
+    if (!input) return;
+    
+    // Initialize flatpickr on the input field
+    flatpickr(input, {
+      mode: 'range',
+      minDate: 'today',
+      maxDate: new Date(new Date().setDate(new Date().getDate() + 365)),
+      dateFormat: 'M d, Y',
+      monthSelectorType: 'dropdown',
+      defaultDate: new Date(),
+      onChange: function(selectedDates) {
+        if (selectedDates.length === 2) {
+          var startDate = selectedDates[0].toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          var endDate = selectedDates[1].toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          input.value = startDate + ' to ' + endDate;
+        } else if (selectedDates.length === 1) {
+          input.value = selectedDates[0].toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+        }
+      }
+    });
+    
+    input.focus();
+  }
+
   // Expose global open function for custom buttons
   function openPanel() {
     if (!open) togglePanel();
   }
-  window.SauvageChat = { open: openPanel };
+  window.SauvageChat = { open: openPanel, showCalendar: showCalendarPicker };
 
   // ── Init ──────────────────────────────────────────────────────────────────
   function init() {
