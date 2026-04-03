@@ -107,6 +107,7 @@ _EXTRACT_SYSTEM = (
     "event_type, dates, start_time, end_time, is_multi_day, client_name, email, phone, "
     "guest_count, customer_type, rooms. "
     "Use plain strings. For dates use e.g. 'Thu 9 Apr, Fri 10 Apr'. "
+    "For event_type, accept: Dinner, Birthday, Corporate, Pop-up, Art Gallery, Wine Tasting, Workshop, Wedding, or Other. "
     "Return ONLY the JSON object, no explanation."
 )
 
