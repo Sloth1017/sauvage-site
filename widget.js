@@ -772,10 +772,11 @@
     // Guard: never fire if this is a customer type or confirmation message
     if (t.includes("private booking") || t.includes("business booking") ||
         t.includes("got it") || t.includes("perfect") || t.includes("noted")) return false;
-    return (t.includes("name") && t.includes("email")) ||
-           (t.includes("name") && t.includes("phone")) ||
+    return (t.includes("name") && (t.includes("email") || t.includes("phone") || t.includes("reach"))) ||
+           (t.includes("what's your name")) ||
            t.includes("best email") ||
-           t.includes("reach you on");
+           t.includes("reach you on") ||
+           t.includes("how can we reach");
   }
 
   function showContactWidget() {
