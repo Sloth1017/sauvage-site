@@ -67,4 +67,4 @@ def fonts(filename):
     return send_from_directory(os.path.join(SITE_DIR, "fonts"), filename)
 
 if __name__ == "__main__":
-    app.run()
+    app.run(port=int(os.environ.get("PORT", 5001)))

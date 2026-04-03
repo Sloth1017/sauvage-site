@@ -17,6 +17,7 @@ import re
 import uuid
 import json
 from flask import Blueprint, request, jsonify
+from typing import Optional
 import anthropic
 
 # ── Blueprint ─────────────────────────────────────────────────────────────────
@@ -155,7 +156,7 @@ def _state_block(state: dict) -> str:
 
 # ── Airtable helpers ──────────────────────────────────────────────────────────
 
-def _ensure_airtable_record(session_id: str, state: dict) -> str | None:
+def _ensure_airtable_record(session_id: str, state: dict) -> Optional[str]:
     """Create an Airtable inquiry record the first time we have an event type."""
     if not _AIRTABLE_ENABLED:
         return None

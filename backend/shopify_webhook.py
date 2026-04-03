@@ -11,6 +11,7 @@ import hashlib
 import base64
 import json
 from flask import Flask, Blueprint, request, jsonify
+from typing import Optional
 
 try:
     from config import SHOPIFY_WEBHOOK_SECRET
@@ -43,7 +44,7 @@ def verify_shopify_signature(payload: bytes, hmac_header: str) -> bool:
     return hmac.compare_digest(computed, hmac_header)
 
 
-def extract_airtable_record_id(order: dict) -> str | None:
+def extract_airtable_record_id(order: dict) -> Optional[str]:
     for attr in order.get("note_attributes", []):
         if attr.get("name") == "airtable_record_id":
             return attr["value"]
