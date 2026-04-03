@@ -879,6 +879,39 @@
           font-size: 0.9rem !important;
         }
       }
+      
+      /* DAO section responsive */
+      .web3-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2px;
+        margin-bottom: 4rem;
+        position: relative;
+        z-index: 2;
+      }
+      @media (max-width: 768px) {
+        .web3-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 480px) {
+        .web3-grid {
+          gap: 1px;
+          margin-bottom: 2rem;
+        }
+        .web3-grid > div {
+          padding: 2rem 1.5rem !important;
+        }
+        .web3-grid h4 {
+          font-size: 1.1rem !important;
+        }
+        .web3-grid p {
+          font-size: 0.8rem !important;
+        }
+        .web3-grid a {
+          font-size: 0.65rem !important;
+        }
+      }
     </style>
     <div class="offers-grid">
       <!-- Article 1: Café -->
@@ -1065,7 +1098,7 @@
     </div>
 
     <!-- Web3 pillars -->
-    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:2px; margin-bottom:4rem; position:relative; z-index:2;">
+    <div class="web3-grid" style="display:grid; grid-template-columns:repeat(3,1fr); gap:2px; margin-bottom:4rem; position:relative; z-index:2;">
       <div style="background:rgba(255,255,255,0.04); padding:2.5rem 2rem; display:flex; flex-direction:column;">
         <div style="font-size:2rem; margin-bottom:1rem;">🪙</div>
         <h4 style="font-family:var(--serif); font-size:1.3rem; font-weight:400; color:#fff; margin-bottom:0.6rem;">DAO Tokens</h4>
