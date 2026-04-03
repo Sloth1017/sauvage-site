@@ -842,7 +842,45 @@
       </div>
       <a href="#contact" class="btn-primary">Get in Touch</a>
     </div>
-    <div class="offers-grid" style="position:relative;z-index:1; display:grid; grid-template-columns:repeat(3, 1fr); gap:2rem; padding:2rem;">
+    <style>
+      .offers-grid {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2rem;
+        padding: 2rem;
+      }
+      .offers-grid img {
+        height: 300px;
+      }
+      @media (max-width: 768px) {
+        .offers-grid {
+          grid-template-columns: 1fr;
+          gap: 1.5rem;
+          padding: 1.5rem;
+        }
+        .offers-grid img {
+          height: 250px;
+        }
+      }
+      @media (max-width: 480px) {
+        .offers-grid {
+          gap: 1rem;
+          padding: 1rem;
+        }
+        .offers-grid img {
+          height: 200px !important;
+        }
+        .offers-grid h3 {
+          font-size: 1rem !important;
+        }
+        .offers-grid p {
+          font-size: 0.9rem !important;
+        }
+      }
+    </style>
+    <div class="offers-grid">
       <!-- Article 1: Café -->
       <article style="display:flex; flex-direction:column; gap:1rem;">
         <a href="https://www.instagram.com/ikinaricoffee/" target="_blank" rel="noopener" style="display:block; overflow:hidden; border-radius:4px; cursor:pointer;">
