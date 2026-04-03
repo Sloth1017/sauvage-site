@@ -17,24 +17,29 @@ def health():
 
 @app.route("/widget.js")
 def widget():
-    # Try workspace version first (for live updates)
+    # Load widget.js and replace API endpoint dynamically
     widget_path = "/home/greg/.openclaw/workspace/sauvage/widget.js"
-    try:
-        if os.path.exists(widget_path):
-            with open(widget_path, 'r') as f:
-                content = f.read()
-            resp = make_response(content)
-            resp.headers["Content-Type"] = "application/javascript"
-        else:
-            # Fall back to local version
-            resp = make_response(send_from_directory(os.path.dirname(__file__), "widget.js",
-                                       mimetype="application/javascript"))
-    except Exception as e:
-        # If anything fails, serve from local directory
-        print(f"Warning: Could not load widget.js from workspace: {e}")
-        resp = make_response(send_from_directory(os.path.dirname(__file__), "widget.js",
-                                   mimetype="application/javascript"))
     
+    try:
+        # Try workspace version first (for live updates)
+        with open(widget_path, 'r') as f:
+            content = f.read()
+    except:
+        # Fall back to local version
+        try:
+            with open(os.path.join(os.path.dirname(__file__), "widget.js"), 'r') as f:
+                content = f.read()
+        except:
+            return "// Error loading widget.js", 500, {"Content-Type": "application/javascript"}
+    
+    # Ensure the API endpoint is correct
+    content = content.replace(
+        'const API = "https://booking.selectionsauvage.nl"',
+        'const API = "https://sauvage.amsterdam"'
+    )
+    
+    resp = make_response(content)
+    resp.headers["Content-Type"] = "application/javascript"
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     resp.headers["Pragma"] = "no-cache"
     resp.headers["Expires"] = "0"
