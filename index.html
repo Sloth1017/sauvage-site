@@ -891,15 +891,19 @@
       }
       @media (max-width: 768px) {
         .web3-grid {
-          grid-template-columns: 1fr;
-        }
-      }
-      @media (max-width: 480px) {
-        .web3-grid {
-          gap: 1px;
+          display: flex;
+          gap: 2px;
+          overflow-x: auto;
+          scroll-behavior: smooth;
+          scroll-snap-type: x mandatory;
           margin-bottom: 2rem;
+          padding-bottom: 1rem;
+          -webkit-overflow-scrolling: touch;
         }
         .web3-grid > div {
+          flex: 0 0 100%;
+          scroll-snap-align: start;
+          min-width: 100%;
           padding: 2rem 1.5rem !important;
         }
         .web3-grid h4 {
