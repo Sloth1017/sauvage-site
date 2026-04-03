@@ -882,9 +882,32 @@
         <p class="section-label">Events</p>
         <h2 class="section-title" style="color:var(--white);">What's<br><em style="color:var(--gold)">on</em></h2>
         <p class="section-body">From intimate tastings to full-venue takeovers · the Sauvage calendar is always moving. All events are open to the public unless marked private.</p>
-        <div style="margin-top:2rem; display:flex; justify-content:center;">
+        <div style="margin-top:2rem; display:flex; justify-content:center; position:relative;">
           <iframe src="https://luma.com/embed/calendar/cal-hcUHpXdDwYPQGdm/events" width="100%" height="450" frameborder="0" style="border: 1px solid #bfcbda88; border-radius: 4px; max-width:600px;" allowfullscreen="" aria-hidden="false" tabindex="0"></iframe>
+          <!-- Fallback for empty calendar state -->
+          <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:center; pointer-events:none; display:none; opacity:0.6;" class="calendar-empty-state">
+            <img src="./media/Juustlamp Setch.png" alt="Juust lamp" style="width:120px; height:auto; margin-bottom:1rem; filter:invert(1) brightness(0.9);" />
+            <p style="color:var(--muted); font-size:0.95rem; margin:0;">No upcoming events yet.<br>Check back soon!</p>
+          </div>
         </div>
+        <script>
+          // Check if Luma calendar is empty and show fallback
+          setTimeout(function() {
+            var iframe = document.querySelector('iframe[src*="luma.com"]');
+            if (iframe) {
+              try {
+                var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                var hasEvents = iframeDoc.querySelector('[data-test*="event"], .event, [class*="event"]');
+                var emptyState = document.querySelector('.calendar-empty-state');
+                if (!hasEvents && emptyState) {
+                  emptyState.style.display = 'block';
+                }
+              } catch(e) {
+                // Cross-origin iframe, can't access content
+              }
+            }
+          }, 2000);
+        </script>
       </div>
     </div>
   </section>
