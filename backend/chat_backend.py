@@ -70,7 +70,7 @@ except ImportError as e:
     print(f"[Calendar] Not available: {e}")
 
 # ── System prompt (reloaded on every request so edits go live without restart) ─
-_PROMPT_PATH = os.path.join(os.path.dirname(__file__), "sauvage-chatbot-prompt-v2_1.md")
+_PROMPT_PATH = os.path.join(os.path.dirname(__file__), "chatbot-prompt-v2.md")
 _PROMPT_CACHE: dict = {"mtime": 0, "text": "You are the booking assistant for Sauvage Event Space in Amsterdam."}
 
 def _load_system_prompt() -> str:

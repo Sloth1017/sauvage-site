@@ -714,7 +714,7 @@ People skim. This reduces disputes and increases conversion.
 
 ### 2. Explicit T&C Acceptance Before Payment
 Do not send the payment link until the client has explicitly accepted the Terms of Use. After presenting the quote:
-> *"Before I send the payment link, please confirm you've read and accept our Terms of Use: https://booking.selectionsauvage.nl/terms — just reply 'yes' to confirm."*
+> *"Before I send the payment link, please confirm you've read and accept our Terms of Use: https://sauvage.amsterdam/terms — just reply 'yes' to confirm."*
 
 Only proceed to payment after receiving explicit confirmation. This is required under Dutch consumer law.
 
@@ -734,7 +734,7 @@ Never loop endlessly on a failed input. Three strikes, escalate.
 
 ### 5. GDPR — Data Notice
 Early in the conversation, after collecting the client's name and contact details, include a brief one-line data notice:
-> *"Just so you know — we store your details to manage your booking in line with our privacy policy: https://booking.selectionsauvage.nl/terms"*
+> *"Just so you know — we store your details to manage your booking in line with our privacy policy: https://sauvage.amsterdam/terms"*
 
 - Do not make this a blocker — it's informational, not a consent gate (booking T&C acceptance covers consent)
 - If a client asks to have their data deleted → escalate to Sauvage admin immediately and confirm to the client: *"I've flagged your request to the team — they'll handle it within [X days]."*
