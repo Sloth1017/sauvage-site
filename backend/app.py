@@ -17,8 +17,15 @@ def health():
 
 @app.route("/widget.js")
 def widget():
-    resp = make_response(send_from_directory(os.path.dirname(__file__), "widget.js",
-                               mimetype="application/javascript"))
+    widget_path = "/home/greg/.openclaw/workspace/sauvage/widget.js"
+    if os.path.exists(widget_path):
+        with open(widget_path, 'r') as f:
+            content = f.read()
+        resp = make_response(content)
+        resp.headers["Content-Type"] = "application/javascript"
+    else:
+        resp = make_response(send_from_directory(os.path.dirname(__file__), "widget.js",
+                                   mimetype="application/javascript"))
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     resp.headers["Pragma"] = "no-cache"
     resp.headers["Expires"] = "0"
