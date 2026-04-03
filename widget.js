@@ -9,7 +9,7 @@
  */
 
 (function () {
-  const API = "https://booking.selectionsauvage.nl";
+  const API = "https://sauvage.amsterdam";
   const STAGES = ["Event details", "Your info", "Space & add-ons", "Quote", "Payment"];
   let sessionId = null;
   let currentStage = 0;
