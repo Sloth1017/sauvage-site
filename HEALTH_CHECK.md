@@ -170,6 +170,8 @@ curl -s -X POST https://sauvage.amsterdam/chat \
 - Bot asks for the next piece of info (doesn't re-ask what's been answered)
 - Bot mentions "calendar", "contact", or "form" when appropriate
 - No error messages in responses
+- Airtable API responds (requires AIRTABLE_API_KEY)
+- Shopify store is accessible (requires SHOPIFY_STORE_URL)
 
 ### ⚠️ Warning Signs
 - Server returns 500 or timeout

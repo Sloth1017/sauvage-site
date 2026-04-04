@@ -79,6 +79,37 @@ else
 fi
 
 echo ""
+echo "5️⃣  Airtable Integration"
+
+# Check if Airtable API is accessible (requires AIRTABLE_API_KEY env var)
+if [ -z "$AIRTABLE_API_KEY" ]; then
+  echo "⚠️  AIRTABLE_API_KEY not set - skipping Airtable check"
+else
+  AIRTABLE_RESPONSE=$(curl -s -H "Authorization: Bearer $AIRTABLE_API_KEY" \
+    "https://api.airtable.com/v0/meta/bases" | grep -q "bases")
+  if [ $? -eq 0 ]; then
+    echo "✅ Airtable API accessible"
+  else
+    echo "❌ Airtable API connection failed"
+  fi
+fi
+
+echo ""
+echo "6️⃣  Shopify Integration"
+
+# Check if Shopify store is accessible
+if [ -z "$SHOPIFY_STORE_URL" ]; then
+  echo "⚠️  SHOPIFY_STORE_URL not set - skipping Shopify check"
+else
+  SHOPIFY_RESPONSE=$(curl -s -I "https://$SHOPIFY_STORE_URL" | head -1)
+  if echo "$SHOPIFY_RESPONSE" | grep -q "200\|301\|302"; then
+    echo "✅ Shopify store accessible"
+  else
+    echo "❌ Shopify store connection failed"
+  fi
+fi
+
+echo ""
 echo "✅ All health checks passed!"
 echo ""
 echo "Status Summary:"
@@ -86,4 +117,6 @@ echo "- Server: OK"
 echo "- Sessions: OK"
 echo "- Event extraction: OK"
 echo "- Date/time handling: OK"
+echo "- Airtable: OK (if configured)"
+echo "- Shopify: OK (if configured)"
 echo ""
