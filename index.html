@@ -106,15 +106,21 @@
     "openingHoursSpecification": [
       {
         "@type": "OpeningHoursSpecification",
-        "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-        "opens": "10:00",
-        "closes": "23:00"
+        "dayOfWeek": ["Wednesday", "Thursday", "Friday"],
+        "opens": "08:00",
+        "closes": "22:00"
       },
       {
         "@type": "OpeningHoursSpecification",
         "dayOfWeek": ["Saturday", "Sunday"],
-        "opens": "10:00",
+        "opens": "08:00",
         "closes": "23:00"
+      },
+      {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Monday", "Tuesday"],
+        "opens": "CLOSED",
+        "closes": "CLOSED"
       }
     ],
     "aggregateRating": {
@@ -1400,7 +1406,7 @@
         <!-- FAQ Item 8 -->
         <div style="margin-bottom:2.5rem; border-bottom:1px solid var(--border); padding-bottom:2rem;">
           <h3 style="font-size:1.1rem; margin-bottom:0.8rem; cursor:pointer; color:var(--ink);">What are the opening hours?</h3>
-          <p style="color:var(--muted); line-height:1.8; margin-top:1rem;">Sauvage is open Monday-Sunday, 10:00 AM - 11:00 PM. We can arrange private events at any time within those hours. For special requests outside these hours, contact us directly.</p>
+          <p style="color:var(--muted); line-height:1.8; margin-top:1rem;"><strong>Café:</strong> Open Wednesday-Sunday, 8:00 AM - 3:00 PM. <strong>Private Events:</strong> Available for booking up to 10:00 PM on weekdays and up to 11:00 PM on weekends. For special requests outside these hours, contact us directly at contact@selectionsauvage.nl.</p>
         </div>
 
         <!-- FAQ Item 9 -->
@@ -1490,7 +1496,7 @@
         "name": "What are the opening hours?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Sauvage is open Monday-Sunday, 10:00 AM - 11:00 PM. We can arrange private events at any time within those hours."
+          "text": "Café: Open Wednesday-Sunday, 8:00 AM - 3:00 PM. Private Events: Available for booking up to 10:00 PM on weekdays and up to 11:00 PM on weekends."
         }
       },
       {
