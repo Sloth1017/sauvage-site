@@ -610,6 +610,17 @@
           clearInterval(_paymentPollTimer);
           _paymentPollTimer = null;
           console.log("[Sauvage] Payment confirmed — continuing flow");
+          
+          // Track conversion: booking payment completed
+          if (window.gtag) {
+            gtag('event', 'booking_payment_completed', {
+              'event_category': 'booking',
+              'event_label': 'deposit_paid',
+              'value': 1,
+              'currency': 'EUR'
+            });
+          }
+          
           // Advance progress bar to Payment step
           updateProgress(4);
           // Auto-send so the bot delivers the confirmation message + arrival question
@@ -1465,6 +1476,15 @@
       const r = await fetch(`${API}/chat/session`);
       const data = await r.json();
       sessionId = data.session_id;
+      
+      // Track booking session initiated
+      if (window.gtag) {
+        gtag('event', 'booking_session_started', {
+          'event_category': 'booking',
+          'event_label': 'session_created',
+          'session_id': sessionId
+        });
+      }
     } catch (e) {
       sessionId = "local-" + Date.now();
     }
@@ -1737,6 +1757,13 @@
 
   // Expose global open function for custom buttons
   function openPanel() {
+    // Track chatbot open in Google Analytics
+    if (window.gtag) {
+      gtag('event', 'chatbot_opened', {
+        'event_category': 'booking',
+        'event_label': 'chatbot_engagement'
+      });
+    }
     if (!open) togglePanel();
   }
   window.SauvageChat = { open: openPanel, showCalendar: showCalendarPicker };
