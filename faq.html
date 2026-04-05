@@ -290,7 +290,7 @@
 <body>
   <!-- ── Nav ──────────────────────────────────── -->
   <nav id="navbar">
-    <a href="/" class="nav-logo">Sauvage</a>
+    <a href="/" class="nav-logo"><img src="./media/sauvage-logo.svg" alt="Sauvage" style="height:40px; width:auto;" /></a>
     <ul class="nav-links">
       <li><a href="/#space">The Space</a></li>
       <li><a href="/#offers">Offerings</a></li>
@@ -301,7 +301,7 @@
       <li><a href="/faq">FAQ</a></li>
       <li><a href="/#contact">Contact</a></li>
     </ul>
-    <button class="nav-cta" onclick="if(window.SauvageChat){SauvageChat.open()}else{alert('Chat not loaded')}">Book a Space</button>
+    <button class="nav-cta" onclick="if(window.SauvageChat){SauvageChat.open()}else{document.getElementById('contact').scrollIntoView({behavior:'smooth'})}">Book a Space</button>
   </nav>
 
   <!-- ── Main Content ──────────────────────────────── -->
