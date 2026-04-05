@@ -1355,7 +1355,8 @@
 
 
   <!-- ── Contact ─────────────────────────────────── -->
-  <section id="contact" style="background:var(--cream);">
+  <section id="contact" style="background:var(--cream); position:relative;">
+    <img src="./media/Juustlamp Setch.png" alt="Juustlamp" style="position:absolute; right:0; top:50%; transform:translateY(-50%); width:500px; height:auto; opacity:0.6; pointer-events:none;" />
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:4rem; position:relative;">
       <!-- Left: Title -->
       <div style="padding-right:2rem;">
@@ -1382,7 +1383,6 @@
     </div>
     
     <!-- Fixed Juustlamp Image -->
-    <img src="./media/favicon.svg" alt="Juustlamp" id="juustlamp" style="position:fixed; top:50%; transform:translateY(-50%); right:0; width:500px; height:auto; opacity:0.6; pointer-events:none; z-index:0; display:none; filter:brightness(0.5);" />
     </div>
     
     <style>
@@ -1502,18 +1502,6 @@
   </script>
 
   <script>
-    const juustlamp = document.getElementById('juustlamp');
-    const contactSection = document.getElementById('contact');
-    
-    window.addEventListener('scroll', () => {
-      if (!contactSection) return;
-      
-      const contactRect = contactSection.getBoundingClientRect();
-      
-      // Show lamp only when contact section is well-centered in viewport (cream area only)
-      if (contactRect.top < window.innerHeight * 0.5 && contactRect.bottom > window.innerHeight * 0.5) {
-        juustlamp.style.display = 'block';
-      } else {
         juustlamp.style.display = 'none';
       }
     });
