@@ -267,7 +267,7 @@ def _sync_airtable(session_id: str, state: dict) -> None:
     meta = session_meta[session_id]
     last = meta.get("last_pushed", {})
 
-    # Map state keys → Airtable field names
+    # Map state keys → Airtable field names (only fields that are always set)
     field_map = {
         "client_name":   "Client Name",
         "email":         "Email",
