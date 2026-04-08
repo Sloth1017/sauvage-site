@@ -421,6 +421,12 @@ def chat():
     accumulated = session_states.get(session_id, {})
     state = {**accumulated, **new_state}   # new extraction takes precedence, old survives gaps
     session_states[session_id] = state
+    
+    # DEBUG: log extracted state
+    if new_state or state:
+        print(f"[EXTRACTION] New state: {new_state}")
+        print(f"[EXTRACTION] Accumulated: {accumulated}")
+        print(f"[EXTRACTION] Final state: {state}")
 
     # Push new state to Airtable (async-style: best-effort, non-blocking)
     try:
