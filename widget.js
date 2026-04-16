@@ -1588,7 +1588,10 @@
           setTimeout(startPaymentPolling, 1000);
         }
         var bl = botMsg.toLowerCase();
-        if (bl.includes("booking is confirmed") || bl.includes("deposit received") || bl.includes("payment received")) {
+        // Only stop polling on unambiguous payment-received signals,
+        // NOT on T&C confirmation or quote approval (those precede actual payment).
+        if (bl.includes("deposit received") || bl.includes("payment received") ||
+            (bl.includes("booking is confirmed") && bl.includes("deposit"))) {
           stopPaymentPolling();
         }
         // Widget routing — backend signal takes priority, text matching as fallback.

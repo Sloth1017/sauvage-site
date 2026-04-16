@@ -638,17 +638,19 @@ def _determine_widget(state: dict, bot_text: str) -> Optional[str]:
         if any(tr in t for tr in ctype_triggers) or ("private" in t and "business" in t):
             return "customer_type"
 
-    # Add-ons
-    if "add-on" in t or "addon" in t:
-        if "available" in t or "select" in t or "include" in t:
-            return "addons"
+    # Add-ons — match the exact trigger phrase from the prompt
+    if ("add-on" in t or "addon" in t) and ("available" in t or "select" in t or "include" in t):
+        return "addons"
+    # Also catch the phrase without hyphen
+    if "add ons" in t and ("available" in t or "select" in t or "include" in t):
+        return "addons"
 
     # Attribution / referral
     if "hear about" in t or "referred" in t or "find us" in t or "how did you" in t:
         return "attribution"
 
-    # T&C acceptance
-    if "terms" in t and ("agree" in t or "accept" in t or "confirm" in t):
+    # T&C acceptance — the prompt's exact trigger: "Terms of Use: https://..."
+    if "terms of use" in t or ("terms" in t and ("sauvage.amsterdam/terms" in t or "accept" in t or "confirm" in t)):
         return "tandc"
 
     # Arrival time
