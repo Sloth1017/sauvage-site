@@ -80,15 +80,26 @@ def create_inquiry(session_id: str, event_type: str) -> str:
     Returns the Airtable record ID — store this in your session state.
 
     Call this as soon as the client states their event type (stage 1).
+    If the event_type value is not a valid Airtable select option, we fall back
+    to creating the record without it and storing the value in Notes instead.
     """
     table = _get_table(INQUIRIES_TABLE)
-    record = table.create({
-        "Session ID":       session_id,
-        "Funnel Stage":     "1_event_type",
-        "Event Type":       event_type,
-        "Timestamp":        _now_iso(),
-        "Booking Status":   "inquiry",
-    })
+    base_fields = {
+        "Session ID":     session_id,
+        "Funnel Stage":   "1_event_type",
+        "Timestamp":      _now_iso(),
+        "Booking Status": "inquiry",
+    }
+    try:
+        record = table.create({**base_fields, "Event Type": event_type})
+    except Exception as e:
+        if "INVALID_MULTIPLE_CHOICE_OPTIONS" in str(e) or "INVALID_VALUE_FOR_COLUMN" in str(e):
+            # event_type not in the Airtable select options — create without it
+            # and store as a note so no data is lost
+            base_fields["Notes"] = f"Event type (unrecognised option): {event_type}"
+            record = table.create(base_fields)
+        else:
+            raise
     return record["id"]
 
 

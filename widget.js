@@ -29,6 +29,7 @@
   let open = false;
   let _pickerConfirm = null;     // set when calendar is open, cleared on confirm/remove
   let _paymentPollTimer = null;  // interval ID while polling for deposit confirmation
+  const _shownWidgets = new Set(); // tracks widget types shown this session — each fires once
 
   // ── Styles ────────────────────────────────────────────────────────────────
   const css = `
@@ -595,22 +596,29 @@
 
   // Poll /chat/payment-status until Airtable confirms the deposit is paid,
   // then auto-send a message so the bot continues the flow.
+  var _pollCount = 0;
+  var _POLL_MAX  = 50; // ~5 minutes at 6s intervals
+
   function startPaymentPolling() {
     if (_paymentPollTimer) return; // already polling
     if (!sessionId) return;
-
+    _pollCount = 0;
     console.log("[Sauvage] Payment polling started for session", sessionId);
 
     _paymentPollTimer = setInterval(async function() {
+      _pollCount++;
+      if (_pollCount > _POLL_MAX) {
+        stopPaymentPolling();
+        console.log("[Sauvage] Payment polling timed out after " + _POLL_MAX + " checks");
+        return;
+      }
       try {
         const r = await fetch(API + "/chat/payment-status/" + sessionId);
         if (!r.ok) return;
         const data = await r.json();
         if (data.status === "confirmed") {
-          clearInterval(_paymentPollTimer);
-          _paymentPollTimer = null;
+          stopPaymentPolling();
           console.log("[Sauvage] Payment confirmed — continuing flow");
-          
           // Track conversion: booking payment completed
           if (window.gtag) {
             gtag('event', 'booking_payment_completed', {
@@ -620,16 +628,14 @@
               'currency': 'EUR'
             });
           }
-          
           // Advance progress bar to Payment step
           updateProgress(4);
-          // Auto-send so the bot delivers the confirmation message + arrival question
-          sendMessage("Payment confirmed ✅ — deposit received.");
+          sendMessage("Payment confirmed \u2705 \u2014 deposit received.");
         }
       } catch (e) {
         // Network blip — keep polling silently
       }
-    }, 6000); // check every 6 seconds
+    }, 6000);
   }
 
   function stopPaymentPolling() {
@@ -791,6 +797,8 @@
   }
 
   function showContactWidget() {
+    if (_shownWidgets.has("contact")) return;
+    _shownWidgets.add("contact");
     var msgs = document.getElementById("sv-messages");
     var wrap = document.createElement("div");
     wrap.className = "sv-contact-wrap";
@@ -942,27 +950,30 @@
 
   function isAskingCustomerType(text) {
     const t = text.toLowerCase();
+    // Never fire on confirmation sentences
+    if (t.includes("confirmed") || t.includes("got it") || t.includes("great —") ||
+        t.includes("noted") || t.includes("perfect")) return false;
     return (t.includes("private") && t.includes("business")) ||
-           (t.includes("private") && t.includes("booking")) ||
            t.includes("booking as a") ||
            t.includes("individual or") ||
            t.includes("personal or business") ||
-           t.includes("private individual") ||
            t.includes("private booking or") ||
-           t.includes("business booking");
+           t.includes("is this a private");
   }
 
   function showCustomerTypeToggle() {
+    if (_shownWidgets.has("customer_type")) return;
+    _shownWidgets.add("customer_type");
     var msgs = document.getElementById("sv-messages");
     var wrap = document.createElement("div");
     wrap.className = "sv-ctype-wrap";
     wrap.innerHTML =
       '<div class="sv-ctype-row">' +
         '<button class="sv-ctype-btn" id="sv-ct-private">' +
-          '<span class="sv-ctype-icon">🙋</span>Private' +
+          '<span class="sv-ctype-icon">\uD83D\uDE4B</span>Private' +
         '</button>' +
         '<button class="sv-ctype-btn" id="sv-ct-business">' +
-          '<span class="sv-ctype-icon">🏢</span>Business' +
+          '<span class="sv-ctype-icon">\uD83C\uDFE2</span>Business' +
         '</button>' +
       '</div>';
     msgs.appendChild(wrap);
@@ -1122,41 +1133,43 @@
   }
 
   function showTandCWidget() {
+    if (_shownWidgets.has("tandc")) return;
+    _shownWidgets.add("tandc");
     var msgs = document.getElementById("sv-messages");
     var wrap = document.createElement("div");
     wrap.className = "sv-tandc-wrap";
     var accepted = false;
 
-    function render() {
-      wrap.innerHTML =
-        '<label class="sv-tandc-label">' +
-          '<div class="sv-tandc-box' + (accepted ? " checked" : "") + '" id="sv-tc-box">' +
-            (accepted ? "✓" : "") +
-          '</div>' +
-          '<span>I have read and accept the <a class="sv-tandc-link" href="https://booking.selectionsauvage.nl/terms" target="_blank">Terms of Use</a></span>' +
-        '</label>' +
-        '<button class="sv-tandc-btn" id="sv-tc-ok"' + (accepted ? "" : " disabled") + '>Confirm &amp; continue</button>';
+    // Render once — no re-render, just update classes/state directly
+    wrap.innerHTML =
+      '<div class="sv-tandc-label" id="sv-tc-row">' +
+        '<div class="sv-tandc-box" id="sv-tc-box"></div>' +
+        '<span>I have read and accept the <a class="sv-tandc-link" href="https://booking.selectionsauvage.nl/terms" target="_blank">Terms of Use</a></span>' +
+      '</div>' +
+      '<button class="sv-tandc-btn" id="sv-tc-ok" disabled>Confirm &amp; continue</button>';
 
-      wrap.querySelector("#sv-tc-box").onclick = function() {
-        accepted = !accepted;
-        render();
-      };
-      wrap.querySelector(".sv-tandc-label").onclick = function(e) {
-        if (e.target.tagName === "A") return; // let the link open
-        accepted = !accepted;
-        render();
-      };
-      wrap.querySelector("#sv-tc-ok").onclick = function() {
-        if (!accepted) return;
-        _pickerConfirm = null;
-        wrap.remove();
-        sendMessage("✅ I have read and accepted the Terms of Use.");
-      };
-    }
-
-    render();
     msgs.appendChild(wrap);
-    _pickerConfirm = function() { if (accepted) wrap.querySelector("#sv-tc-ok").click(); };
+
+    var box = wrap.querySelector("#sv-tc-box");
+    var btn = wrap.querySelector("#sv-tc-ok");
+
+    // Single click handler on the row — box click bubbles up here naturally
+    wrap.querySelector("#sv-tc-row").addEventListener("click", function(e) {
+      if (e.target.tagName === "A") return; // let the Terms link open in new tab
+      accepted = !accepted;
+      box.classList.toggle("checked", accepted);
+      box.textContent = accepted ? "\u2713" : "";
+      btn.disabled = !accepted;
+    });
+
+    btn.addEventListener("click", function() {
+      if (!accepted) return;
+      _pickerConfirm = null;
+      wrap.remove();
+      sendMessage("\u2705 I have read and accepted the Terms of Use.");
+    });
+
+    _pickerConfirm = function() { if (accepted) btn.click(); };
     scrollToContext(msgs, wrap);
   }
 
@@ -1205,14 +1218,11 @@
 
   function isAskingDateTime(text) {
     const t = text.toLowerCase();
-    // Never trigger for arrival/setup time questions — those are answered by typing
+    // Only show the calendar when the bot explicitly uses the trigger phrase.
+    // The system prompt instructs the bot to say "select your dates" when asking for dates.
+    // This prevents the calendar firing on time-only follow-ups or confirmations.
     if (t.includes("arrive") || t.includes("arrival") || t.includes("setup")) return false;
-    return (
-      (t.includes("date") && (t.includes("time") || t.includes("start") || t.includes("finish") || t.includes("end"))) ||
-      t.includes("what date") || t.includes("which date") ||
-      (t.includes("when") && t.includes("event")) ||
-      t.includes("what time")
-    );
+    return t.includes("select your dates") || t.includes("select a date");
   }
 
   function showDateTimePicker() {
@@ -1472,6 +1482,7 @@
 
   // ── API calls ─────────────────────────────────────────────────────────────
   async function initSession() {
+    _shownWidgets.clear(); // fresh session = fresh widget slate
     try {
       const r = await fetch(`${API}/chat/session`);
       const data = await r.json();
@@ -1498,12 +1509,35 @@
     if (!text && _pickerConfirm) { _pickerConfirm(); return; }
     if (!text) return;
 
+    // Secret admin code — simulate payment for testing
+    if (text.trim() === "sauvage-test-paid") {
+      addMessage("Simulating payment confirmation...", "bot");
+      fetch(API + "/chat/test-confirm/" + sessionId, { method: "POST" })
+        .then(function(r){ return r.json(); })
+        .then(function(){ sendMessage("Payment confirmed - deposit received."); })
+        .catch(function(e){ addMessage("Test error: " + e, "bot"); });
+      return;
+    }
+
+    // Intercept "paid" keywords — start polling locally, do not send to API
+    var _pw = ["paid", "betaald", "payment done", "i paid", "just paid", "payment complete"];
+    if (_pw.some(function(w){ return text.toLowerCase().trim() === w; })) {
+      addMessage(text, "user");
+      addMessage("Thanks! Checking your payment...", "bot");
+      setTimeout(startPaymentPolling, 500);
+      return;
+    }
+
     // Instant local handoff — triggered by button or by user expressing intent
-    if (text === "🙋 Talk to someone" || wantsHuman(text)) {
+    if (text === "\uD83D\uDE4B Talk to someone" || wantsHuman(text)) {
       addMessage(text, "user");
       addMessage("Of course! Greg from the Sauvage team can help you directly.\n\n👉 WhatsApp him here: https://wa.me/31634742988\n\nJust mention what you're looking for and he'll get back to you quickly 👋", "bot");
       return;
     }
+
+    // In-flight guard — ignore if a request is already in progress
+    if (sendMessage._inflight) return;
+    sendMessage._inflight = true;
 
     input.value = "";
     input.style.height = "auto";
@@ -1512,18 +1546,35 @@
     addMessage(text, "user");
     showTyping();
 
+    // Dismiss any open interactive widgets before the API round-trip
+    var _widgetSelectors = [
+      ".sv-dt-picker", ".sv-ctype-wrap", ".sv-contact-wrap",
+      ".sv-addons-wrap", ".sv-attr-wrap", ".sv-tandc-wrap",
+      ".sv-arrival-wrap", ".sv-radio-wrap"
+    ];
+    _widgetSelectors.forEach(function(sel) {
+      document.querySelectorAll(sel).forEach(function(el) { el.remove(); });
+    });
+    _pickerConfirm = null;
+
+    // 45-second timeout — prevents hanging indefinitely if server is slow
+    var _controller = new AbortController();
+    var _timeout = setTimeout(function() { _controller.abort(); }, 45000);
+
     try {
       const r = await fetch(`${API}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ session_id: sessionId, message: text }),
+        signal: _controller.signal,
       });
+      clearTimeout(_timeout);
       const data = await r.json();
       hideTyping();
 
       if (data.error) {
-        addMessage("Sorry, something went wrong. Please try again.", "bot");
-        showQuickReplies(["🙋 Talk to someone"]);
+        addMessage("Our booking assistant is briefly unavailable. You can reach us directly on WhatsApp in the meantime — Greg will get back to you quickly.", "bot");
+        showQuickReplies(["\uD83D\uDE4B Talk to someone"]);
       } else {
         const botMsg = data.response;
         sessionId = data.session_id;
@@ -1533,39 +1584,53 @@
         if (isQuoteMessage(botMsg)) {
           setTimeout(function() { addPdfExportButton(botDiv.innerHTML); }, 200);
         }
-        // Start polling for payment confirmation once the payment link has been sent
         if (hasPaymentLink(botMsg)) {
           setTimeout(startPaymentPolling, 1000);
         }
-        // Stop polling once the bot has sent the booking confirmation (deposit received)
-        if (botMsg.toLowerCase().includes("booking is confirmed") ||
-            botMsg.toLowerCase().includes("deposit received") ||
-            botMsg.toLowerCase().includes("payment received")) {
+        var bl = botMsg.toLowerCase();
+        if (bl.includes("booking is confirmed") || bl.includes("deposit received") || bl.includes("payment received")) {
           stopPaymentPolling();
         }
-        if (isAskingDateTime(botMsg)) {
-          setTimeout(showDateTimePicker, 300);
-        } else if (isAskingCustomerType(botMsg)) {
-          setTimeout(showCustomerTypeToggle, 300);
-        } else if (isAskingContact(botMsg)) {
-          setTimeout(showContactWidget, 300);
-        } else if (isAskingAddons(botMsg)) {
-          setTimeout(showAddonsWidget, 300);
-        } else if (isAskingAttribution(botMsg)) {
-          setTimeout(showAttributionWidget, 300);
-        } else if (isAskingTandC(botMsg)) {
-          setTimeout(showTandCWidget, 300);
-        } else if (isAskingArrivalTime(botMsg)) {
-          setTimeout(showArrivalTimePicker, 300);
+        // Widget routing — backend signal takes priority, text matching as fallback.
+        // _shownWidgets ensures each widget type appears at most once per session.
+        var _widgetMap = {
+          "datetime":      showDateTimePicker,
+          "contact":       showContactWidget,
+          "customer_type": showCustomerTypeToggle,
+          "addons":        showAddonsWidget,
+          "attribution":   showAttributionWidget,
+          "tandc":         showTandCWidget,
+          "arrival_time":  showArrivalTimePicker,
+        };
+        var _nextWidget = data.widget || null;
+        if (!_nextWidget) {
+          // Fallback text matching — only for widget types that can appear more than once
+          // (datetime and addons can repeat; others are guarded by _shownWidgets anyway)
+          if      (isAskingDateTime(botMsg))     _nextWidget = "datetime";
+          else if (isAskingAddons(botMsg))       _nextWidget = "addons";
+          else if (!_shownWidgets.has("contact")      && isAskingContact(botMsg))      _nextWidget = "contact";
+          else if (!_shownWidgets.has("customer_type") && isAskingCustomerType(botMsg)) _nextWidget = "customer_type";
+          else if (!_shownWidgets.has("attribution")  && isAskingAttribution(botMsg))  _nextWidget = "attribution";
+          else if (!_shownWidgets.has("tandc")         && isAskingTandC(botMsg))        _nextWidget = "tandc";
+          else if (!_shownWidgets.has("arrival_time")  && isAskingArrivalTime(botMsg))  _nextWidget = "arrival_time";
+        }
+        if (_nextWidget && _widgetMap[_nextWidget]) {
+          setTimeout(_widgetMap[_nextWidget], 300);
         }
       }
     } catch (e) {
+      clearTimeout(_timeout);
       hideTyping();
-      addMessage("Connection error — please check your internet and try again.", "bot");
+      if (e.name === "AbortError") {
+        addMessage("The request timed out — please try again.", "bot");
+      } else {
+        addMessage("Connection error — please check your internet and try again.", "bot");
+      }
+    } finally {
+      sendMessage._inflight = false;
+      btn.disabled = false;
+      input.focus();
     }
-
-    btn.disabled = false;
-    input.focus();
   }
 
   // ── Events ────────────────────────────────────────────────────────────────
@@ -1581,6 +1646,7 @@
       }
     });
     input.addEventListener("input", function () {
+      if (this.value.length > 1000) this.value = this.value.slice(0, 1000);
       this.style.height = "auto";
       this.style.height = Math.min(this.scrollHeight, 100) + "px";
     });
