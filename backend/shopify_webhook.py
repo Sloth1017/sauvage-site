@@ -41,7 +41,11 @@ from airtable_client import confirm_booking, update_inquiry
 # ── Optional Google Calendar write ───────────────────────────────────────────
 _GCAL_WRITE = False
 try:
-    from google_calendar_write import create_booking as _gcal_create, cancel_booking as _gcal_cancel
+    from google_calendar_write import (
+        create_booking as _gcal_create,
+        create_booking_series as _gcal_series,
+        cancel_booking as _gcal_cancel,
+    )
     _GCAL_WRITE = True
     print("[CalendarWrite] Google Calendar write integration loaded ✓")
 except Exception as e:
@@ -230,33 +234,57 @@ def handle_webhook():
                 session_id = _extract_session_id(order)
                 st = _get_session_state(session_id) if session_id else {}
 
-                start = _build_dt(st.get("dates"), st.get("start_time", ""))
-                end   = _build_dt(st.get("dates"), st.get("end_time",   ""))
+                dates_val    = st.get("dates") or details.get("start_dt", "")
+                start_time   = st.get("start_time", "")
+                end_time     = st.get("end_time",   "")
+                arrival_time = st.get("arrival_time", "")
 
-                if start and end:
-                    rooms = st.get("rooms") or details.get("rooms", [])
-                    if isinstance(rooms, str):
-                        rooms = [rooms]
+                rooms = st.get("rooms") or details.get("rooms", [])
+                if isinstance(rooms, str):
+                    rooms = [rooms]
 
-                    cal_event = _gcal_create(
-                        client_name  = st.get("client_name")  or details["client_name"],
-                        event_type   = st.get("event_type")   or details["event_type"],
-                        rooms        = rooms,
-                        start_dt     = start,
-                        end_dt       = end,
-                        guest_count  = st.get("guest_count")  or details["guest_count"],
-                        email        = st.get("email")        or details["email"],
-                        phone        = st.get("phone")        or details["phone"],
-                        airtable_id  = record_id,
+                common_kwargs = dict(
+                    client_name  = st.get("client_name")  or details["client_name"],
+                    event_type   = st.get("event_type")   or details["event_type"],
+                    rooms        = rooms,
+                    guest_count  = st.get("guest_count")  or details["guest_count"],
+                    email        = st.get("email")        or details["email"],
+                    phone        = st.get("phone")        or details["phone"],
+                    airtable_id  = record_id,
+                    arrival_time = arrival_time,
+                )
+
+                # Multi-day: create one event per date
+                if isinstance(dates_val, list) and len(dates_val) >= 2 and start_time and end_time:
+                    events = _gcal_series(
+                        dates          = dates_val,
+                        start_time_str = start_time,
+                        end_time_str   = end_time,
+                        **common_kwargs,
                     )
-                    cal_link = cal_event.get("htmlLink", "")
-                    if cal_link:
-                        update_inquiry(record_id, {"Calendar Link": cal_link})
-                    print(f"[Webhook] Calendar event created: {cal_link}")
+                    cal_link = events[0].get("htmlLink", "") if events else ""
+                    print(f"[Webhook] Calendar series created: {len(events)} events, first: {cal_link}")
+
+                # Single day
+                elif start_time and end_time:
+                    start = _build_dt(dates_val, start_time)
+                    end   = _build_dt(dates_val, end_time)
+                    if start and end:
+                        ev = _gcal_create(start_dt=start, end_dt=end, **common_kwargs)
+                        cal_link = ev.get("htmlLink", "")
+                        print(f"[Webhook] Calendar event created: {cal_link}")
+                    else:
+                        cal_link = ""
+                        print(f"[Webhook] Skipped calendar — could not parse datetime "
+                              f"(dates={dates_val}, start={start_time}, end={end_time})")
                 else:
-                    print(f"[Webhook] Skipped calendar — missing start/end datetime "
-                          f"(session={session_id}, dates={st.get('dates')}, "
-                          f"start={st.get('start_time')}, end={st.get('end_time')})")
+                    cal_link = ""
+                    print(f"[Webhook] Skipped calendar — missing start/end time "
+                          f"(session={session_id})")
+
+                if cal_link:
+                    update_inquiry(record_id, {"Calendar Link": cal_link})
+
             except Exception as e:
                 print(f"[Webhook] Calendar write error: {e}")
                 # Non-fatal — booking is still confirmed in Airtable

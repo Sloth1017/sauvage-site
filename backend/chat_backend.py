@@ -1303,35 +1303,55 @@ def test_confirm(session_id):
     else:
         _session_create(session_id, [], meta=meta)
 
-    # Create Google Calendar event for the test booking
+    # Create Google Calendar event(s) for the test booking
     try:
         import importlib
         _wh = importlib.import_module("shopify_webhook")
         if _wh._GCAL_WRITE:
-            start = _wh._build_dt(state.get("dates"), state.get("start_time", ""))
-            end   = _wh._build_dt(state.get("dates"), state.get("end_time",   ""))
-            if start and end:
-                rooms = state.get("rooms") or []
-                if isinstance(rooms, str):
-                    rooms = [rooms]
-                cal_event = _wh._gcal_create(
-                    client_name = state.get("client_name", "Test"),
-                    event_type  = state.get("event_type", "Event"),
-                    rooms       = rooms,
-                    start_dt    = start,
-                    end_dt      = end,
-                    guest_count = state.get("guest_count", 0),
-                    email       = state.get("email", ""),
-                    phone       = state.get("phone", ""),
-                    airtable_id = record_id or "test",
+            from google_calendar_write import create_booking_series as _gcal_series
+            dates_val    = state.get("dates")
+            start_time   = state.get("start_time", "")
+            end_time     = state.get("end_time",   "")
+            arrival_time = state.get("arrival_time", "")
+
+            rooms = state.get("rooms") or []
+            if isinstance(rooms, str):
+                rooms = [rooms]
+
+            common_kwargs = dict(
+                client_name  = state.get("client_name", "Test"),
+                event_type   = state.get("event_type", "Event"),
+                rooms        = rooms,
+                guest_count  = state.get("guest_count", 0),
+                email        = state.get("email", ""),
+                phone        = state.get("phone", ""),
+                airtable_id  = record_id or "test",
+                arrival_time = arrival_time,
+            )
+
+            cal_link = ""
+            if isinstance(dates_val, list) and len(dates_val) >= 2 and start_time and end_time:
+                events = _gcal_series(
+                    dates=dates_val, start_time_str=start_time, end_time_str=end_time,
+                    **common_kwargs,
                 )
-                cal_link = cal_event.get("htmlLink", "")
-                print(f"[test-confirm] Calendar event created: {cal_link}")
-                if cal_link and record_id and _AIRTABLE_ENABLED:
-                    from airtable_client import update_inquiry as _upd
-                    _upd(record_id, {"Calendar Link": cal_link})
+                cal_link = events[0].get("htmlLink", "") if events else ""
+                print(f"[test-confirm] Calendar series created: {len(events)} events")
+            elif start_time and end_time:
+                start = _wh._build_dt(dates_val, start_time)
+                end   = _wh._build_dt(dates_val, end_time)
+                if start and end:
+                    ev = _wh._gcal_create(start_dt=start, end_dt=end, **common_kwargs)
+                    cal_link = ev.get("htmlLink", "")
+                    print(f"[test-confirm] Calendar event created: {cal_link}")
+                else:
+                    print(f"[test-confirm] Skipped calendar — could not parse datetime")
             else:
-                print(f"[test-confirm] Skipped calendar — missing dates/times in state")
+                print(f"[test-confirm] Skipped calendar — missing start/end time")
+
+            if cal_link and record_id and _AIRTABLE_ENABLED:
+                from airtable_client import update_inquiry as _upd
+                _upd(record_id, {"Calendar Link": cal_link})
     except Exception as e:
         print(f"[test-confirm] Calendar creation failed: {e}")
 

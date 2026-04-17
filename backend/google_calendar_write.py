@@ -12,11 +12,13 @@ import os
 import time
 import urllib.request
 import urllib.parse
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import datetime, date, timedelta, timezone
+from typing import Optional, Union
 
 # ── Config ────────────────────────────────────────────────────────────────────
-CALENDAR_ID = "sauvagespace.reservations@gmail.com"
+CALENDAR_ID      = "sauvagespace.reservations@gmail.com"
+AIRTABLE_BASE_ID = "app4rCwUqnJ5A28YH"
+AIRTABLE_TABLE_ID = "tbledNkWpyzbT8J27"  # Inquiries
 
 # Credentials — loaded from env or file
 _CREDS_PATH = os.path.join(os.path.dirname(__file__), ".secrets", "google-calendar-credentials.json")
@@ -99,6 +101,27 @@ def _api(method: str, path: str, body: Optional[dict] = None) -> dict:
         raise RuntimeError(f"Calendar API {method} {path} failed ({e.code}): {error_body}")
 
 
+# ── Room normalisation ────────────────────────────────────────────────────────
+
+_ROOM_ALIASES: dict[str, str] = {
+    # canonical keys used internally
+    "gallery":           "gallery",
+    "entrance":          "entrance",
+    "kitchen":           "kitchen",
+    "cave":              "cave",
+    # display names from session state / Airtable
+    "upstairs (gallery)": "gallery",
+    "gallery (upstairs)": "gallery",
+    "upstairs":           "gallery",
+    "upstairs gallery":   "gallery",
+    "gallery upstairs":   "gallery",
+}
+
+def _norm_room(r: str) -> str:
+    """Map any room string variant to a canonical key, or return '' if unknown."""
+    return _ROOM_ALIASES.get(r.strip().lower(), "")
+
+
 # ── Room title formatting ─────────────────────────────────────────────────────
 
 def _build_title(rooms: list[str], client_name: str, event_type: str) -> str:
@@ -114,9 +137,12 @@ def _build_title(rooms: list[str], client_name: str, event_type: str) -> str:
         "kitchen":  "KITCHEN",
         "cave":     "CAVE",
     }
-    room_parts = [room_labels.get(r, r.upper()) for r in rooms if r in room_labels]
+    keys = [_norm_room(r) for r in rooms]
+    keys = [k for k in keys if k]  # drop unrecognised
 
-    if set(rooms) >= {"gallery", "entrance", "kitchen", "cave"}:
+    room_parts = [room_labels[k] for k in keys if k in room_labels]
+
+    if set(keys) >= {"gallery", "entrance", "kitchen", "cave"}:
         prefix = "FULL SPACE"
     elif len(room_parts) > 1:
         prefix = "+".join(room_parts)
@@ -129,32 +155,45 @@ def _build_title(rooms: list[str], client_name: str, event_type: str) -> str:
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def create_booking(
-    client_name:  str,
-    event_type:   str,
-    rooms:        list[str],
-    start_dt:     datetime,
-    end_dt:       datetime,
-    guest_count:  int = 0,
-    email:        str = "",
-    phone:        str = "",
-    notes:        str = "",
-    airtable_id:  str = "",
+    client_name:   str,
+    event_type:    str,
+    rooms:         list[str],
+    start_dt:      datetime,
+    end_dt:        datetime,
+    guest_count:   int = 0,
+    email:         str = "",
+    phone:         str = "",
+    notes:         str = "",
+    airtable_id:   str = "",
+    arrival_time:  str = "",   # e.g. "14:30" — setup/arrival before event
 ) -> dict:
     """
     Create a Google Calendar event for a confirmed booking.
     Returns the created event dict (includes 'id' and 'htmlLink').
     """
-    title       = _build_title(rooms, client_name, event_type)
+    title = _build_title(rooms, client_name, event_type)
+
+    # Human-readable room names (preserve original strings)
+    rooms_display = ", ".join(r for r in rooms) if rooms else "—"
+
     description = (
         f"Client: {client_name}\n"
+        f"Email: {email}\n"
+        f"Phone: {phone}\n"
         f"Event: {event_type}\n"
-        f"Rooms: {', '.join(r.capitalize() for r in rooms)}\n"
+        f"Rooms: {rooms_display}\n"
         f"Guests: {guest_count}\n"
     )
-    if email:   description += f"Email: {email}\n"
-    if phone:   description += f"Phone: {phone}\n"
-    if notes:   description += f"Notes: {notes}\n"
-    if airtable_id: description += f"Airtable ID: {airtable_id}\n"
+    if arrival_time:
+        description += f"Arrival / setup time: {arrival_time}\n"
+    if notes:
+        description += f"Notes: {notes}\n"
+    if airtable_id:
+        at_url = (
+            f"https://airtable.com/{AIRTABLE_BASE_ID}"
+            f"/{AIRTABLE_TABLE_ID}/{airtable_id}"
+        )
+        description += f"\nAirtable: {at_url}\n"
     description += "\n📅 Booked via Sauvage Booking Assistant"
 
     event = {
@@ -214,6 +253,76 @@ def get_event(event_id: str) -> dict:
     return _api("GET", f"/calendars/{CALENDAR_ID}/events/{event_id}")
 
 
+def create_booking_series(
+    dates:         Union[list[str], str],
+    start_time_str: str,
+    end_time_str:   str,
+    client_name:   str,
+    event_type:    str,
+    rooms:         list[str],
+    guest_count:   int = 0,
+    email:         str = "",
+    phone:         str = "",
+    notes:         str = "",
+    airtable_id:   str = "",
+    arrival_time:  str = "",
+) -> list[dict]:
+    """
+    Create one calendar event per day for a multi-day booking.
+
+    `dates` can be:
+      - a list of ISO date strings  ["2026-05-15", "2026-05-16", ...]
+      - a two-item list [start, end] which is expanded into every date in range
+      - a single date string (falls back to create_booking)
+
+    Returns a list of created event dicts (each has 'id' and 'htmlLink').
+    """
+    # Normalise to a list of date strings
+    if isinstance(dates, str):
+        date_list = [dates.strip()]
+    else:
+        date_list = [d.strip() for d in dates if d]
+
+    # If exactly two dates that differ, treat as [start, end] range and expand
+    if len(date_list) == 2 and date_list[0] != date_list[1]:
+        try:
+            d_start = datetime.strptime(date_list[0], "%Y-%m-%d").date()
+            d_end   = datetime.strptime(date_list[1], "%Y-%m-%d").date()
+            if d_end > d_start:
+                date_list = [
+                    (d_start + timedelta(days=i)).isoformat()
+                    for i in range((d_end - d_start).days + 1)
+                ]
+        except ValueError:
+            pass  # leave as-is if parse fails
+
+    events = []
+    for ds in date_list:
+        try:
+            start_dt = datetime.strptime(f"{ds} {start_time_str}", "%Y-%m-%d %H:%M")
+            end_dt   = datetime.strptime(f"{ds} {end_time_str}",   "%Y-%m-%d %H:%M")
+        except ValueError as e:
+            print(f"[Calendar] Skipping date {ds}: {e}")
+            continue
+
+        ev = create_booking(
+            client_name  = client_name,
+            event_type   = event_type,
+            rooms        = rooms,
+            start_dt     = start_dt,
+            end_dt       = end_dt,
+            guest_count  = guest_count,
+            email        = email,
+            phone        = phone,
+            notes        = notes,
+            airtable_id  = airtable_id,
+            arrival_time = arrival_time,
+        )
+        events.append(ev)
+
+    return events
+
+
 def find_events_by_name(name: str, days_ahead: int = 180) -> list[dict]:
     """Search upcoming events whose summary contains `name`."""
     from datetime import timedelta
@@ -231,18 +340,19 @@ def find_events_by_name(name: str, days_ahead: int = 180) -> list[dict]:
 
 
 def _room_color(rooms: list[str]) -> str:
-    """Google Calendar color IDs by room combo."""
-    if set(rooms) >= {"gallery", "entrance", "kitchen", "cave"}:
+    """Google Calendar color IDs by room combo (accepts any room name variant)."""
+    keys = {_norm_room(r) for r in rooms}
+    if keys >= {"gallery", "entrance", "kitchen", "cave"}:
         return "11"   # Tomato — full space
-    if "kitchen" in rooms:
+    if "kitchen" in keys:
         return "6"    # Tangerine
-    if "cave" in rooms:
+    if "cave" in keys:
         return "3"    # Grape
-    if "entrance" in rooms and "gallery" in rooms:
+    if "entrance" in keys and "gallery" in keys:
         return "2"    # Sage
-    if "gallery" in rooms:
+    if "gallery" in keys:
         return "7"    # Peacock
-    if "entrance" in rooms:
+    if "entrance" in keys:
         return "5"    # Banana
     return "1"        # Lavender — default
 
