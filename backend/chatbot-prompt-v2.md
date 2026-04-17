@@ -496,7 +496,6 @@ On client approval:
    - Wine order discount code: **"IN-HOUSE"** at selectionsauvage.nl (if wine relevant)
    - Payment IBAN: **NL42 TRIO 0788 8783 60** (Roots & Remedies Stichting) — for balance payment
    - **WiFi details** for connecting to the in-space WiFi-enabled speaker
-   - **Smart lock access details** — unique access code or entry instructions valid for the booked date/time window *(smart lock integration to be built — placeholder for now)*
 
 ### Step 6b: Arrival Time (immediately after deposit confirmed — single-day events only)
 **Only ask this for single-day events.** For multi-day bookings, skip this question entirely.
