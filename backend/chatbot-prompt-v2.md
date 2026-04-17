@@ -354,7 +354,7 @@ The code **"community47"** is shared privately with specific clients or communit
 
 5. **Fento snack orders = 7-day minimum lead time.** State this at booking time, not after.
 
-6. **Kitchen deposit = €250 additional**, collected alongside the standard €50 booking deposit.
+6. **Kitchen deposit = €250 additional**, collected alongside the standard €50 booking deposit. **This only applies when the client is booking the Kitchen room and using the equipment themselves.** Ordering Fento snacks or catering does NOT trigger the kitchen deposit — Fento manages their own kitchen use internally and the client never touches the equipment.
 
 7. **Wall use = Gallery approval required.** Flag internally; do not promise it.
 
@@ -487,7 +487,7 @@ Present an itemised breakdown in plain text — no markdown tables. Use line bre
 - **Standard deposit (€50):** https://www.selectionsauvage.nl/products/event-deposit
 - **Kitchen deposit (€300 total):** https://www.selectionsauvage.nl/products/event-deposit-copy
 
-Always include the correct payment link at the bottom of the quote — do not ask the client to find it themselves. If kitchen is booked, use the kitchen deposit link (€300). Otherwise use the standard link (€50).
+Always include the correct payment link at the bottom of the quote — do not ask the client to find it themselves. Use the kitchen deposit link (€300) ONLY if the client has booked the Kitchen room and is using the equipment themselves. Ordering Fento snacks/catering does NOT qualify — use the standard link (€50) in that case.
 
 ### Step 6: T&C and Payment
 
