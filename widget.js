@@ -907,7 +907,7 @@
       if (!valName(name) || !valEmail(email) || !valPhone(phone)) return;
       _pickerConfirm = null;
       wrap.remove();
-      sendMessage(name + ", " + email + ", " + phone);
+      sendMessage(name + ", " + email + ", " + phone + " [contact:" + name + "|" + email + "|" + phone + "]");
     }
 
     var submitBtn = document.getElementById("sv-c-submit");
@@ -1022,13 +1022,13 @@
       '</div>';
     msgs.appendChild(wrap);
 
-    function pick(value) {
+    function pick(value, atValue) {
       wrap.remove();
-      sendMessage(value);
+      sendMessage(value + " [type:" + atValue + "]");
     }
 
-    document.getElementById("sv-ct-private").addEventListener("click", function() { pick("Private individual"); });
-    document.getElementById("sv-ct-business").addEventListener("click", function() { pick("Business"); });
+    document.getElementById("sv-ct-private").addEventListener("click", function() { pick("Private individual", "Private"); });
+    document.getElementById("sv-ct-business").addEventListener("click", function() { pick("Business", "Business"); });
     scrollToContext(msgs, wrap);
   }
 

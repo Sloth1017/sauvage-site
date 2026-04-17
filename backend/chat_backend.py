@@ -354,15 +354,19 @@ def _sync_airtable(session_id: str, state: dict, meta: dict) -> None:
 
     # String scalar fields
     str_map = {
-        "event_type":     "Event Type",
-        "client_name":    "Client Name",
-        "email":          "Email",
-        "phone":          "Phone",
-        "customer_type":  "Customer Type",
-        # "is_multi_day" has no Airtable column — captured implicitly in Requested Date
-        "duration":       "Duration",
-        "arrival_time":   "Arrival Time",
+        "event_type":  "Event Type",
+        "duration":    "Duration",
+        "arrival_time":"Arrival Time",
     }
+    # Contact fields — skip if already pushed deterministically via [contact:] widget tag
+    if not last.get("contact_direct_pushed"):
+        str_map["client_name"]   = "Client Name"
+        str_map["email"]         = "Email"
+        str_map["phone"]         = "Phone"
+    # Customer type — skip if already pushed deterministically via [type:] widget tag
+    if not last.get("customer_type_direct_pushed"):
+        str_map["customer_type"] = "Customer Type"
+
     for key, at_field in str_map.items():
         val = state.get(key)
         if val and val != last.get(key):
@@ -743,6 +747,31 @@ def chat():
         _ref_value = _ref_match.group(1).strip()
         message = (message[:_ref_match.start()] + message[_ref_match.end():]).strip()
 
+    # ── Deterministic contact sync ────────────────────────────────────────────
+    # The contact widget embeds [contact:name|email|phone] — push directly.
+    _contact_data = {}
+    _contact_match = re.search(r'\[contact:([^\]]*)\]', message)
+    if _contact_match:
+        _parts = _contact_match.group(1).split("|")
+        if len(_parts) >= 1 and _parts[0].strip():
+            _contact_data["client_name"] = _parts[0].strip()
+        if len(_parts) >= 2 and _parts[1].strip():
+            _contact_data["email"] = _parts[1].strip()
+        if len(_parts) >= 3 and _parts[2].strip():
+            _contact_data["phone"] = _parts[2].strip()
+        message = (message[:_contact_match.start()] + message[_contact_match.end():]).strip()
+        # Also update session state immediately
+        sess["state"].update(_contact_data)
+
+    # ── Deterministic customer type sync ─────────────────────────────────────
+    # The customer type widget embeds [type:Private|Business] — push directly.
+    _type_value = None
+    _type_match = re.search(r'\[type:([^\]]*)\]', message)
+    if _type_match:
+        _type_value = _type_match.group(1).strip()
+        message = (message[:_type_match.start()] + message[_type_match.end():]).strip()
+        sess["state"]["customer_type"] = _type_value
+
     # ── Track T&C acceptance ──────────────────────────────────────────────────
     if "accepted the terms of use" in message.lower() or "i have read and accepted" in message.lower():
         sess["meta"]["tandc_accepted"] = True
@@ -786,6 +815,40 @@ def chat():
                 print(f"[Referral] Direct sync → {_ref_fields}")
             except Exception as _e:
                 print(f"[Referral] Direct sync error: {_e}")
+    # Push contact info to Airtable immediately
+    if _contact_data and _AIRTABLE_ENABLED:
+        _r_id = sess["meta"].get("record_id")
+        if _r_id:
+            try:
+                from airtable_client import update_inquiry as _upd_at
+                _at_contact = {}
+                if _contact_data.get("client_name"):
+                    _at_contact["Client Name"] = _contact_data["client_name"]
+                if _contact_data.get("email"):
+                    _at_contact["Email"] = _contact_data["email"]
+                if _contact_data.get("phone"):
+                    _at_contact["Phone"] = _contact_data["phone"]
+                if _at_contact:
+                    _upd_at(_r_id, _at_contact)
+                    sess["meta"].setdefault("last_pushed", {})["contact_direct_pushed"] = True
+                    _session_update(session_id, meta=sess["meta"])
+                    print(f"[Contact] Direct sync → {_at_contact}")
+            except Exception as _e:
+                print(f"[Contact] Direct sync error: {_e}")
+
+    # Push customer type to Airtable immediately
+    if _type_value and _AIRTABLE_ENABLED:
+        _r_id = sess["meta"].get("record_id")
+        if _r_id:
+            try:
+                from airtable_client import update_inquiry as _upd_at
+                _upd_at(_r_id, {"Customer Type": _type_value})
+                sess["meta"].setdefault("last_pushed", {})["customer_type_direct_pushed"] = True
+                _session_update(session_id, meta=sess["meta"])
+                print(f"[CustomerType] Direct sync → {_type_value}")
+            except Exception as _e:
+                print(f"[CustomerType] Direct sync error: {_e}")
+
     history = messages[-20:]   # keep last 10 exchanges — ~3-4K tokens, much faster
 
     # Use state already accumulated from previous turns — no blocking LLM call needed now.
@@ -926,6 +989,27 @@ def chat():
             assistant_text = assistant_text.strip()
     except Exception as e:
         print(f"_inject_checkout_url error: {e}")
+
+    # ── Deterministic quote_total extraction ─────────────────────────────────
+    # Parse "Total incl VAT: €X" from the bot response right now — synchronously,
+    # before saving to DB — so _sync_airtable always has the correct value.
+    # This is more reliable than waiting for the background LLM extractor.
+    _qt_match = re.search(
+        r"total\s+incl\.?\s+vat[:\s]+€\s*([\d\s,\.]+)",
+        assistant_text, re.IGNORECASE
+    )
+    if _qt_match:
+        _raw_num = _qt_match.group(1).strip().replace(" ", "").replace(",", ".")
+        _parts = _raw_num.split(".")
+        if len(_parts) > 2:
+            _raw_num = "".join(_parts[:-1]).replace(".", "") + "." + _parts[-1]
+        try:
+            _extracted_total = float(_raw_num)
+            if _extracted_total > 0:
+                state["quote_total"] = _extracted_total
+                print(f"[Chat] Synchronous quote_total extracted: €{_extracted_total}")
+        except ValueError:
+            pass
 
     messages.append({"role": "assistant", "content": assistant_text})
     _session_update(session_id, messages=messages, state=state, meta=meta)
