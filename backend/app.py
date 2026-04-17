@@ -20,8 +20,9 @@ def widget():
     # Load widget.js and replace API endpoint dynamically.
     # Try paths in priority order — git repo first so deploys take effect immediately.
     _widget_candidates = [
-        "/var/www/sauvage/widget.js",                                   # git repo (primary)
+        "/root/sauvage/widget.js",                                      # git repo (primary)
         os.path.join(os.path.dirname(__file__), "..", "widget.js"),     # repo relative path
+        "/var/www/sauvage/widget.js",                                   # legacy static copy
         "/home/greg/.openclaw/workspace/sauvage/widget.js",            # legacy workspace
         os.path.join(os.path.dirname(__file__), "widget.js"),          # backend dir fallback
     ]
