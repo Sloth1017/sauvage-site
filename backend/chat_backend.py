@@ -283,6 +283,8 @@ _STATE_LABELS = {
     "quote_total":        "Quote total (incl VAT)",
     "community_pricing":  "Community pricing mode",
     "referral_source":    "How they heard about us",
+    "attributed_host":    "Attributed host (Greg/Dorian/Bart/Unattributed)",
+    "referred_by":        "Referred by (person name, if mentioned)",
 }
 
 _EXTRACT_SYSTEM = (
@@ -291,7 +293,7 @@ _EXTRACT_SYSTEM = (
     "Return a single JSON object with these keys (omit any that are not yet confirmed):\n"
     "  event_type, dates, start_time, end_time, is_multi_day, client_name, email, phone,\n"
     "  guest_count, customer_type, rooms, duration, hours, addons, quote_total,\n"
-    "  community_pricing, referral_source.\n"
+    "  community_pricing, referral_source, attributed_host, referred_by.\n"
     "Rules:\n"
     "- event_type: one of Dinner, Birthday, Corporate, Community, Pop-up, Art Gallery, Wine Tasting, Workshop, Wedding, Other\n"
     "- dates: ISO format YYYY-MM-DD, e.g. '2026-05-10'. Current year is 2026 unless the client specifies otherwise.\n"
@@ -301,7 +303,12 @@ _EXTRACT_SYSTEM = (
     "- addons: JSON array of confirmed add-on names, e.g. [\"Stemless glassware\", \"Staff 2hr\"]\n"
     "- quote_total: numeric EUR amount incl VAT if the bot has stated a total, e.g. 194.40\n"
     "- community_pricing: true if the community pricing code was used, else omit\n"
-    "- referral_source: if the client mentioned how they heard about Sauvage\n"
+    "- referral_source: channel or person given in response to 'how did you hear about Sauvage?' "
+    "e.g. 'Instagram', 'Google', 'Organic', 'Greg', 'Dorian', 'Bart', 'Other'\n"
+    "- attributed_host: 'Greg', 'Dorian', or 'Bart' if a host was named; otherwise 'Unattributed'. "
+    "Only set this if the client answered the attribution question.\n"
+    "- referred_by: the specific person who referred them, verbatim — only if a person was named "
+    "(e.g. 'I heard from Greg' → referred_by: 'Greg'). Omit if just a channel was given.\n"
     "- customer_type: 'Private' if client said private/personal, 'Business' if corporate/company/business. "
     "Look for words like 'private', 'personal', 'business', 'corporate', 'company' anywhere in the conversation.\n"
     "Return ONLY the JSON object, no explanation."
@@ -426,12 +433,32 @@ def _sync_airtable(session_id: str, state: dict, meta: dict) -> None:
         "customer_type":  "Customer Type",
         "is_multi_day":   "Multi-Day",
         "duration":       "Duration",
-        "referral_source":"Referral Source",
     }
     for key, at_field in str_map.items():
         val = state.get(key)
         if val and val != last.get(key):
             updates[at_field] = _clean_str(val)
+
+    # Attribution — push all three fields together when referral_source is first seen
+    _HOST_NAMES = {"greg", "dorian", "bart"}
+    ref_src = state.get("referral_source")
+    if ref_src and ref_src != last.get("referral_source"):
+        cleaned_src = _clean_str(ref_src)
+        updates["Referral Source"] = cleaned_src
+        # Derive attributed host: person > channel
+        explicit_host = _clean_str(state.get("attributed_host", ""))
+        if explicit_host and explicit_host.lower() not in ("unattributed", ""):
+            updates["Attributed Host"] = explicit_host
+        elif cleaned_src.lower() in _HOST_NAMES:
+            updates["Attributed Host"] = cleaned_src.capitalize()
+        else:
+            updates["Attributed Host"] = "Unattributed"
+        # Referred By — specific person if named
+        ref_by = state.get("referred_by") or (
+            cleaned_src if cleaned_src.lower() in _HOST_NAMES else None
+        )
+        if ref_by:
+            updates["Referred By"] = _clean_str(ref_by)
 
     # Requested Date — Airtable only accepts a single ISO date string.
     # If the LLM extracted a list (multi-day booking), use the first date.
@@ -912,7 +939,7 @@ def payment_status(session_id):
                 if booking_status == "confirmed":
                     status = "confirmed"
                     # Send confirmation email to client
-                    state = session_states.get(session_id, {})
+                    state = (sess or {}).get("state", {})
                     send_confirmation_email(
                         client_name=state.get("client_name", "Guest"),
                         client_email=state.get("email", ""),
@@ -953,14 +980,11 @@ def test_confirm(session_id):
     meta      = sess["meta"] if sess else {}
     record_id = meta.get("record_id")
 
+    state = (sess or {}).get("state", {})
+
     if record_id and _AIRTABLE_ENABLED:
         try:
             confirm_booking(record_id)
-            return jsonify({
-                "status":     "confirmed",
-                "session_id": session_id,
-                "record_id":  record_id,
-            }), 200, _cors_headers()
         except Exception as e:
             return jsonify({"error": str(e)}), 500, _cors_headers()
     else:
@@ -970,11 +994,35 @@ def test_confirm(session_id):
             _session_update(session_id, meta=meta)
         else:
             _session_create(session_id, [], meta=meta)
-        return jsonify({
-            "status":     "confirmed",
-            "session_id": session_id,
-            "note":       "Airtable not enabled — persisted flag set",
-        }), 200, _cors_headers()
+
+    # Fire Make.com notification regardless of Airtable state
+    try:
+        import importlib
+        _wh = importlib.import_module("shopify_webhook")
+        _wh._notify_make({
+            "event":        "booking_confirmed",
+            "order_number": "TEST",
+            "airtable_id":  record_id or "none",
+            "client_name":  state.get("client_name", "Test"),
+            "client_email": state.get("email", ""),
+            "client_phone": state.get("phone", ""),
+            "event_type":   state.get("event_type", ""),
+            "event_date":   str(state.get("dates", "")),
+            "start_time":   state.get("start_time", ""),
+            "end_time":     state.get("end_time", ""),
+            "guest_count":  state.get("guest_count", ""),
+            "rooms":        state.get("rooms", []),
+            "deposit_amount": "TEST",
+            "source":       "test-confirm",
+        })
+    except Exception as e:
+        print(f"[test-confirm] Make.com notify failed: {e}")
+
+    return jsonify({
+        "status":     "confirmed",
+        "session_id": session_id,
+        "record_id":  record_id,
+    }), 200, _cors_headers()
 
 
 @chat_bp.route("/admin/calendar", methods=["POST", "OPTIONS"])
