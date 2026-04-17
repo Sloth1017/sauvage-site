@@ -483,6 +483,23 @@ def _sync_airtable(session_id: str, state: dict, meta: dict) -> None:
         items = raw if isinstance(raw, list) else [raw]
         return [_clean_str(i) for i in items if i]
 
+    def _parse_fento_order(addons, guest_count: int) -> str:
+        """
+        Scan the add-on list for a Fento item and return a formatted order string,
+        e.g. 'Light Snacks × 27 pax' or 'Snacks × 15 pax'.
+        Returns '' if no Fento add-on present.
+        """
+        items = addons if isinstance(addons, list) else [addons]
+        for item in items:
+            lower = str(item).lower()
+            if "light snack" in lower or "light" in lower and "fento" in lower:
+                qty = guest_count or 0
+                return f"Light Snacks × {qty} pax"
+            elif "fento" in lower or "snack" in lower:
+                qty = guest_count or 0
+                return f"Snacks × {qty} pax"
+        return ""
+
     # Canonical Add-Ons normaliser — maps any LLM variation to the exact Airtable option name.
     # Checked in order; first keyword match wins.
     _ADDON_MAP = [
@@ -543,6 +560,13 @@ def _sync_airtable(session_id: str, state: dict, meta: dict) -> None:
         if normalised:
             updates["Add-Ons"] = normalised
             print(f"[Airtable] Addons normalised: {addons} → {normalised}")
+
+    # Fento Order — populate whenever we have add-ons and it hasn't been pushed yet
+    _guest_count_for_fento = state.get("guest_count", 0) or 0
+    _fento_source = addons or []
+    _fento_str = _parse_fento_order(_fento_source, _guest_count_for_fento)
+    if _fento_str and _fento_str != last.get("fento_order"):
+        updates["Fento Order"] = _fento_str
 
     # Community pricing flag
     if state.get("community_pricing") and not last.get("community_pricing"):
@@ -817,12 +841,19 @@ def chat():
         if _r_id:
             try:
                 from airtable_client import update_inquiry as _upd_at
-                _upd_at(_r_id, {"Add-Ons": _at_addons})
+                _addon_update: dict = {"Add-Ons": _at_addons}
+                # Fento Order — parsed from the canonical add-on names + guest count
+                _fento = _parse_fento_order(_at_addons, sess["state"].get("guest_count", 0))
+                if _fento:
+                    _addon_update["Fento Order"] = _fento
+                _upd_at(_r_id, _addon_update)
                 # Mark in meta so _sync_airtable doesn't re-push with LLM values
                 sess["meta"].setdefault("last_pushed", {})["addons"] = _at_addons
                 sess["meta"]["last_pushed"]["addons_direct_pushed"] = True
+                if _fento:
+                    sess["meta"]["last_pushed"]["fento_order"] = _fento
                 _session_update(session_id, meta=sess["meta"])
-                print(f"[Addons] Direct sync → {_at_addons}")
+                print(f"[Addons] Direct sync → {_at_addons}" + (f"  Fento: {_fento}" if _fento else ""))
             except Exception as _e:
                 print(f"[Addons] Direct sync error: {_e}")
 
