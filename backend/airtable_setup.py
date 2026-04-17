@@ -172,7 +172,6 @@ INQUIRIES_FIELDS = [
          {"name": "Bart"},
          {"name": "Instagram"},
          {"name": "Google"},
-         {"name": "Organic"},
          {"name": "Other"},
      ]}},
     {"name": "Attributed Host", "type": "singleSelect",

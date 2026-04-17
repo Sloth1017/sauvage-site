@@ -765,7 +765,8 @@
     wrap.className = "sv-radio-wrap";
 
     // Values must match Airtable "Referral Source" single-select options verbatim
-    var OPTIONS = ["Greg","Dorian","Bart","Instagram","Google","Organic","Other…"];
+    // "Other…" triggers a free-text input; the raw text is sent to the bot, [ref:Other] to Airtable
+    var OPTIONS = ["Greg","Dorian","Bart","Instagram","Google","Other…"];
     var selected = null;
 
     function render() {
