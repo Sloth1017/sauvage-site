@@ -124,6 +124,10 @@ def update_inquiry(record_id: str, fields: dict) -> dict:
     table = _get_table(INQUIRIES_TABLE)
     MULTI_FIELDS = ["Rooms Requested", "Add-Ons", "Special Flags"]
 
+    # Fields that don't exist in the live base — strip before every call
+    _BLOCKED_FIELDS = {"Deposit Amount Due"}
+    fields = {k: v for k, v in fields.items() if k not in _BLOCKED_FIELDS}
+
     # Ensure multi-select fields are lists
     for mf in MULTI_FIELDS:
         if mf in fields:
