@@ -1064,11 +1064,299 @@ def test_confirm(session_id):
     except Exception as e:
         print(f"[test-confirm] Make.com notification failed: {e}")
 
+    # Send booking confirmation email
+    try:
+        from confirmation_email import send_booking_confirmation
+        if record_id:
+            send_booking_confirmation(record_id, state)
+        else:
+            print("[test-confirm] Skipped confirmation email — no record_id")
+    except Exception as e:
+        print(f"[test-confirm] Confirmation email failed: {e}")
+
     return jsonify({
         "status":     "confirmed",
         "session_id": session_id,
         "record_id":  record_id,
     }), 200, _cors_headers()
+
+
+# ── Arrival time form ─────────────────────────────────────────────────────────
+
+@chat_bp.route("/arrival", methods=["GET"])
+def arrival_form():
+    """Branded HTML form for client to confirm their arrival time."""
+    record_id = request.args.get("record", "")
+    token     = request.args.get("token", "")
+
+    try:
+        from confirmation_email import verify_arrival_token
+        valid = verify_arrival_token(record_id, token)
+    except Exception:
+        valid = False
+
+    if not valid or not record_id:
+        return """<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>Invalid Link — Sauvage</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:#f5f3ef;
+display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}
+.box{background:#fff;padding:48px;border-radius:4px;max-width:400px;text-align:center;}
+h1{font-size:20px;font-weight:500;color:#1a1a1a;margin:0 0 12px;}
+p{color:#666;font-size:14px;line-height:1.6;margin:0;}</style></head>
+<body><div class="box">
+<h1>Link not valid</h1>
+<p>This arrival link has expired or is invalid. Please contact Greg on
+<a href="https://wa.me/31634742988" style="color:#1a1a1a;">WhatsApp</a>
+or <a href="tel:+31634742988" style="color:#1a1a1a;">+31 634 742 988</a>.</p>
+</div></body></html>""", 400
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirm Arrival — Sauvage</title>
+  <style>
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      background: #f5f3ef;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }}
+    .card {{
+      background: #ffffff;
+      border-radius: 4px;
+      overflow: hidden;
+      width: 100%;
+      max-width: 480px;
+    }}
+    .header {{
+      background: #1a1a1a;
+      padding: 28px 32px;
+    }}
+    .header span {{
+      display: block;
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 6px;
+    }}
+    .header h1 {{
+      font-size: 22px;
+      font-weight: 400;
+      color: #ffffff;
+      letter-spacing: -0.3px;
+    }}
+    .body {{
+      padding: 32px;
+    }}
+    p {{
+      font-size: 15px;
+      line-height: 1.7;
+      color: #333;
+      margin-bottom: 24px;
+    }}
+    label {{
+      display: block;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #999;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }}
+    input[type="time"] {{
+      width: 100%;
+      padding: 12px 14px;
+      font-size: 16px;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      background: #fafafa;
+      color: #1a1a1a;
+      margin-bottom: 24px;
+      -webkit-appearance: none;
+    }}
+    button {{
+      width: 100%;
+      background: #1a1a1a;
+      color: #ffffff;
+      border: none;
+      padding: 14px 28px;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      border-radius: 3px;
+      cursor: pointer;
+    }}
+    button:hover {{ background: #333; }}
+    .footer {{
+      background: #1a1a1a;
+      padding: 16px 32px;
+      font-size: 12px;
+      color: #666;
+    }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <span>Sauvage Amsterdam</span>
+      <h1>When will you arrive?</h1>
+    </div>
+    <div class="body">
+      <p>Let us know what time you're planning to arrive for setup — this helps us coordinate with the other residents sharing the building.</p>
+      <form method="POST" action="/arrival">
+        <input type="hidden" name="record" value="{record_id}">
+        <input type="hidden" name="token"  value="{token}">
+        <label for="arrival_time">Arrival time</label>
+        <input type="time" id="arrival_time" name="arrival_time" required>
+        <button type="submit">Confirm arrival time →</button>
+      </form>
+    </div>
+    <div class="footer">
+      Sauvage · Potgieterstraat 47H · Amsterdam ·
+      <a href="https://sauvage.amsterdam" style="color:#888;text-decoration:none;">sauvage.amsterdam</a>
+    </div>
+  </div>
+</body>
+</html>"""
+
+
+@chat_bp.route("/arrival", methods=["POST"])
+def arrival_submit():
+    """Receive arrival time form submission and write to Airtable."""
+    record_id    = request.form.get("record", "")
+    token        = request.form.get("token", "")
+    arrival_time = request.form.get("arrival_time", "").strip()
+
+    try:
+        from confirmation_email import verify_arrival_token
+        valid = verify_arrival_token(record_id, token)
+    except Exception:
+        valid = False
+
+    if not valid or not record_id or not arrival_time:
+        return """<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>Error — Sauvage</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:#f5f3ef;
+display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}
+.box{background:#fff;padding:48px;border-radius:4px;max-width:400px;text-align:center;}
+h1{font-size:20px;font-weight:500;color:#1a1a1a;margin:0 0 12px;}
+p{color:#666;font-size:14px;line-height:1.6;margin:0;}</style></head>
+<body><div class="box">
+<h1>Something went wrong</h1>
+<p>Please go back and try again, or contact Greg on
+<a href="https://wa.me/31634742988" style="color:#1a1a1a;">WhatsApp</a>
+or <a href="tel:+31634742988" style="color:#1a1a1a;">+31 634 742 988</a>.</p>
+</div></body></html>""", 400
+
+    # Save to Airtable
+    try:
+        from airtable_client import update_inquiry
+        update_inquiry(record_id, {"Arrival Time": arrival_time})
+        print(f"[Arrival] Saved {arrival_time} for record {record_id}")
+    except Exception as e:
+        print(f"[Arrival] Airtable update failed: {e}")
+        return """<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>Error — Sauvage</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:#f5f3ef;
+display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}
+.box{background:#fff;padding:48px;border-radius:4px;max-width:400px;text-align:center;}
+h1{font-size:20px;font-weight:500;color:#1a1a1a;margin:0 0 12px;}
+p{color:#666;font-size:14px;line-height:1.6;margin:0;}</style></head>
+<body><div class="box">
+<h1>Could not save your arrival time</h1>
+<p>Please contact Greg on
+<a href="https://wa.me/31634742988" style="color:#1a1a1a;">WhatsApp</a>
+or <a href="tel:+31634742988" style="color:#1a1a1a;">+31 634 742 988</a>.</p>
+</div></body></html>""", 500
+
+    return """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>All set — Sauvage</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      background: #f5f3ef;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 4px;
+      overflow: hidden;
+      width: 100%;
+      max-width: 480px;
+    }
+    .header {
+      background: #1a1a1a;
+      padding: 28px 32px;
+    }
+    .header span {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 6px;
+    }
+    .header h1 {
+      font-size: 22px;
+      font-weight: 400;
+      color: #ffffff;
+    }
+    .body {
+      padding: 32px;
+    }
+    .check {
+      font-size: 36px;
+      margin-bottom: 16px;
+    }
+    p {
+      font-size: 15px;
+      line-height: 1.7;
+      color: #333;
+    }
+    .footer {
+      background: #1a1a1a;
+      padding: 16px 32px;
+      font-size: 12px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <span>Sauvage Amsterdam</span>
+      <h1>You're all set</h1>
+    </div>
+    <div class="body">
+      <div class="check">✓</div>
+      <p>Your arrival time has been noted. We'll make sure everything is ready for you. See you soon.</p>
+    </div>
+    <div class="footer">
+      Sauvage · Potgieterstraat 47H · Amsterdam ·
+      <a href="https://sauvage.amsterdam" style="color:#888;text-decoration:none;">sauvage.amsterdam</a>
+    </div>
+  </div>
+</body>
+</html>"""
 
 
 @chat_bp.route("/admin/calendar", methods=["POST", "OPTIONS"])

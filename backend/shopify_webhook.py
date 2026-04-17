@@ -168,7 +168,21 @@ def handle_webhook():
         })
         print(f"[Webhook] Airtable confirmed: {record_id}")
 
-        # 2. Notify Make.com — sends summary email to client + Sauvage team
+        # 2. Send branded confirmation email to client
+        try:
+            from confirmation_email import send_booking_confirmation
+            session_id_for_email = _extract_session_id(order)
+            email_state = _get_session_state(session_id_for_email) if session_id_for_email else {}
+            # Fallback: fill in email from Shopify order if session state missing it
+            if not email_state.get("email"):
+                email_state["email"] = details.get("email", "")
+            if not email_state.get("client_name"):
+                email_state["client_name"] = details.get("client_name", "")
+            send_booking_confirmation(record_id, email_state)
+        except Exception as e:
+            print(f"[Webhook] Confirmation email failed: {e}")
+
+        # 3. Notify Make.com — sends summary email to client + Sauvage team
         _notify_make({
             "event":          "booking_confirmed",
             "order_number":   order_number,
@@ -186,7 +200,7 @@ def handle_webhook():
             "airtable_url":   f"https://airtable.com/appXXXXXXXX/tblXXXXXXXX/{record_id}",
         })
 
-        # 3. Create Google Calendar event — use session state for full booking data
+        # 4. Create Google Calendar event — use session state for full booking data
         if _GCAL_WRITE:
             try:
                 session_id = _extract_session_id(order)
