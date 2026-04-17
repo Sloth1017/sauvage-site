@@ -225,7 +225,7 @@ def save_addons(record_id: str, addons: list, special_flags: list = None) -> dic
     """
     Save selected add-ons and any special flags — call when stage moves to 5_addons.
 
-    addons:        e.g. ["Glassware (25 pax)", "Staff Support", "Projector"]
+    addons:        e.g. ["Stem Glassware", "Staff Support", "Projector/Display Screen"]
     special_flags: e.g. ["Wall Use - Gallery Approval Required", "Ikinari Overlap",
                           "Fento Snack Deadline", "Kitchen Deposit Required"]
     """

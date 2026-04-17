@@ -134,10 +134,12 @@ INQUIRIES_FIELDS = [
          {"name": "Dishware & Cutlery"},
          {"name": "Stem Glassware"},
          {"name": "Staff Support"},
+         {"name": "Extended Hours (after midnight)"},
          {"name": "Event Cleanup"},
-         {"name": "Snacks (Fento)"},
-         {"name": "Sommelier / Barista"},
-         {"name": "Projector / Screen"},
+         {"name": "Light Snacks Fento"},
+         {"name": "Snacks Fento"},
+         {"name": "Sommelier/Barista Service"},
+         {"name": "Projector/Display Screen"},
      ]}},
 
     # --- Pricing ---

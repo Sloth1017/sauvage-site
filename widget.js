@@ -1013,9 +1013,9 @@
       { id:"glass-st",  name:"Glassware — stem glasses",  sub:"25 pax · upgrade", price:35,  type:"flat",  at:"Stem Glassware" },
       { id:"staff",     name:"Staff support",             sub:"€35/hr · full event duration", price:35, type:"staff", at:"Staff Support" },
       { id:"cleanup",   name:"Event cleanup",             sub:"flat fee",          price:60,  type:"flat",  at:"Event Cleanup" },
-      { id:"snacks",    name:"Snacks / Fento",            sub:"€10 per person",    price:10,  type:"pax",   at:"Snacks (Fento)", qty:10 },
-      { id:"bar",       name:"Sommelier / barista service", sub:"€50/hr",          price:50,  type:"hr",    at:"Sommelier / Barista", qty:1 },
-      { id:"projector", name:"Projector / screen",        sub:"flat fee",          price:25,  type:"flat",  at:"Projector / Screen" }
+      { id:"snacks",    name:"Snacks / Fento",            sub:"€10 per person",    price:10,  type:"pax",   at:"Snacks Fento", qty:10 },
+      { id:"bar",       name:"Sommelier / barista service", sub:"€50/hr",          price:50,  type:"hr",    at:"Sommelier/Barista Service", qty:1 },
+      { id:"projector", name:"Projector / screen",        sub:"flat fee",          price:25,  type:"flat",  at:"Projector/Display Screen" }
     ];
 
     var checked = {};
