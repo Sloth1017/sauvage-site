@@ -753,6 +753,14 @@ def chat():
         # Strip the tag so Claude never sees it
         message = (message[:_at_match.start()] + message[_at_match.end():]).strip()
 
+    # ── Deterministic referral source sync ───────────────────────────────────
+    # The attribution widget embeds [ref:Value] — push directly to Airtable.
+    _ref_value = None
+    _ref_match = re.search(r'\[ref:([^\]]*)\]', message)
+    if _ref_match:
+        _ref_value = _ref_match.group(1).strip()
+        message = (message[:_ref_match.start()] + message[_ref_match.end():]).strip()
+
     messages = sess["messages"]
     messages.append({"role": "user", "content": message})
 
@@ -769,6 +777,26 @@ def chat():
                 print(f"[Addons] Direct sync → {_at_addons}")
             except Exception as _e:
                 print(f"[Addons] Direct sync error: {_e}")
+
+    # Push referral source to Airtable immediately
+    _HOST_NAMES_SET = {"greg", "dorian", "bart"}
+    if _ref_value and _AIRTABLE_ENABLED:
+        _r_id = sess["meta"].get("record_id")
+        if _r_id:
+            try:
+                from airtable_client import update_inquiry as _upd_at
+                _ref_fields = {"Referral Source": _ref_value}
+                if _ref_value.lower() in _HOST_NAMES_SET:
+                    _ref_fields["Attributed Host"] = _ref_value.capitalize()
+                    _ref_fields["Referred By"]     = _ref_value.capitalize()
+                else:
+                    _ref_fields["Attributed Host"] = "Unattributed"
+                _upd_at(_r_id, _ref_fields)
+                sess["meta"].setdefault("last_pushed", {})["referral"] = _ref_value
+                _session_update(session_id, meta=sess["meta"])
+                print(f"[Referral] Direct sync → {_ref_fields}")
+            except Exception as _e:
+                print(f"[Referral] Direct sync error: {_e}")
     history = messages[-20:]   # keep last 10 exchanges — ~3-4K tokens, much faster
 
     # Use state already accumulated from previous turns — no blocking LLM call needed now.

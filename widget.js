@@ -764,7 +764,8 @@
     var wrap = document.createElement("div");
     wrap.className = "sv-radio-wrap";
 
-    var OPTIONS = ["Greg","Dorian","Bart","Instagram","Google","Word of mouth","Other…"];
+    // Values must match Airtable "Referral Source" single-select options verbatim
+    var OPTIONS = ["Greg","Dorian","Bart","Instagram","Google","Organic","Other…"];
     var selected = null;
 
     function render() {
@@ -803,9 +804,11 @@
       var value = selected === 'Other…'
         ? (wrap.querySelector('#sv-attr-other') ? wrap.querySelector('#sv-attr-other').value.trim() || 'Other' : 'Other')
         : selected;
+      // Canonical tag for deterministic Airtable sync — backend parses [ref:...] directly
+      var atValue = (selected === 'Other…') ? 'Other' : selected;
       _pickerConfirm = null;
       wrap.remove();
-      sendMessage(value);
+      sendMessage(value + ' [ref:' + atValue + ']');
     }
 
     render();
