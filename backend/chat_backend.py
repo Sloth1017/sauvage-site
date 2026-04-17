@@ -871,6 +871,25 @@ def chat():
                 # Regex pre-pass on last user message — catch fields the LLM often misses
                 last_user = next((m["content"] for m in reversed(hist) if m["role"] == "user"), "")
                 msg_lower = last_user.lower()
+                # Regex pass on last assistant message — reliably extract quote_total
+                last_asst = next((m["content"] for m in reversed(hist) if m["role"] == "assistant"), "")
+                if not merged.get("quote_total"):
+                    # Match "Total incl VAT: €1 234,56" or "Total incl VAT: €1234.56"
+                    _qt_match = re.search(
+                        r"total\s+incl\.?\s+vat[:\s]+€\s*([\d\s,\.]+)",
+                        last_asst, re.IGNORECASE
+                    )
+                    if _qt_match:
+                        raw_num = _qt_match.group(1).strip().replace(" ", "").replace(",", ".")
+                        # Handle "1.234.56" → take last dot as decimal
+                        parts = raw_num.split(".")
+                        if len(parts) > 2:
+                            raw_num = "".join(parts[:-1]).replace(".", "") + "." + parts[-1]
+                        try:
+                            merged["quote_total"] = float(raw_num)
+                            print(f"[BG] Regex-extracted quote_total: {merged['quote_total']}")
+                        except ValueError:
+                            pass
                 if not merged.get("customer_type"):
                     if any(w in msg_lower for w in ["private", "personal", "priv\u00e9"]):
                         merged["customer_type"] = "Private"
