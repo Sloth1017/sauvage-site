@@ -20,6 +20,8 @@ import hashlib
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
 
 # ── Config ────────────────────────────────────────────────────────────────────
 SMTP_SERVER   = os.getenv("SMTP_SERVER",   "smtp.gmail.com")
@@ -60,9 +62,16 @@ def _fmt_date(dates) -> str:
     return str(dates or "TBC")
 
 
-def send_booking_confirmation(record_id: str, state: dict) -> bool:
+def send_booking_confirmation(
+    record_id: str,
+    state: dict,
+    invoice_pdf: bytes = None,
+    invoice_number: str = "",
+    invoice_url: str = "",
+) -> bool:
     """
     Send the branded booking confirmation email to the client.
+    Optionally attaches a PDF invoice.
     Returns True on success, False on failure.
     """
     client_email = state.get("email", "")
@@ -88,6 +97,32 @@ def send_booking_confirmation(record_id: str, state: dict) -> bool:
 
     arrival_token = generate_arrival_token(record_id)
     arrival_url   = f"{BASE_URL}/arrival?record={record_id}&token={arrival_token}"
+
+    # Invoice section (optional)
+    inv_html = ""
+    if invoice_url:
+        inv_html = f"""
+          <!-- Invoice -->
+          <tr>
+            <td style="padding:0 40px 32px;">
+              <hr style="border:none;border-top:1px solid #e8e4de;margin:0 0 24px;">
+              <h2 style="margin:0 0 12px;font-size:14px;letter-spacing:1.5px;text-transform:uppercase;color:#999;font-weight:600;">Your Invoice</h2>
+              <p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#333;">
+                Your invoice {f'<strong>{invoice_number}</strong>' if invoice_number else ''} is attached to this email
+                {"and available at the link below" if invoice_url else ""}.
+              </p>
+              <a href="{invoice_url}"
+                 style="display:inline-block;background:#f5f3ef;color:#1a1a1a;text-decoration:none;
+                        border:1px solid #ccc;padding:12px 24px;border-radius:3px;font-size:13px;
+                        font-weight:500;letter-spacing:0.5px;">
+                View invoice {invoice_number} →
+              </a>
+            </td>
+          </tr>"""
+    inv_plain = (
+        f"\nINVOICE\n{invoice_number}\nView: {invoice_url}\n"
+        if invoice_url else ""
+    )
 
     subject = f"Your Sauvage booking is confirmed ✓"
 
@@ -207,6 +242,8 @@ def send_booking_confirmation(record_id: str, state: dict) -> bool:
             </td>
           </tr>
 
+          {inv_html}
+
           <!-- Website link -->
           <tr>
             <td style="padding:0 40px 32px;">
@@ -265,19 +302,38 @@ Sauvage · Potgieterstraat 47H · Amsterdam
 """
 
     try:
-        msg = MIMEMultipart("alternative")
+        # Use mixed (not alternative) when we have attachments
+        if invoice_pdf:
+            msg = MIMEMultipart("mixed")
+            alt = MIMEMultipart("alternative")
+            alt.attach(MIMEText(plain, "plain"))
+            alt.attach(MIMEText(html,  "html"))
+            msg.attach(alt)
+            # Attach PDF
+            pdf_part = MIMEBase("application", "pdf")
+            pdf_part.set_payload(invoice_pdf)
+            encoders.encode_base64(pdf_part)
+            fname = f"{invoice_number or 'invoice'}.pdf"
+            pdf_part.add_header(
+                "Content-Disposition", "attachment", filename=fname
+            )
+            msg.attach(pdf_part)
+        else:
+            msg = MIMEMultipart("alternative")
+            msg.attach(MIMEText(plain, "plain"))
+            msg.attach(MIMEText(html,  "html"))
+
         msg["Subject"] = subject
         msg["From"]    = f"Sauvage Amsterdam <{FROM_EMAIL}>"
         msg["To"]      = client_email
-        msg.attach(MIMEText(plain, "plain"))
-        msg.attach(MIMEText(html,  "html"))
 
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
             server.starttls()
             server.login(SMTP_USER, SMTP_PASSWORD)
             server.send_message(msg)
 
-        print(f"[Email] Confirmation sent to {client_email} (record {record_id})")
+        print(f"[Email] Confirmation sent to {client_email} (record {record_id})"
+              + (f" + invoice {invoice_number}" if invoice_number else ""))
         return True
 
     except Exception as e:

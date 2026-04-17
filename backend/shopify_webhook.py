@@ -194,19 +194,47 @@ def handle_webhook():
         print(f"[Webhook] Airtable confirmed: {record_id}")
 
         # Mark session so Claude stops showing deposit link
-        _set_payment_confirmed(_extract_session_id(order))
+        session_id_main = _extract_session_id(order)
+        _set_payment_confirmed(session_id_main)
 
-        # 2. Send branded confirmation email to client
+        # 1b. Build email state (used for invoice + email)
+        email_state = _get_session_state(session_id_main) if session_id_main else {}
+        if not email_state.get("email"):
+            email_state["email"] = details.get("email", "")
+        if not email_state.get("client_name"):
+            email_state["client_name"] = details.get("client_name", "")
+
+        # 2. Generate invoice PDF
+        inv_num = inv_pdf = inv_url_str = ""
+        try:
+            from invoice_generator import build_invoice, save_invoice, invoice_url as _inv_url
+            deposit_paid = float(amount_total or 0)
+            inv_num, inv_pdf = build_invoice(
+                email_state,
+                deposit_paid = deposit_paid,
+                record_id    = record_id,
+            )
+            save_invoice(inv_num, inv_pdf)
+            inv_url_str = _inv_url(inv_num)
+            # Write invoice number + URL to Airtable
+            update_inquiry(record_id, {
+                "Invoice Number": inv_num,
+                "Invoice URL":    inv_url_str,
+            })
+            print(f"[Webhook] Invoice {inv_num} generated → {inv_url_str}")
+        except Exception as e:
+            print(f"[Webhook] Invoice generation failed (non-fatal): {e}")
+
+        # 3. Send branded confirmation email (with PDF attached)
         try:
             from confirmation_email import send_booking_confirmation
-            session_id_for_email = _extract_session_id(order)
-            email_state = _get_session_state(session_id_for_email) if session_id_for_email else {}
-            # Fallback: fill in email from Shopify order if session state missing it
-            if not email_state.get("email"):
-                email_state["email"] = details.get("email", "")
-            if not email_state.get("client_name"):
-                email_state["client_name"] = details.get("client_name", "")
-            send_booking_confirmation(record_id, email_state)
+            send_booking_confirmation(
+                record_id,
+                email_state,
+                invoice_pdf    = inv_pdf or None,
+                invoice_number = inv_num,
+                invoice_url    = inv_url_str,
+            )
         except Exception as e:
             print(f"[Webhook] Confirmation email failed: {e}")
 

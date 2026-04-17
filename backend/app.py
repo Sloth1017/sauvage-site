@@ -1,4 +1,4 @@
-from flask import Flask, send_from_directory, make_response
+from flask import Flask, send_from_directory, make_response, abort, send_file
 from shopify_webhook import webhook_bp
 from chat_backend import chat_bp
 import os
@@ -73,6 +73,28 @@ def media(filename):
 @app.route("/fonts/<path:filename>")
 def fonts(filename):
     return send_from_directory(os.path.join(SITE_DIR, "fonts"), filename)
+
+# ── Invoice serving ───────────────────────────────────────────────────────────
+_INV_DIR = os.path.join(os.path.dirname(__file__), "invoices")
+
+@app.route("/invoice/<invoice_number>")
+def serve_invoice(invoice_number):
+    """Serve a PDF invoice — HMAC-token gated so only the URL recipient can access it."""
+    from flask import request as _req
+    from invoice_generator import verify_invoice_token
+    token = _req.args.get("t", "")
+    if not verify_invoice_token(invoice_number, token):
+        abort(403)
+    path = os.path.join(_INV_DIR, f"{invoice_number}.pdf")
+    if not os.path.exists(path):
+        abort(404)
+    return send_file(
+        path,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=f"{invoice_number}.pdf",
+    )
+
 
 if __name__ == "__main__":
     app.run(port=int(os.environ.get("PORT", 5001)))

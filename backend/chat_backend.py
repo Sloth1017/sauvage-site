@@ -1409,11 +1409,33 @@ def test_confirm(session_id):
     except Exception as e:
         print(f"[test-confirm] Make.com notification failed: {e}")
 
+    # Generate invoice PDF
+    inv_num = inv_pdf = inv_url_str = ""
+    try:
+        from invoice_generator import build_invoice, save_invoice, invoice_url as _inv_url
+        inv_num, inv_pdf = build_invoice(state, deposit_paid=50.0, record_id=record_id or "test")
+        save_invoice(inv_num, inv_pdf)
+        inv_url_str = _inv_url(inv_num)
+        print(f"[test-confirm] Invoice {inv_num} → {inv_url_str}")
+        if record_id and _AIRTABLE_ENABLED:
+            from airtable_client import update_inquiry as _upd
+            try:
+                _upd(record_id, {"Invoice Number": inv_num, "Invoice URL": inv_url_str})
+            except Exception as _ae:
+                print(f"[test-confirm] Airtable invoice fields failed: {_ae}")
+    except Exception as e:
+        print(f"[test-confirm] Invoice generation failed: {e}")
+
     # Send booking confirmation email
     try:
         from confirmation_email import send_booking_confirmation
         if record_id:
-            send_booking_confirmation(record_id, state)
+            send_booking_confirmation(
+                record_id, state,
+                invoice_pdf    = inv_pdf or None,
+                invoice_number = inv_num,
+                invoice_url    = inv_url_str,
+            )
         else:
             print("[test-confirm] Skipped confirmation email — no record_id")
     except Exception as e:
