@@ -1151,7 +1151,7 @@
     wrap.innerHTML =
       '<div class="sv-tandc-label" id="sv-tc-row">' +
         '<div class="sv-tandc-box" id="sv-tc-box"></div>' +
-        '<span>I have read and accept the <a class="sv-tandc-link" href="https://www.sauvage.amsterdam/terms" target="_blank">Terms of Use</a></span>' +
+        '<span>I have read and accept the <a class="sv-tandc-link" href="https://sauvage.amsterdam/terms" target="_blank">Terms of Use</a></span>' +
       '</div>' +
       '<button class="sv-tandc-btn" id="sv-tc-ok" disabled>Confirm &amp; continue</button>';
 

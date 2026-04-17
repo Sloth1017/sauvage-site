@@ -157,13 +157,13 @@ def send_booking_confirmation(record_id: str, state: dict) -> bool:
                       {"" if not quote_total else f'''<tr>
                         <td width="50%" style="padding:0;vertical-align:top;">
                           <p style="margin:0 0 2px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;">Total</p>
-                          <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">€{quote_total} incl. VAT</p>
+                          <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">&#8364;{quote_total} incl. VAT</p>
                         </td>
                         <td width="50%" style="padding:0;vertical-align:top;">
                           <p style="margin:0 0 2px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;">Deposit Paid</p>
                           <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">{deposit}</p>
                         </td>
-                      </tr>''"}
+                      </tr>'''}
                     </table>
                   </td>
                 </tr>
