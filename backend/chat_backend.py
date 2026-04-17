@@ -759,6 +759,8 @@ def chat():
     # ── Deterministic addon sync ──────────────────────────────────────────────
     # The widget embeds [at:Value1,Value2] in the submission message.
     # Parse and push directly to Airtable — no LLM extraction needed.
+    if "add-ons" in message.lower() or "[at:" in message.lower():
+        print(f"[Addons] Raw incoming message: {repr(message)}")
     _at_addons = []
     _at_match = re.search(r'\[at:([^\]]*)\]', message)
     if _at_match:
