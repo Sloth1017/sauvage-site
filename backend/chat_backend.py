@@ -638,15 +638,22 @@ def _inject_checkout_url(session_id: str, state: dict, meta: dict, bot_response:
 
 # ── Widget hint ───────────────────────────────────────────────────────────────
 
-def _determine_widget(state: dict, bot_text: str) -> Optional[str]:
+def _determine_widget(state: dict, bot_text: str, sent_widgets: list) -> Optional[str]:
     """
     Tell the frontend which interactive widget to show next.
     This is the authoritative signal — far more reliable than client-side text matching.
     Returns a widget key or None.
+
+    sent_widgets: list of widget keys already shown this session (from meta["widgets_sent"]).
+    Each one-shot widget (addons, contact, customer_type, attribution, tandc) fires at most once.
     """
     t = bot_text.lower()
 
-    # Date/time picker
+    def _once(key: str) -> Optional[str]:
+        """Return key only if it hasn't been sent yet this session."""
+        return key if key not in sent_widgets else None
+
+    # Date/time picker — can show multiple times (different question)
     if "select your dates" in t or "select a date" in t:
         return "datetime"
 
@@ -659,10 +666,9 @@ def _determine_widget(state: dict, bot_text: str) -> Optional[str]:
             "name and contact", "contact details",
         ]
         if any(tr in t for tr in contact_triggers):
-            return "contact"
-        # Multi-field ask: name + (email or phone or reach)
+            return _once("contact")
         if "name" in t and any(w in t for w in ["email", "phone", "reach", "whatsapp"]):
-            return "contact"
+            return _once("contact")
 
     # Customer type — only if still unknown
     if not state.get("customer_type"):
@@ -672,22 +678,19 @@ def _determine_widget(state: dict, bot_text: str) -> Optional[str]:
             "individual or business", "booking as a",
         ]
         if any(tr in t for tr in ctype_triggers) or ("private" in t and "business" in t):
-            return "customer_type"
+            return _once("customer_type")
 
-    # Add-ons — match the exact trigger phrase from the prompt
-    if ("add-on" in t or "addon" in t) and ("available" in t or "select" in t or "include" in t):
-        return "addons"
-    # Also catch the phrase without hyphen
-    if "add ons" in t and ("available" in t or "select" in t or "include" in t):
-        return "addons"
+    # Add-ons — exact trigger phrase only; fires at most once per session
+    if "add-ons for your event" in t and ("select" in t or "include" in t or "available" in t):
+        return _once("addons")
 
     # Attribution / referral
     if "hear about" in t or "referred" in t or "find us" in t or "how did you" in t:
-        return "attribution"
+        return _once("attribution")
 
-    # T&C acceptance — the prompt's exact trigger: "Terms of Use: https://..."
+    # T&C acceptance — fires at most once per session
     if "terms of use" in t or ("terms" in t and ("sauvage.amsterdam/terms" in t or "accept" in t or "confirm" in t)):
-        return "tandc"
+        return _once("tandc")
 
     return None
 
@@ -904,7 +907,14 @@ def chat():
         daemon=True,
     ).start()
 
-    widget_hint = _determine_widget(state, assistant_text)
+    sent_widgets = meta.get("widgets_sent", [])
+    widget_hint  = _determine_widget(state, assistant_text, sent_widgets)
+
+    # Track which one-shot widgets have been sent so we never fire them twice
+    if widget_hint and widget_hint != "datetime":
+        if widget_hint not in sent_widgets:
+            meta["widgets_sent"] = sent_widgets + [widget_hint]
+            _session_update(session_id, meta=meta)
 
     resp = {
         "session_id":    session_id,
