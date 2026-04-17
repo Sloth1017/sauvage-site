@@ -1007,14 +1007,15 @@
     var wrap = document.createElement("div");
     wrap.className = "sv-addons-wrap";
 
+    // at: exact Airtable "Add-Ons" multi-select option name — must match column options verbatim
     var ITEMS = [
-      { id:"dishware",  name:"Dishware, cutlery & glass", sub:"25 pax",           price:25,  type:"flat" },
-      { id:"glass-st",  name:"Glassware — stem glasses",  sub:"25 pax · upgrade", price:35,  type:"flat" },
-      { id:"staff",     name:"Staff support",             sub:"€35/hr per person · full event duration", price:35, type:"staff" },
-      { id:"cleanup",   name:"Event cleanup",             sub:"flat fee",          price:60,  type:"flat" },
-      { id:"snacks",    name:"Snacks / Fento",            sub:"€10 per person",    price:10,  type:"pax", qty:10 },
-      { id:"bar",       name:"Sommelier / barista service", sub:"€50/hr",           price:50,  type:"hr",  qty:1 },
-      { id:"projector", name:"Projector / screen",        sub:"flat fee",          price:25,  type:"flat" }
+      { id:"dishware",  name:"Dishware, cutlery & glass", sub:"25 pax",           price:25,  type:"flat",  at:"Dishware & Cutlery" },
+      { id:"glass-st",  name:"Glassware — stem glasses",  sub:"25 pax · upgrade", price:35,  type:"flat",  at:"Stem Glassware" },
+      { id:"staff",     name:"Staff support",             sub:"€35/hr · full event duration", price:35, type:"staff", at:"Staff Support" },
+      { id:"cleanup",   name:"Event cleanup",             sub:"flat fee",          price:60,  type:"flat",  at:"Event Cleanup" },
+      { id:"snacks",    name:"Snacks / Fento",            sub:"€10 per person",    price:10,  type:"pax",   at:"Snacks (Fento)", qty:10 },
+      { id:"bar",       name:"Sommelier / barista service", sub:"€50/hr",          price:50,  type:"hr",    at:"Sommelier / Barista", qty:1 },
+      { id:"projector", name:"Projector / screen",        sub:"flat fee",          price:25,  type:"flat",  at:"Projector / Screen" }
     ];
 
     var checked = {};
@@ -1119,7 +1120,9 @@
         var subtotalStr = hasStaff
           ? (nonStaffTotal > 0 ? "€" + nonStaffTotal + " + staff (priced in quote)" : "staff (priced in quote)")
           : "€" + grandTotal();
-        msg = "Add-ons: " + lines.join(", ") + ". Subtotal: " + subtotalStr;
+        // Append canonical Airtable values for deterministic backend sync
+        var atValues = sel.map(function(i){ return i.at; }).join(",");
+        msg = "Add-ons: " + lines.join(", ") + ". Subtotal: " + subtotalStr + " [at:" + atValues + "]";
       }
       _pickerConfirm = null;
       wrap.remove();

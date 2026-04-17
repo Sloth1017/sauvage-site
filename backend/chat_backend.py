@@ -742,8 +742,33 @@ def chat():
         _session_create(session_id, [])
         sess = {"messages": [], "state": {}, "meta": {}}
 
+    # ── Deterministic addon sync ──────────────────────────────────────────────
+    # The widget embeds [at:Value1,Value2] in the submission message.
+    # Parse and push directly to Airtable — no LLM extraction needed.
+    _at_addons = []
+    _at_match = re.search(r'\[at:([^\]]*)\]', message)
+    if _at_match:
+        raw = _at_match.group(1).strip()
+        _at_addons = [v.strip() for v in raw.split(",") if v.strip()]
+        # Strip the tag so Claude never sees it
+        message = (message[:_at_match.start()] + message[_at_match.end():]).strip()
+
     messages = sess["messages"]
     messages.append({"role": "user", "content": message})
+
+    # Push addon list to Airtable immediately (synchronous, before LLM call)
+    if _at_addons and _AIRTABLE_ENABLED:
+        _r_id = sess["meta"].get("record_id")
+        if _r_id:
+            try:
+                from airtable_client import update_inquiry as _upd_at
+                _upd_at(_r_id, {"Add-Ons": _at_addons})
+                # Mark in meta so _sync_airtable doesn't re-push with LLM values
+                sess["meta"].setdefault("last_pushed", {})["addons"] = _at_addons
+                _session_update(session_id, meta=sess["meta"])
+                print(f"[Addons] Direct sync → {_at_addons}")
+            except Exception as _e:
+                print(f"[Addons] Direct sync error: {_e}")
     history = messages[-20:]   # keep last 10 exchanges — ~3-4K tokens, much faster
 
     # Use state already accumulated from previous turns — no blocking LLM call needed now.

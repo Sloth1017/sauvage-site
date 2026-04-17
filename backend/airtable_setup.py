@@ -129,17 +129,15 @@ INQUIRIES_FIELDS = [
          {"name": "Kitchen"},
          {"name": "Cave"},
      ]}},
-    {"name": "Add-Ons Requested", "type": "multipleSelects",
+    {"name": "Add-Ons", "type": "multipleSelects",
      "options": {"choices": [
-         {"name": "Dishware & Cutlery (25 pax)"},
-         {"name": "Glassware (25 pax)"},
+         {"name": "Dishware & Cutlery"},
+         {"name": "Stem Glassware"},
          {"name": "Staff Support"},
-         {"name": "Extended Hours (after midnight)"},
          {"name": "Event Cleanup"},
-         {"name": "Snacks per Person (Fento)"},
-         {"name": "Bar/Barista Service"},
-         {"name": "Projector/Display Screen"},
-         {"name": "Natural Wine (Selection Sauvage)"},
+         {"name": "Snacks (Fento)"},
+         {"name": "Sommelier / Barista"},
+         {"name": "Projector / Screen"},
      ]}},
 
     # --- Pricing ---
