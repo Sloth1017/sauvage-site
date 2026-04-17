@@ -27,9 +27,10 @@
   let sessionId = null;
   let currentStage = 0;
   let open = false;
-  let _pickerConfirm = null;     // set when calendar is open, cleared on confirm/remove
-  let _paymentPollTimer = null;  // interval ID while polling for deposit confirmation
-  const _shownWidgets = new Set(); // tracks widget types shown this session — each fires once
+  let _pickerConfirm = null;        // set when calendar is open, cleared on confirm/remove
+  let _paymentPollTimer = null;     // interval ID while polling for deposit confirmation
+  let _pendingCheckoutUrl = null;   // checkout URL returned by backend, used by pay button
+  const _shownWidgets = new Set();  // tracks widget types shown this session — each fires once
 
   // ── Styles ────────────────────────────────────────────────────────────────
   const css = `
@@ -373,6 +374,15 @@
     }
     .sv-tandc-btn:disabled { background: #ccc; cursor: default; }
     .sv-tandc-btn:not(:disabled):hover { background: #333; }
+    .sv-pay-btn {
+      width: 100%; background: #1a1a1a; color: #fff; border: none; border-radius: 8px;
+      padding: 11px 14px; font-size: 14px; font-weight: 700; cursor: pointer;
+      font-family: inherit; transition: background 0.15s; outline: none;
+      margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .sv-pay-btn:disabled { background: #ccc; cursor: default; }
+    .sv-pay-btn:not(:disabled):hover { background: #333; }
+    .sv-pay-divider { border: none; border-top: 1px solid #f0f0f0; margin: 10px 0 2px; }
 
     /* ── Date / Time Picker ── */
     .sv-dt-picker {
@@ -1195,37 +1205,77 @@
     var wrap = document.createElement("div");
     wrap.className = "sv-tandc-wrap";
     var accepted = false;
+    var checkoutUrl = _pendingCheckoutUrl;
 
-    // Render once — no re-render, just update classes/state directly
+    var payHtml = checkoutUrl
+      ? '<hr class="sv-pay-divider">' +
+        '<button class="sv-pay-btn" id="sv-pay-btn" disabled>' +
+          '<span>💳</span><span>Pay deposit</span>' +
+        '</button>'
+      : '<button class="sv-tandc-btn" id="sv-tc-ok" disabled>Confirm &amp; continue</button>';
+
     wrap.innerHTML =
       '<div class="sv-tandc-label" id="sv-tc-row">' +
         '<div class="sv-tandc-box" id="sv-tc-box"></div>' +
         '<span>I have read and accept the <a class="sv-tandc-link" href="https://sauvage.amsterdam/terms" target="_blank">Terms of Use</a></span>' +
       '</div>' +
-      '<button class="sv-tandc-btn" id="sv-tc-ok" disabled>Confirm &amp; continue</button>';
+      payHtml;
 
     msgs.appendChild(wrap);
 
     var box = wrap.querySelector("#sv-tc-box");
-    var btn = wrap.querySelector("#sv-tc-ok");
+    var confirmBtn = wrap.querySelector("#sv-tc-ok");
+    var payBtn     = wrap.querySelector("#sv-pay-btn");
 
-    // Single click handler on the row — box click bubbles up here naturally
     wrap.querySelector("#sv-tc-row").addEventListener("click", function(e) {
-      if (e.target.tagName === "A") return; // let the Terms link open in new tab
+      if (e.target.tagName === "A") return;
       accepted = !accepted;
       box.classList.toggle("checked", accepted);
       box.textContent = accepted ? "\u2713" : "";
-      btn.disabled = !accepted;
+      if (confirmBtn) confirmBtn.disabled = !accepted;
+      if (payBtn)     payBtn.disabled     = !accepted;
     });
 
-    btn.addEventListener("click", function() {
+    if (confirmBtn) {
+      confirmBtn.addEventListener("click", function() {
+        if (!accepted) return;
+        _pickerConfirm = null;
+        wrap.remove();
+        sendMessage("\u2705 I have read and accepted the Terms of Use.");
+      });
+    }
+
+    if (payBtn) {
+      payBtn.addEventListener("click", function() {
+        if (!accepted) return;
+        _pickerConfirm = null;
+        wrap.remove();
+        sendMessage("\u2705 I have read and accepted the Terms of Use.");
+        window.open(checkoutUrl, "_blank");
+      });
+    }
+
+    _pickerConfirm = function() {
       if (!accepted) return;
-      _pickerConfirm = null;
-      wrap.remove();
-      sendMessage("\u2705 I have read and accepted the Terms of Use.");
-    });
+      if (payBtn)     payBtn.click();
+      else if (confirmBtn) confirmBtn.click();
+    };
+    scrollToContext(msgs, wrap);
+  }
 
-    _pickerConfirm = function() { if (accepted) btn.click(); };
+  function showStandalonePayButton(checkoutUrl) {
+    if (!checkoutUrl) return;
+    var msgs = document.getElementById("sv-messages");
+    var wrap = document.createElement("div");
+    wrap.className = "sv-tandc-wrap";
+    wrap.innerHTML =
+      '<button class="sv-pay-btn" id="sv-pay-standalone">' +
+        '<span>💳</span><span>Pay deposit</span>' +
+      '</button>';
+    msgs.appendChild(wrap);
+    wrap.querySelector("#sv-pay-standalone").addEventListener("click", function() {
+      window.open(checkoutUrl, "_blank");
+    });
     scrollToContext(msgs, wrap);
   }
 
@@ -1598,7 +1648,11 @@
         if (isQuoteMessage(botMsg)) {
           setTimeout(function() { addPdfExportButton(botDiv.innerHTML); }, 200);
         }
-        if (hasPaymentLink(botMsg)) {
+        // Store checkout URL for the pay button widget (T&C widget or standalone)
+        if (data.checkout_url) {
+          _pendingCheckoutUrl = data.checkout_url;
+          setTimeout(startPaymentPolling, 1000);
+        } else if (hasPaymentLink(botMsg)) {
           setTimeout(startPaymentPolling, 1000);
         }
         var bl = botMsg.toLowerCase();
@@ -1629,6 +1683,9 @@
         }
         if (_nextWidget && _widgetMap[_nextWidget]) {
           setTimeout(_widgetMap[_nextWidget], 300);
+        } else if (!_nextWidget && data.checkout_url && _shownWidgets.has("tandc")) {
+          // T&C already accepted in this session — show standalone pay button
+          setTimeout(function(){ showStandalonePayButton(data.checkout_url); }, 300);
         }
       }
     } catch (e) {

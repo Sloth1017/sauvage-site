@@ -848,9 +848,31 @@ def chat():
     if assistant_text is None:
         return jsonify({"error": "Service temporarily overloaded, please try again in a moment."}), 200, _cors_headers()
 
-    # Replace static deposit URL with a session-linked Shopify checkout URL
+    # Replace static deposit URL with a session-linked Shopify checkout URL,
+    # then extract it from the text so the frontend renders it as a button widget.
+    checkout_url = None
     try:
         assistant_text = _inject_checkout_url(session_id, state, meta, assistant_text)
+        # Extract the final URL (dynamic or static fallback) from the response text
+        # and strip it so the text body doesn't contain a raw link anymore.
+        _url_candidates = []
+        for _static in (DEPOSIT_URL_STD, DEPOSIT_URL_KIT):
+            if _static in assistant_text:
+                _url_candidates.append(_static)
+        # Also look for any Shopify invoice/payment URL the injector may have substituted
+        _dyn = re.search(r'https?://[^\s\)\]>\"\']+(?:invoice|checkouts|payment)[^\s\)\]>\"\']*', assistant_text)
+        if _dyn:
+            _url_candidates.insert(0, _dyn.group(0))
+        if _url_candidates:
+            checkout_url = _url_candidates[0]
+            # Strip markdown link patterns like [Pay deposit here](URL) or bare URL
+            _url_esc = re.escape(checkout_url)
+            assistant_text = re.sub(r'\[([^\]]+)\]\(' + _url_esc + r'\)', r'\1', assistant_text)
+            assistant_text = re.sub(_url_esc, '', assistant_text)
+            # Clean up any leftover "→ Pay deposit here" orphan text that was the link label
+            assistant_text = re.sub(r'→\s*\*?\*?Pay deposit here\*?\*?', '', assistant_text)
+            assistant_text = re.sub(r'\*?\*?Pay deposit here\*?\*?', '', assistant_text)
+            assistant_text = assistant_text.strip()
     except Exception as e:
         print(f"_inject_checkout_url error: {e}")
 
@@ -939,6 +961,15 @@ def chat():
     }
     if widget_hint:
         resp["widget"] = widget_hint
+    # Always surface the checkout URL (stripped from text or from stored meta)
+    # so the frontend can render the pay button — unless payment is already confirmed.
+    if not meta.get("payment_confirmed"):
+        if checkout_url:
+            resp["checkout_url"] = checkout_url
+        elif meta.get("payment_url"):
+            # Payment URL exists from a prior quote turn — pass it so the
+            # standalone pay button appears after T&C acceptance, etc.
+            resp["checkout_url"] = meta["payment_url"]
 
     # If addons widget is being shown, check if Fento was mentioned earlier — pre-select it
     if widget_hint == "addons":
