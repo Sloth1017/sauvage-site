@@ -470,12 +470,12 @@ Present an itemised breakdown in plain text — no markdown tables. Use line bre
 > *Total incl VAT: €[X]*
 > *Excl VAT: €[X] · VAT (21%): €[X]*
 >
-> *Deposit to confirm: €50 → [Pay deposit here](https://www.selectionsauvage.nl/products/event-deposit)*
-> *(Kitchen booked? Total deposit €300 → [Pay kitchen deposit here](https://www.selectionsauvage.nl/products/event-deposit-copy))*
->
 > *Quote valid for 14 days, or until 7 days before your event — whichever comes first. Availability subject to confirmation.*
 >
-> *If you'd like any changes just let me know — otherwise please accept our Terms of Use to proceed: https://sauvage.amsterdam/terms"*
+> *If you'd like any changes just let me know — otherwise please accept our Terms of Use to proceed: https://sauvage.amsterdam/terms*
+>
+> *Deposit to confirm: €50 → [Pay deposit here](https://www.selectionsauvage.nl/products/event-deposit)*
+> *(Kitchen booked? Total deposit €300 → [Pay kitchen deposit here](https://www.selectionsauvage.nl/products/event-deposit-copy))*
 
 **IMPORTANT: Never use markdown tables (pipes and dashes) in the quote. Always use plain line items with line breaks as shown above. This renders cleanly in the chat interface.**
 

@@ -51,290 +51,227 @@
     <div class="mermaid">
 ```mermaid
 flowchart TD
-    subgraph Greeting
-        A[Auto-greeting sent by system]
+    subgraph Opening
+        A[Client sends first message]
     end
 
     subgraph Event_Details
-        B[Client sends first message]
-        C{Event type\nmentioned?}
-        D[Confirm event type\n→ AT: Event Type]
-        E[Ask event type\n→ AT: Event Type]
+        B{Event type\nstated?}
+        B -->|No| C[Ask event type\n→ AT: Event Type]
+        B -->|Yes| D[Confirm event type\n→ AT: Event Type]
+        C --> D
     end
 
     subgraph Date_Time
-        F{Date provided?}
-        G[Ask for date\nTrigger: datetime widget\n→ AT: Requested Date]
-        H{Time provided?}
-        I[Ask for start/end time\n→ AT: Time Slot, Duration]
-        J[Confirm date + time\n→ AT: Requested Date, Time Slot, Duration]
-        K{Date available?}
-        L[Offer alternatives or waitlist]
-        M[Waitlist flow\n→ AT: Funnel Stage = waitlisted]
+        D --> E{Date provided?}
+        E -->|No| F[Ask for dates\ntrigger datetime widget\n→ AT: Requested Date]
+        E -->|Yes| G{Time provided?}
+        F --> G
+        G -->|No| H[Ask start/end time\n→ AT: Time Slot, Duration]
+        G -->|Yes| I[Confirm date and time\n→ AT: Requested Date, Time Slot, Duration]
+        H --> I
+    end
+
+    subgraph Availability_Check
+        I --> J{Check Google Calendar}
+        J -->|Available| K[Proceed to contact]
+        J -->|Unavailable| L[Offer alternatives]
+        L --> M{Client accepts\nalternative?}
+        M -->|Yes| K
+        M -->|No| N{Want waitlist?}
+        N -->|Yes| O[Collect waitlist info\n→ AT: Funnel Stage = waitlisted]
+        N -->|No| P[End conversation gracefully]
+        O --> P
     end
 
     subgraph Contact_Collection
-        N[Ask name + email + phone\nTrigger: contact widget\n→ AT: Client Name, Email, Phone]
-        O[Confirm contact details]
+        K --> Q[Ask name + email + phone\ntrigger contact widget\n→ AT: Client Name, Email, Phone]
+        Q --> R[GDPR notice shown]
     end
 
     subgraph Customer_Type
-        P{Customer type\nalready known?}
-        Q[Skip customer type question]
-        R[Ask private or business\nTrigger: customer_type widget\n→ AT: Customer Type]
+        R --> S{Customer type\nknown?}
+        S -->|Yes| T[Skip to guest count]
+        S -->|No| U[Ask private or business\ntrigger customer_type widget\n→ AT: Customer Type]
+        U --> T
+    end
+
+    subgraph Guest_Count
+        T --> V[Ask guest count\n→ AT: Guest Count]
+        V --> W{Count > 30?}
+        W -->|Yes| X[Hard stop: max 30 guests]
+        W -->|No| Y[Proceed to rooms]
     end
 
     subgraph Room_Selection
-        S[Share walkthrough video]
-        T{Guest count\nprovided?}
-        U[Ask guest count\n→ AT: Guest Count]
-        V{Guests > 30?}
-        W[Hard stop: max 30 guests]
-        X[Apply capacity rules\nRecommend rooms]
-        Y[Present rooms as photo links]
-        Z[Client selects rooms\n→ AT: Rooms Requested]
-        AA{Kitchen selected?}
-        AB[Flag kitchen deposit €250\n→ AT: Rooms Requested]
-        AC{Food involved?}
-        AD[Prompt kitchen option]
-        AE[Client declines kitchen\nExplain equipment rules]
-        AF{Upstairs selected?}
-        AG[Ask about wall use]
-        AH[Flag for Gallery approval]
+        Y --> Z[Share walkthrough video]
+        Z --> AA[Present rooms with\ncapacity guidance]
+        AA --> AB[Client selects rooms\n→ AT: Rooms Requested]
+        AB --> AC{Kitchen selected?}
+        AC -->|Yes| AD[Explain kitchen deposit €250]
+        AC -->|No| AE{Food mentioned?}
+        AE -->|Yes| AF[Prompt kitchen option]
+        AF --> AG{Client wants kitchen?}
+        AG -->|Yes| AD
+        AG -->|No| AH[State kitchen equipment rules]
+        AE -->|No| AI[Continue]
+        AD --> AI
+        AH --> AI
+        AI --> AJ{Upstairs selected?}
+        AJ -->|Yes| AK[Ask about wall use]
+        AK --> AL{Wall use needed?}
+        AL -->|Yes| AM[Flag for Gallery approval]
+        AL -->|No| AN[Continue]
+        AM --> AN
+        AJ -->|No| AN
     end
 
-    subgraph Add_Ons
-        AI[Trigger add-ons widget\nExact phrase only\n→ AT: Add-Ons]
-        AJ[Client submits add-on selections]
-        AK{Staff selected?}
-        AL[Include 1 staff full duration]
-        AM[Self-managed event confirmed]
-        AN{Glassware selected?}
-        AO[Default stemless €25]
-        AP[Stem upgrade €35]
+    subgraph Addons
+        AN --> AO[Trigger addons widget\nExact phrase only\n→ AT: Add-Ons]
+        AO --> AP[Client submits selections]
+        AP --> AQ[Calculate staff if selected\ndefault 1 person full duration]
     end
 
-    subgraph Quote_Calculation
-        AQ[Calculate room subtotal]
-        AR[Apply bundle discount]
-        AS{Full-Day booking?}
-        AT[Add closure premiums]
-        AU[Add add-on costs]
-        AV[Calculate VAT]
-        AW[Present itemised quote\n→ AT: Total Incl VAT, Total Ex VAT, VAT Amount]
-        AX[Include T&C link\nTrigger: tandc widget]
+    subgraph Quote_Generation
+        AQ --> AR[Build itemised quote]
+        AR --> AS[Apply bundle discount]
+        AS --> AT{Full-Day booking?}
+        AT -->|Yes| AU[Add closure premiums\nif Entrance/Kitchen]
+        AT -->|No| AV[Skip premiums]
+        AU --> AW[Sum totals\n→ AT: Total Incl VAT, Total Ex VAT, VAT Amount]
+        AV --> AW
+        AW --> AX[Present quote with T&C link\ntrigger tandc widget]
+        AX --> AY[→ AT: Funnel Stage = 6_quoted]
     end
 
-    subgraph TC_Payment
-        AY{Client requests changes?}
-        AZ[Update quote and re-present]
-        BA[Client accepts T&C]
-        BB[Respond: payment link above\n→ AT: Funnel Stage = 7_deposit_pending]
-        BC{Payment webhook received?}
-        BD[Hard stop: awaiting payment]
-        BE[Payment confirmed\n→ AT: Deposit Collected, Stripe Payment Reference]
-        BF[Send confirmation email]
-        BG[Update booking status\n→ AT: Booking Status = confirmed, Funnel Stage = 8_confirmed]
+    subgraph TandC_Payment
+        AY --> AZ{Client requests\nchanges?}
+        AZ -->|Yes| BA[Update quote]
+        BA --> AX
+        AZ -->|No| BB[Client accepts T&C]
+        BB --> BC[Respond: payment link above]
+        BC --> BD{Deposit paid?\nShopify webhook}
+        BD -->|No| BE[Wait for payment\n→ AT: Funnel Stage = 7_deposit_pending]
+        BD -->|Yes| BF[Confirm booking\n→ AT: Deposit Collected, Stripe Payment Reference]
+        BF --> BG[Send confirmation email]
+        BG --> BH[→ AT: Funnel Stage = 8_confirmed, Booking Status = confirmed]
     end
 
     subgraph Attribution
-        BH[Ask how heard about Sauvage\nTrigger: attribution widget\n→ AT: Referral Source, Attributed Host, Referred By]
-        BI[Client submits attribution]
-        BJ[No response - silence]
-    end
-
-    subgraph Internal_Notifications
-        BK[Notify Selection Sauvage\nif wine/Cave]
-        BL[Notify Fento\nif Kitchen/snacks]
-        BM[Notify Cake sub-tenant\nif Kitchen date conflict]
-        BN[Notify Sauvage Gallery\nif Upstairs/wall use]
-        BO[Notify Ikinari\nif Entrance Wed-Sun before 15:00]
-        BP[Notify Sauvage Admin]
-        BQ[Post to Google Calendar]
+        BH --> BI[Ask how heard about Sauvage\ntrigger attribution widget]
+        BI --> BJ[Client submits response\n→ AT: Referral Source, Attributed Host, Referred By]
+        BJ --> BK[No response to client\nSilent completion]
     end
 
     subgraph Airtable_Sync
-        BR[Update Funnel Stage\n→ AT: Funnel Stage]
-        BS[Save all collected data]
-        BT[Log community pricing if active\n→ AT: Community Pricing]
+        C -.-> AT1[Update: Event Type, Funnel Stage = 1_event_type]
+        I -.-> AT2[Update: Requested Date, Time Slot, Duration, Funnel Stage = 2_date_time]
+        Q -.-> AT3[Update: Client Name, Email, Phone, Funnel Stage = 3_contact]
+        AB -.-> AT4[Update: Rooms Requested, Funnel Stage = 4_rooms]
+        AP -.-> AT5[Update: Add-Ons, Funnel Stage = 5_addons]
+        AY -.-> AT6[Update: Totals, Funnel Stage = 6_quoted]
+        BE -.-> AT7[Update: Funnel Stage = 7_deposit_pending]
+        BH -.-> AT8[Update: Deposit Collected, Payment Ref, Funnel Stage = 8_confirmed, Booking Status]
+        BJ -.-> AT9[Update: Referral Source, Attributed Host, Referred By]
     end
 
-    subgraph Error_Handling
-        BU{Unrecognised input?}
-        BV[First: ask to rephrase]
-        BW[Second: try different approach]
-        BX[Third: escalate to human]
+    subgraph Internal_Notifications
+        BH --> CA{Wine or Cave?}
+        CA -->|Yes| CB[Notify Selection Sauvage BV]
+        CA -->|No| CC[Skip]
+        BH --> CD{Kitchen or snacks?}
+        CD -->|Yes| CE[Notify Fento BV]
+        CD -->|No| CF[Skip]
+        BH --> CG{Kitchen date conflict\nwith cake tenant?}
+        CG -->|Yes| CH[Notify cake sub-tenant]
+        CG -->|No| CI[Skip]
+        BH --> CJ{Upstairs or wall use?}
+        CJ -->|Yes| CK[Notify Sauvage Gallery]
+        CJ -->|No| CL[Skip]
+        BH --> CM{Entrance booked\n08:00-15:00 Wed-Sun?}
+        CM -->|Yes| CN[Notify Ikinari Coffee]
+        CM -->|No| CO[Skip]
+        BH --> CP[Notify Sauvage Admin]
+        BH --> CQ[Post to Google Calendar]
     end
 
-    subgraph Session_Management
-        BY{30 min inactive?}
-        BZ[Send soft nudge]
-        CA{24 hr inactive?}
-        CB[Send follow-up message]
-        CC{48 hr no response?}
-        CD[Mark abandoned\n→ AT: Funnel Stage = abandoned]
-        CE{Client says restart?}
-        CF[Reset conversation\nSave abandoned data]
+    subgraph Abandoned_Flow
+        BE --> DA{No response\n24hrs?}
+        DA -->|Yes| DB[Send follow-up nudge]
+        DB --> DC{No response\n48hrs more?}
+        DC -->|Yes| DD[Mark abandoned\n→ AT: Funnel Stage = abandoned]
+        DC -->|No| AZ
+        DA -->|No| AZ
+    end
+
+    subgraph Session_Timeout
+        EA[30min inactive mid-session] --> EB[Send soft nudge]
+        EB --> EC{No response\n30min more?}
+        EC -->|Yes| ED[Save stage to Airtable\nClose session]
+        EC -->|No| EE[Continue conversation]
     end
 
     subgraph Community_Pricing
-        CG{community47 code entered?}
-        CH[Activate community pricing silently\n→ AT: Community Pricing = true]
-        CI[Apply community kitchen rates]
+        FA{Client enters\ncommunity47?} -->|Yes| FB[Activate community mode\n→ AT: Community Pricing = true]
+        FB --> FC[Use community kitchen rates]
+        FA -->|No| FD[Standard pricing]
+    end
+
+    subgraph Error_Handling
+        GA[Unrecognisable input] --> GB{1st instance?}
+        GB -->|Yes| GC[Ask to rephrase]
+        GC --> GD[Continue]
+        GB -->|No| GE{2nd instance?}
+        GE -->|Yes| GF[Try different approach]
+        GF --> GD
+        GE -->|No| GG[3rd instance - escalate to human]
+    end
+
+    subgraph Human_Handoff
+        HA{Handoff trigger?} -->|Yes| HB[Send handoff message\nGreg contact info]
+        HB --> HC[End bot handling]
     end
 
     A --> B
-    B --> C
-    C -->|No| E
-    C -->|Yes| D
-    E --> D
-    D --> F
-    F -->|No| G
-    F -->|Yes| H
-    G --> H
-    H -->|No| I
-    H -->|Yes| J
-    I --> J
-    J --> K
-    K -->|No| L
-    L --> M
-    K -->|Yes| N
-    N --> O
-    O --> P
-    P -->|Yes| Q
-    P -->|No| R
-    Q --> S
-    R --> S
-    S --> T
-    T -->|No| U
-    T -->|Yes| V
-    U --> V
-    V -->|Yes| W
-    V -->|No| X
-    X --> Y
-    Y --> Z
-    Z --> AA
-    AA -->|Yes| AB
-    AA -->|No| AC
-    AB --> AC
-    AC -->|Yes| AD
-    AC -->|No| AF
-    AD --> AE
-    AE --> AF
-    AF -->|Yes| AG
-    AF -->|No| AI
-    AG --> AH
-    AH --> AI
-    AI --> AJ
-    AJ --> AK
-    AK -->|Yes| AL
-    AK -->|No| AM
-    AL --> AN
-    AM --> AN
-    AN -->|Stem| AP
-    AN -->|Stemless/None| AO
-    AO --> AQ
-    AP --> AQ
-    AQ --> AR
-    AR --> AS
-    AS -->|Yes| AT
-    AS -->|No| AU
-    AT --> AU
-    AU --> AV
-    AV --> AW
-    AW --> AX
-    AX --> AY
-    AY -->|Yes| AZ
-    AZ --> AW
-    AY -->|No| BA
-    BA --> BB
-    BB --> BC
-    BC -->|No| BD
-    BC -->|Yes| BE
-    BE --> BF
-    BF --> BG
-    BG --> BH
-    BH --> BI
-    BI --> BJ
-    BG --> BK
-    BG --> BL
-    BG --> BM
-    BG --> BN
-    BG --> BO
-    BG --> BP
-    BG --> BQ
 
-    B --> BU
-    BU -->|1st| BV
-    BV --> B
-    BU -->|2nd| BW
-    BW --> B
-    BU -->|3rd| BX
-
-    B --> BY
-    BY -->|Yes| BZ
-    BZ --> CA
-    CA -->|Yes| CB
-    CB --> CC
-    CC -->|Yes| CD
-
-    B --> CE
-    CE -->|Yes| CF
-    CF --> B
-
-    B --> CG
-    CG -->|Yes| CH
-    CH --> CI
-    CI --> AQ
-
-    BR -.-> D
-    BR -.-> J
-    BR -.-> O
-    BR -.-> Z
-    BR -.-> AJ
-    BR -.-> AW
-    BR -.-> BB
-    BR -.-> BG
-    BR -.-> CD
-    BR -.-> M
-
-    BS -.-> BG
-    BT -.-> CH
-
-    style W fill:#ffcccc,stroke:#cc0000
-    style BD fill:#fff3cd,stroke:#ffcc00
-    style CD fill:#ffcccc,stroke:#cc0000
-    style BX fill:#ffcccc,stroke:#cc0000
-    style C fill:#e6f3ff,stroke:#0066cc,shape:diamond
-    style F fill:#e6f3ff,stroke:#0066cc
-    style H fill:#e6f3ff,stroke:#0066cc
-    style K fill:#e6f3ff,stroke:#0066cc
-    style P fill:#e6f3ff,stroke:#0066cc
-    style T fill:#e6f3ff,stroke:#0066cc
-    style V fill:#e6f3ff,stroke:#0066cc
-    style AA fill:#e6f3ff,stroke:#0066cc
-    style AC fill:#e6f3ff,stroke:#0066cc
-    style AF fill:#e6f3ff,stroke:#0066cc
-    style AK fill:#e6f3ff,stroke:#0066cc
-    style AN fill:#e6f3ff,stroke:#0066cc
-    style AS fill:#e6f3ff,stroke:#0066cc
-    style AY fill:#e6f3ff,stroke:#0066cc
-    style BC fill:#e6f3ff,stroke:#0066cc
-    style BU fill:#e6f3ff,stroke:#0066cc
-    style BY fill:#e6f3ff,stroke:#0066cc
-    style CA fill:#e6f3ff,stroke:#0066cc
-    style CC fill:#e6f3ff,stroke:#0066cc
-    style CE fill:#e6f3ff,stroke:#0066cc
-    style CG fill:#e6f3ff,stroke:#0066cc
-    style G fill:#d4edda,stroke:#28a745
-    style N fill:#d4edda,stroke:#28a745
-    style R fill:#d4edda,stroke:#28a745
-    style AI fill:#d4edda,stroke:#28a745
-    style AX fill:#d4edda,stroke:#28a745
-    style BH fill:#d4edda,stroke:#28a745
-    style BE fill:#ccffcc,stroke:#00cc00
-    style BG fill:#ccffcc,stroke:#00cc00
-    style BJ fill:#ccffcc,stroke:#00cc00
+    style X fill:#ffcccc,stroke:#cc0000
+    style P fill:#ffcccc,stroke:#cc0000
+    style DD fill:#ffcccc,stroke:#cc0000
+    style GG fill:#ffffcc,stroke:#cccc00
+    style HB fill:#ffffcc,stroke:#cccc00
+    style AO fill:#ccffcc,stroke:#00cc00
+    style BI fill:#ccffcc,stroke:#00cc00
+    style Q fill:#ccffcc,stroke:#00cc00
+    style U fill:#ccffcc,stroke:#00cc00
+    style F fill:#ccffcc,stroke:#00cc00
+    style AX fill:#ccffcc,stroke:#00cc00
+    style B fill:#cce5ff,stroke:#0066cc
+    style E fill:#cce5ff,stroke:#0066cc
+    style G fill:#cce5ff,stroke:#0066cc
+    style J fill:#cce5ff,stroke:#0066cc
+    style M fill:#cce5ff,stroke:#0066cc
+    style N fill:#cce5ff,stroke:#0066cc
+    style S fill:#cce5ff,stroke:#0066cc
+    style W fill:#cce5ff,stroke:#0066cc
+    style AC fill:#cce5ff,stroke:#0066cc
+    style AE fill:#cce5ff,stroke:#0066cc
+    style AG fill:#cce5ff,stroke:#0066cc
+    style AJ fill:#cce5ff,stroke:#0066cc
+    style AL fill:#cce5ff,stroke:#0066cc
+    style AT fill:#cce5ff,stroke:#0066cc
+    style AZ fill:#cce5ff,stroke:#0066cc
+    style BD fill:#cce5ff,stroke:#0066cc
+    style CA fill:#cce5ff,stroke:#0066cc
+    style CD fill:#cce5ff,stroke:#0066cc
+    style CG fill:#cce5ff,stroke:#0066cc
+    style CJ fill:#cce5ff,stroke:#0066cc
+    style CM fill:#cce5ff,stroke:#0066cc
+    style DA fill:#cce5ff,stroke:#0066cc
+    style EC fill:#cce5ff,stroke:#0066cc
+    style FA fill:#cce5ff,stroke:#0066cc
+    style GB fill:#cce5ff,stroke:#0066cc
+    style GE fill:#cce5ff,stroke:#0066cc
+    style HA fill:#cce5ff,stroke:#0066cc
 ```
     </div>
   </div>
@@ -349,7 +286,7 @@ flowchart TD
     <div class="l-item"><div class="l-dot" style="background:#1a1a1a;"></div>Terminal node</div>
   </div>
 
-  <div class="updated">Auto-generated 17 Apr 2026 09:45 · source: chatbot-prompt-v2.md</div>
+  <div class="updated">Auto-generated 17 Apr 2026 09:52 · source: chatbot-prompt-v2.md</div>
 
   <script>
     mermaid.initialize({ startOnLoad: true, theme: 'neutral', flowchart: { curve: 'basis', padding: 20 } });
