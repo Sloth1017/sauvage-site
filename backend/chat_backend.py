@@ -287,6 +287,7 @@ _STATE_LABELS = {
     "attributed_host":    "Attributed host (Greg/Dorian/Bart/Unattributed)",
     "referred_by":        "Referred by (person name, if mentioned)",
     "arrival_time":       "Setup arrival time",
+    "tandc_accepted":     "Terms of Use accepted this session",
 }
 
 _EXTRACT_SYSTEM = (
@@ -761,6 +762,11 @@ def chat():
         _ref_value = _ref_match.group(1).strip()
         message = (message[:_ref_match.start()] + message[_ref_match.end():]).strip()
 
+    # ── Track T&C acceptance ──────────────────────────────────────────────────
+    if "accepted the terms of use" in message.lower() or "i have read and accepted" in message.lower():
+        sess["meta"]["tandc_accepted"] = True
+        _session_update(session_id, meta=sess["meta"])
+
     messages = sess["messages"]
     messages.append({"role": "user", "content": message})
 
@@ -803,6 +809,10 @@ def chat():
     # A background thread will extract new state after we return the response.
     state = dict(sess["state"])
     meta  = sess["meta"]
+
+    # Inject T&C acceptance flag into state so it appears in the state block for Claude
+    if meta.get("tandc_accepted"):
+        state["tandc_accepted"] = True
 
     # Fast regex pre-pass — catch customer_type directly from the raw message
     # so the bot never re-asks even if the LLM extractor missed it
