@@ -436,7 +436,7 @@ def _sync_airtable(session_id: str, state: dict, meta: dict) -> None:
         "email":          "Email",
         "phone":          "Phone",
         "customer_type":  "Customer Type",
-        "is_multi_day":   "Multi-Day",
+        # "is_multi_day" has no Airtable column — captured implicitly in Requested Date
         "duration":       "Duration",
         "arrival_time":   "Arrival Time",
     }
