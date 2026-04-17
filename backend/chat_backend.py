@@ -285,6 +285,7 @@ _STATE_LABELS = {
     "referral_source":    "How they heard about us",
     "attributed_host":    "Attributed host (Greg/Dorian/Bart/Unattributed)",
     "referred_by":        "Referred by (person name, if mentioned)",
+    "arrival_time":       "Setup arrival time",
 }
 
 _EXTRACT_SYSTEM = (
@@ -303,6 +304,8 @@ _EXTRACT_SYSTEM = (
     "- addons: JSON array of confirmed add-on names, e.g. [\"Stemless glassware\", \"Staff 2hr\"]\n"
     "- quote_total: numeric EUR amount incl VAT if the bot has stated a total, e.g. 194.40\n"
     "- community_pricing: true if the community pricing code was used, else omit\n"
+    "- arrival_time: setup arrival time stated by the client after payment confirmation, "
+    "e.g. '14:00'. Only set if client explicitly said what time they will arrive.\n"
     "- referral_source: channel or person given in response to 'how did you hear about Sauvage?' "
     "e.g. 'Instagram', 'Google', 'Organic', 'Greg', 'Dorian', 'Bart', 'Other'\n"
     "- attributed_host: 'Greg', 'Dorian', or 'Bart' if a host was named; otherwise 'Unattributed'. "
@@ -433,6 +436,7 @@ def _sync_airtable(session_id: str, state: dict, meta: dict) -> None:
         "customer_type":  "Customer Type",
         "is_multi_day":   "Multi-Day",
         "duration":       "Duration",
+        "arrival_time":   "Arrival Time",
     }
     for key, at_field in str_map.items():
         val = state.get(key)
