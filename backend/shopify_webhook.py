@@ -10,14 +10,31 @@ import hmac
 import hashlib
 import base64
 import json
+import os
+import sqlite3
+import requests as _requests
+from datetime import datetime
 from flask import Flask, Blueprint, request, jsonify
 from typing import Optional
 
 try:
     from config import SHOPIFY_WEBHOOK_SECRET
 except ImportError:
-    import os
     SHOPIFY_WEBHOOK_SECRET = os.getenv("SHOPIFY_WEBHOOK_SECRET")
+
+# ── Make.com / Routines webhook (optional) ────────────────────────────────────
+# Set MAKE_WEBHOOK_URL in your .env to enable booking summary emails via Make.com
+MAKE_WEBHOOK_URL = os.getenv("MAKE_WEBHOOK_URL", "")
+
+def _notify_make(payload: dict) -> None:
+    """POST booking summary to Make.com webhook — non-blocking, errors are logged not raised."""
+    if not MAKE_WEBHOOK_URL:
+        return
+    try:
+        r = _requests.post(MAKE_WEBHOOK_URL, json=payload, timeout=10)
+        print(f"[Make.com] Notified — status {r.status_code}")
+    except Exception as e:
+        print(f"[Make.com] Notification failed: {e}")
 
 from airtable_client import confirm_booking, update_inquiry
 
@@ -43,6 +60,40 @@ def verify_shopify_signature(payload: bytes, hmac_header: str) -> bool:
     computed = base64.b64encode(digest).decode()
     return hmac.compare_digest(computed, hmac_header)
 
+
+_DB_PATH = os.path.join(os.path.dirname(__file__), "sessions.db")
+
+def _get_session_state(session_id: str) -> dict:
+    """Read booking state directly from the SQLite sessions DB."""
+    if not session_id:
+        return {}
+    try:
+        conn = sqlite3.connect(_DB_PATH)
+        row  = conn.execute(
+            "SELECT state FROM sessions WHERE session_id = ?", (session_id,)
+        ).fetchone()
+        conn.close()
+        return json.loads(row[0]) if row else {}
+    except Exception as e:
+        print(f"[Webhook] Session state lookup error: {e}")
+        return {}
+
+def _build_dt(date_val, time_str: str) -> Optional[datetime]:
+    """Combine a date (ISO string or list) and HH:MM time into a datetime."""
+    try:
+        if isinstance(date_val, list):
+            date_val = date_val[0]
+        date_str = str(date_val).strip()
+        time_str = str(time_str).strip()
+        if date_str and time_str:
+            return datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+    except Exception as e:
+        print(f"[Webhook] _build_dt error: {e}")
+    return None
+
+def _extract_session_id(order: dict) -> Optional[str]:
+    attrs = {a["name"]: a["value"] for a in order.get("note_attributes", [])}
+    return attrs.get("session_id")
 
 def extract_airtable_record_id(order: dict) -> Optional[str]:
     for attr in order.get("note_attributes", []):
@@ -109,6 +160,7 @@ def handle_webhook():
 
         # 1. Update Airtable
         confirm_booking(record_id)
+        details = extract_booking_details(order)
         update_inquiry(record_id, {
             "Stripe Payment Reference": f"shopify-order-{order_number}",
             "Deposit Collected":        True,
@@ -116,35 +168,56 @@ def handle_webhook():
         })
         print(f"[Webhook] Airtable confirmed: {record_id}")
 
-        # 2. Create Google Calendar event
+        # 2. Notify Make.com — sends summary email to client + Sauvage team
+        _notify_make({
+            "event":          "booking_confirmed",
+            "order_number":   order_number,
+            "airtable_id":    record_id,
+            "client_name":    details["client_name"],
+            "client_email":   details["email"],
+            "client_phone":   details["phone"],
+            "event_type":     details["event_type"],
+            "event_date":     details.get("event_date", ""),
+            "start_time":     details["start_dt"],
+            "end_time":       details["end_dt"],
+            "guest_count":    details["guest_count"],
+            "rooms":          details["rooms"],
+            "deposit_amount": amount_total,
+            "airtable_url":   f"https://airtable.com/appXXXXXXXX/tblXXXXXXXX/{record_id}",
+        })
+
+        # 3. Create Google Calendar event — use session state for full booking data
         if _GCAL_WRITE:
             try:
-                from datetime import datetime
-                details = extract_booking_details(order)
+                session_id = _extract_session_id(order)
+                st = _get_session_state(session_id) if session_id else {}
 
-                # Parse datetimes — stored as ISO strings by the chatbot
-                start = datetime.fromisoformat(details["start_dt"]) if details["start_dt"] else None
-                end   = datetime.fromisoformat(details["end_dt"])   if details["end_dt"]   else None
+                start = _build_dt(st.get("dates"), st.get("start_time", ""))
+                end   = _build_dt(st.get("dates"), st.get("end_time",   ""))
 
                 if start and end:
+                    rooms = st.get("rooms") or details.get("rooms", [])
+                    if isinstance(rooms, str):
+                        rooms = [rooms]
+
                     cal_event = _gcal_create(
-                        client_name  = details["client_name"],
-                        event_type   = details["event_type"],
-                        rooms        = details["rooms"],
+                        client_name  = st.get("client_name")  or details["client_name"],
+                        event_type   = st.get("event_type")   or details["event_type"],
+                        rooms        = rooms,
                         start_dt     = start,
                         end_dt       = end,
-                        guest_count  = details["guest_count"],
-                        email        = details["email"],
-                        phone        = details["phone"],
+                        guest_count  = st.get("guest_count")  or details["guest_count"],
+                        email        = st.get("email")        or details["email"],
+                        phone        = st.get("phone")        or details["phone"],
                         airtable_id  = record_id,
                     )
-                    # Store calendar event ID back in Airtable for later updates
-                    update_inquiry(record_id, {
-                        "Notes": f"Google Calendar event: {cal_event.get('htmlLink', '')}",
-                    })
-                    print(f"[Webhook] Calendar event created: {cal_event.get('htmlLink', '')}")
+                    cal_link = cal_event.get("htmlLink", "")
+                    update_inquiry(record_id, {"Notes": f"Google Calendar event: {cal_link}"})
+                    print(f"[Webhook] Calendar event created: {cal_link}")
                 else:
-                    print(f"[Webhook] Skipped calendar — missing start/end datetime in order {order_number}")
+                    print(f"[Webhook] Skipped calendar — missing start/end datetime "
+                          f"(session={session_id}, dates={st.get('dates')}, "
+                          f"start={st.get('start_time')}, end={st.get('end_time')})")
             except Exception as e:
                 print(f"[Webhook] Calendar write error: {e}")
                 # Non-fatal — booking is still confirmed in Airtable

@@ -999,11 +999,43 @@ def test_confirm(session_id):
         else:
             _session_create(session_id, [], meta=meta)
 
-    # Fire Make.com notification regardless of Airtable state
+    # Create Google Calendar event for the test booking
     try:
         import importlib
         _wh = importlib.import_module("shopify_webhook")
-        _wh._notify_make({
+        if _wh._GCAL_WRITE:
+            start = _wh._build_dt(state.get("dates"), state.get("start_time", ""))
+            end   = _wh._build_dt(state.get("dates"), state.get("end_time",   ""))
+            if start and end:
+                rooms = state.get("rooms") or []
+                if isinstance(rooms, str):
+                    rooms = [rooms]
+                cal_event = _wh._gcal_create(
+                    client_name = state.get("client_name", "Test"),
+                    event_type  = state.get("event_type", "Event"),
+                    rooms       = rooms,
+                    start_dt    = start,
+                    end_dt      = end,
+                    guest_count = state.get("guest_count", 0),
+                    email       = state.get("email", ""),
+                    phone       = state.get("phone", ""),
+                    airtable_id = record_id or "test",
+                )
+                cal_link = cal_event.get("htmlLink", "")
+                print(f"[test-confirm] Calendar event created: {cal_link}")
+                if record_id and _AIRTABLE_ENABLED:
+                    from airtable_client import update_inquiry as _upd
+                    _upd(record_id, {"Notes": f"Google Calendar event: {cal_link}"})
+            else:
+                print(f"[test-confirm] Skipped calendar — missing dates/times in state")
+    except Exception as e:
+        print(f"[test-confirm] Calendar creation failed: {e}")
+
+    # Fire Make.com notification
+    try:
+        import importlib as _il
+        _wh2 = _il.import_module("shopify_webhook")
+        _wh2._notify_make({
             "event":        "booking_confirmed",
             "order_number": "TEST",
             "airtable_id":  record_id or "none",
@@ -1020,7 +1052,7 @@ def test_confirm(session_id):
             "source":       "test-confirm",
         })
     except Exception as e:
-        print(f"[test-confirm] Make.com notify failed: {e}")
+        print(f"[test-confirm] Make.com notification failed: {e}")
 
     return jsonify({
         "status":     "confirmed",
