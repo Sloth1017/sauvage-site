@@ -108,7 +108,7 @@ def update_inquiry(record_id: str, fields: dict) -> dict:
     Update any fields on an existing inquiry.
     Use this to progressively add data as the conversation moves forward.
 
-    Multi-select fields (Rooms Requested, Add-Ons Requested, Special Flags) are
+    Multi-select fields (Rooms Requested, Add-Ons, Special Flags) are
     coerced to lists. If Airtable rejects a multi-select value (unrecognised option),
     we retry without that field and save the raw value in Notes instead — so the rest
     of the update always lands.
@@ -122,7 +122,7 @@ def update_inquiry(record_id: str, fields: dict) -> dict:
         })
     """
     table = _get_table(INQUIRIES_TABLE)
-    MULTI_FIELDS = ["Rooms Requested", "Add-Ons Requested", "Special Flags"]
+    MULTI_FIELDS = ["Rooms Requested", "Add-Ons", "Special Flags"]
 
     # Ensure multi-select fields are lists
     for mf in MULTI_FIELDS:
@@ -229,7 +229,7 @@ def save_addons(record_id: str, addons: list, special_flags: list = None) -> dic
     special_flags: e.g. ["Wall Use - Gallery Approval Required", "Ikinari Overlap",
                           "Fento Snack Deadline", "Kitchen Deposit Required"]
     """
-    fields = {"Add-Ons Requested": addons}
+    fields = {"Add-Ons": addons}
     if special_flags:
         fields["Special Flags"] = special_flags
     return advance_stage(record_id, "5_addons", fields)

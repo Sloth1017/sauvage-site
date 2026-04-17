@@ -541,7 +541,7 @@ def _sync_airtable(session_id: str, state: dict, meta: dict) -> None:
 
     addons = state.get("addons")
     if addons and addons != last.get("addons"):
-        updates["Add-Ons Requested"] = _clean_list(addons)
+        updates["Add-Ons"] = _clean_list(addons)
 
     # Community pricing flag
     if state.get("community_pricing") and not last.get("community_pricing"):

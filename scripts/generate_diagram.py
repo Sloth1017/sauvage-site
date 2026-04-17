@@ -34,19 +34,55 @@ def extract_widgets(backend_src: str) -> str:
 
 # ── Ask Claude to generate the Mermaid diagram ────────────────────────────────
 
-SYSTEM = """You are a technical diagram generator. Given a chatbot system prompt and
-backend widget logic, produce a single valid Mermaid flowchart (flowchart TD) that
-accurately maps the booking conversation flow.
+AIRTABLE_COLUMNS = """
+## Airtable column mapping (Inquiries table)
+Each step that collects data maps to one or more of these exact Airtable columns.
+Show the column name in square brackets on the node label wherever data is captured.
+
+| Data collected          | Airtable column         |
+|------------------------|-------------------------|
+| Event type             | Event Type              |
+| Date(s)                | Requested Date          |
+| Start + end time       | Time Slot               |
+| Duration               | Duration                |
+| Client name            | Client Name             |
+| Email                  | Email                   |
+| Phone                  | Phone                   |
+| Private / Business     | Customer Type           |
+| Guest count            | Guest Count             |
+| Rooms selected         | Rooms Requested         |
+| Add-ons selected       | Add-Ons                 |
+| Quote total (incl VAT) | Total Incl VAT          |
+| Quote total (ex VAT)   | Total Ex VAT            |
+| VAT amount             | VAT Amount              |
+| Referral source        | Referral Source         |
+| Attributed host        | Attributed Host         |
+| Referred by (person)   | Referred By             |
+| Arrival time           | Arrival Time            |
+| Deposit collected      | Deposit Collected       |
+| Payment reference      | Stripe Payment Reference|
+| Funnel position        | Funnel Stage            |
+| Booking state          | Booking Status          |
+| Community pricing      | Community Pricing       |
+"""
+
+SYSTEM = """You are a technical diagram generator. Given a chatbot system prompt,
+backend widget logic, and an Airtable column mapping table, produce a single valid
+Mermaid flowchart (flowchart TD) that accurately maps the booking conversation flow.
 
 Rules:
 - Output ONLY the raw Mermaid code block — no prose, no markdown fences, no explanation
 - Cover every step, decision point, branch, and widget trigger
-- Use descriptive node labels (not just numbers)
-- Decision diamonds for branching logic
+- For EVERY node that captures data, append the Airtable column name(s) in the label
+  using this format: Client name\\n→ AT: Client Name
+  Use \\n to put the column reference on a second line inside the node
+- If a step captures multiple columns, list them: → AT: Email, Phone
+- Decision diamonds for branching logic (no Airtable labels on diamonds)
+- Do NOT include a "Client wants Cave?" decision node — Cave is a passive mention only
 - Distinct style for: happy path nodes, decision nodes, widget nodes, error/hard-stop nodes
-- Keep node IDs short (no spaces)
-- Group the Airtable sync steps in a subgraph called "Airtable"
-- The diagram must be valid Mermaid 10 syntax
+- Keep node IDs short and camelCase (no spaces)
+- Group the Airtable sync steps in a subgraph called "Airtable_Sync"
+- The diagram must be valid Mermaid 10 syntax — test every node ID is unique
 """
 
 def _get_api_key() -> str:
@@ -92,7 +128,8 @@ def generate_mermaid(prompt_src: str, widget_src: str) -> str:
             "role": "user",
             "content": (
                 f"## CHATBOT SYSTEM PROMPT\n\n{prompt_src}\n\n"
-                f"## WIDGET DETECTION LOGIC\n\n{widget_src}"
+                f"## WIDGET DETECTION LOGIC\n\n{widget_src}\n\n"
+                f"{AIRTABLE_COLUMNS}"
             )
         }]
     )
