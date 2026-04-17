@@ -230,8 +230,9 @@ try:
         get_inquiry_by_session, confirm_booking,
     )
     _AIRTABLE_ENABLED = bool(os.getenv("AIRTABLE_API_KEY"))
-except ImportError:
-    pass
+    print(f"[Airtable] {'Enabled ✓' if _AIRTABLE_ENABLED else 'DISABLED — AIRTABLE_API_KEY not set'}")
+except ImportError as e:
+    print(f"[Airtable] Import failed: {e}")
 
 try:
     from shopify_client import create_checkout_session as _shopify_create_checkout
@@ -687,10 +688,6 @@ def _determine_widget(state: dict, bot_text: str) -> Optional[str]:
     # T&C acceptance — the prompt's exact trigger: "Terms of Use: https://..."
     if "terms of use" in t or ("terms" in t and ("sauvage.amsterdam/terms" in t or "accept" in t or "confirm" in t)):
         return "tandc"
-
-    # Arrival time
-    if "arrival time" in t or "arriving" in t or "what time will you" in t:
-        return "arrival_time"
 
     return None
 

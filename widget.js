@@ -1178,51 +1178,6 @@
     scrollToContext(msgs, wrap);
   }
 
-  // ── Arrival time picker ───────────────────────────────────────────────────
-  function isAskingArrivalTime(text) {
-    // Must match the bot's specific phrasing: "What time will you arrive for setup?"
-    // Avoid false positives on room descriptions that mention "arrivals and crowd flow"
-    const t = text.toLowerCase();
-    return t.includes("what time will you arrive") || t.includes("time will you arrive for setup");
-  }
-
-  function showArrivalTimePicker() {
-    if (_shownWidgets.has("arrival_time")) return;
-    _shownWidgets.add("arrival_time");
-    var msgs = document.getElementById("sv-messages");
-    var wrap = document.createElement("div");
-    wrap.className = "sv-arrival-wrap";
-    var arrMins = 14 * 60;
-
-    function fmt(m) {
-      return String(Math.floor(m / 60) % 24).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
-    }
-
-    function render() {
-      wrap.innerHTML =
-        '<span class="sv-arrival-lbl">Arrival</span>' +
-        '<div class="sv-stepper">' +
-          '<button class="sv-step-btn" id="sv-arr-m">&#x2212;</button>' +
-          '<div class="sv-step-val" id="sv-arr-v">' + fmt(arrMins) + '</div>' +
-          '<button class="sv-step-btn" id="sv-arr-p">+</button>' +
-        '</div>' +
-        '<button class="sv-arrival-confirm" id="sv-arr-ok">Confirm</button>';
-
-      wrap.querySelector("#sv-arr-m").onclick = function() { arrMins = (arrMins - 30 + 1440) % 1440; render(); };
-      wrap.querySelector("#sv-arr-p").onclick = function() { arrMins = (arrMins + 30) % 1440; render(); };
-      wrap.querySelector("#sv-arr-ok").onclick = function() {
-        _pickerConfirm = null;
-        wrap.remove();
-        sendMessage("I'll arrive at " + fmt(arrMins) + " for setup.");
-      };
-    }
-
-    render();
-    msgs.appendChild(wrap);
-    _pickerConfirm = function() { var ok = wrap.querySelector("#sv-arr-ok"); if (ok) ok.click(); };
-    scrollToContext(msgs, wrap);
-  }
-
   function isAskingDateTime(text) {
     const t = text.toLowerCase();
     // Only show the calendar when the bot explicitly uses the trigger phrase.
@@ -1611,19 +1566,15 @@
           "addons":        showAddonsWidget,
           "attribution":   showAttributionWidget,
           "tandc":         showTandCWidget,
-          "arrival_time":  showArrivalTimePicker,
         };
         var _nextWidget = data.widget || null;
         if (!_nextWidget) {
-          // Fallback text matching — only for widget types that can appear more than once
-          // (datetime and addons can repeat; others are guarded by _shownWidgets anyway)
           if      (isAskingDateTime(botMsg))     _nextWidget = "datetime";
           else if (isAskingAddons(botMsg))       _nextWidget = "addons";
-          else if (!_shownWidgets.has("contact")      && isAskingContact(botMsg))      _nextWidget = "contact";
-          else if (!_shownWidgets.has("customer_type") && isAskingCustomerType(botMsg)) _nextWidget = "customer_type";
-          else if (!_shownWidgets.has("attribution")  && isAskingAttribution(botMsg))  _nextWidget = "attribution";
-          else if (!_shownWidgets.has("tandc")         && isAskingTandC(botMsg))        _nextWidget = "tandc";
-          else if (!_shownWidgets.has("arrival_time")  && isAskingArrivalTime(botMsg))  _nextWidget = "arrival_time";
+          else if (!_shownWidgets.has("contact")       && isAskingContact(botMsg))       _nextWidget = "contact";
+          else if (!_shownWidgets.has("customer_type") && isAskingCustomerType(botMsg))  _nextWidget = "customer_type";
+          else if (!_shownWidgets.has("attribution")   && isAskingAttribution(botMsg))   _nextWidget = "attribution";
+          else if (!_shownWidgets.has("tandc")         && isAskingTandC(botMsg))         _nextWidget = "tandc";
         }
         if (_nextWidget && _widgetMap[_nextWidget]) {
           setTimeout(_widgetMap[_nextWidget], 300);

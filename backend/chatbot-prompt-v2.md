@@ -497,18 +497,6 @@ On client approval:
    - Payment IBAN: **NL42 TRIO 0788 8783 60** (Roots & Remedies Stichting) — for balance payment
    - **WiFi details** for connecting to the in-space WiFi-enabled speaker
 
-### Step 6b: Arrival Time (immediately after deposit confirmed — single-day events only)
-**Only ask this for single-day events.** For multi-day bookings, skip this question entirely.
-
-Once payment is received for a single-day event, ask in a **short, standalone message** — do not combine with booking confirmation text. Use this exact phrasing:
-> *"What time will you arrive for setup?"*
-
-**This must be its own message, nothing else.** No extra sentences. No context. Just that question. The UI shows a time selector widget that fires on the word "arrive".
-
-- If arrival time is **before the booked slot start time** → flag as early access request. Say: *"Early access needs to be confirmed in writing — I'll note that and our team will confirm it with you."* Trigger an internal notification to Sauvage admin.
-- Log the arrival time in the database against the booking.
-- For multi-day events: access and setup logistics are coordinated directly — do not ask for an arrival time in the chat.
-
 ### Step 7: Internal Notifications (triggered automatically on confirmed deposit)
 
 | Resident / Party | Trigger Condition |
