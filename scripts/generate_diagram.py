@@ -101,7 +101,7 @@ def _get_api_key() -> str:
             ["ssh", "-i", os.path.expanduser("~/.ssh/id_ed25519_new"),
              "-o", "ConnectTimeout=5", "-o", "StrictHostKeyChecking=no",
              "root@31.97.35.5",
-             "grep ANTHROPIC_API_KEY /var/www/sauvage/.env | cut -d= -f2"],
+             "grep ANTHROPIC_API_KEY /root/sauvage/backend/.env | cut -d= -f2"],
             capture_output=True, text=True, timeout=10
         )
         key = result.stdout.strip()
