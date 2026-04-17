@@ -1029,9 +1029,10 @@
            (t.includes("available") || t.includes("select") || t.includes("include") || t.includes("like to add"));
   }
 
-  function showAddonsWidget() {
+  function showAddonsWidget(opts) {
     if (_shownWidgets.has("addons")) return;
     _shownWidgets.add("addons");
+    opts = opts || {};
     var msgs = document.getElementById("sv-messages");
     var wrap = document.createElement("div");
     wrap.className = "sv-addons-wrap";
@@ -1051,6 +1052,18 @@
     var checked = {};
     var qty = {};
     ITEMS.forEach(function(i){ qty[i.id] = i.qty || 1; });
+
+    // Pre-select items passed from backend (e.g. Fento when mentioned before widget appears)
+    if (opts.preselect && Array.isArray(opts.preselect)) {
+      opts.preselect.forEach(function(id) {
+        checked[id] = true;
+        // Use guest count for per-person items
+        var item = ITEMS.find(function(it){ return it.id === id; });
+        if (item && (item.type === "pax") && opts.pax && opts.pax > 0) {
+          qty[id] = opts.pax;
+        }
+      });
+    }
 
     function lineTotal(item) {
       if (!checked[item.id]) return 0;
@@ -1598,12 +1611,12 @@
         // Widget routing — backend signal takes priority, text matching as fallback.
         // _shownWidgets ensures each widget type appears at most once per session.
         var _widgetMap = {
-          "datetime":      showDateTimePicker,
-          "contact":       showContactWidget,
-          "customer_type": showCustomerTypeToggle,
-          "addons":        showAddonsWidget,
-          "attribution":   showAttributionWidget,
-          "tandc":         showTandCWidget,
+          "datetime":      function(){ showDateTimePicker(); },
+          "contact":       function(){ showContactWidget(); },
+          "customer_type": function(){ showCustomerTypeToggle(); },
+          "addons":        function(){ showAddonsWidget(data.widget_data || {}); },
+          "attribution":   function(){ showAttributionWidget(); },
+          "tandc":         function(){ showTandCWidget(); },
         };
         var _nextWidget = data.widget || null;
         if (!_nextWidget) {

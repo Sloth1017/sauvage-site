@@ -940,6 +940,35 @@ def chat():
     if widget_hint:
         resp["widget"] = widget_hint
 
+    # If addons widget is being shown, check if Fento was mentioned earlier — pre-select it
+    if widget_hint == "addons":
+        fento_preselect = None
+        # Check LLM-extracted addons state first
+        extracted_addons = [str(a).lower() for a in (state.get("addons") or [])]
+        if any("light" in a and "fento" in a for a in extracted_addons):
+            fento_preselect = "light-snacks"
+        elif any("snack" in a and "fento" in a for a in extracted_addons) or any("fento" in a for a in extracted_addons):
+            fento_preselect = "snacks"
+        # Fallback: scan recent conversation for Fento mentions
+        if not fento_preselect:
+            recent_text = " ".join(
+                m["content"].lower() for m in messages[-6:]
+                if m.get("role") == "user"
+            )
+            if "fento" in recent_text:
+                if "light" in recent_text:
+                    fento_preselect = "light-snacks"
+                else:
+                    fento_preselect = "snacks"
+        if fento_preselect:
+            pax = state.get("guest_count")
+            try:
+                pax = int(pax) if pax else 10
+            except (ValueError, TypeError):
+                pax = 10
+            resp["widget_data"] = {"preselect": [fento_preselect], "pax": pax}
+            print(f"[Widget] Addons pre-select: {fento_preselect} × {pax} pax")
+
     return jsonify(resp), 200, _cors_headers()
 
 
