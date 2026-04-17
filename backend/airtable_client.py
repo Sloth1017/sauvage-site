@@ -129,25 +129,44 @@ def update_inquiry(record_id: str, fields: dict) -> dict:
         if mf in fields:
             fields[mf] = _safe_list(fields[mf])
 
+    def _safe_update(flds: dict, attempt: int = 0) -> dict:
+        """Try the update; on known recoverable errors strip the bad field and retry once."""
+        if not flds:
+            return {}
+        try:
+            return table.update(record_id, flds)
+        except Exception as e:
+            if attempt >= 3:
+                raise
+            err = str(e)
+            # Bad multi-select value — strip all multi-select fields, stash in Notes
+            if "INVALID_MULTIPLE_CHOICE_OPTIONS" in err or "INVALID_VALUE_FOR_COLUMN" in err:
+                notes_parts = []
+                safe = {}
+                for k, v in flds.items():
+                    if k in MULTI_FIELDS:
+                        notes_parts.append(f"{k}: {v}")
+                    else:
+                        safe[k] = v
+                if notes_parts:
+                    existing = safe.get("Notes", "")
+                    safe["Notes"] = f"{existing} [{' | '.join(notes_parts)}]".strip(" |")
+                print(f"[Airtable] Multi-select error — retrying without: {notes_parts}. Error: {e}")
+                return _safe_update(safe, attempt + 1)
+            # Unknown field name — extract the offending field name and drop it
+            if "UNKNOWN_FIELD_NAME" in err:
+                import re as _re
+                bad = _re.search(r'Unknown field name: "([^"]+)"', err)
+                if bad:
+                    bad_field = bad.group(1)
+                    safe = {k: v for k, v in flds.items() if k != bad_field}
+                    print(f"[Airtable] Unknown field '{bad_field}' — retrying without it")
+                    return _safe_update(safe, attempt + 1)
+            raise
+
     try:
-        return table.update(record_id, fields)
+        return _safe_update(fields)
     except Exception as e:
-        err = str(e)
-        if "INVALID_MULTIPLE_CHOICE_OPTIONS" in err or "INVALID_VALUE_FOR_COLUMN" in err:
-            # Strip offending multi-select fields, stash their raw values in Notes
-            notes_parts = []
-            safe_fields = {}
-            for k, v in fields.items():
-                if k in MULTI_FIELDS:
-                    notes_parts.append(f"{k}: {v}")
-                else:
-                    safe_fields[k] = v
-            if notes_parts:
-                existing_notes = safe_fields.get("Notes", "")
-                extra = " | ".join(notes_parts)
-                safe_fields["Notes"] = f"{existing_notes} [{extra}]".strip(" |")
-            print(f"[Airtable] Multi-select validation error — retrying without: {notes_parts}. Error: {e}")
-            return table.update(record_id, safe_fields)
         raise
 
 

@@ -427,7 +427,7 @@ def _sync_airtable(session_id: str, state: dict, meta: dict) -> None:
             updates["Total Ex VAT"]   = ex_vat
             updates["VAT Amount"]     = vat_amount
             deposit = 50.0 if not (state.get("rooms") and "Kitchen" in str(state.get("rooms", []))) else 300.0
-            updates["Deposit Amount Due"] = deposit
+            # Note: "Deposit Amount Due" field does not exist in the live Airtable base
             print(f"[Airtable] Quote sync: €{incl_vat} incl VAT, deposit €{deposit}")
 
     # Time Slot — combine start + end into "HH:MM-HH:MM"
@@ -462,15 +462,66 @@ def _sync_airtable(session_id: str, state: dict, meta: dict) -> None:
         items = raw if isinstance(raw, list) else [raw]
         return [_clean_str(i) for i in items if i]
 
+    # Canonical Add-Ons normaliser — maps any LLM variation to the exact Airtable option name.
+    # Checked in order; first keyword match wins.
+    _ADDON_MAP = [
+        ("light snack",                       "Light Snacks Fento"),
+        ("fento",                              "Snacks Fento"),       # catches "fento snacks", "snacks fento", etc.
+        ("snack",                              "Snacks Fento"),
+        ("dishware",                           "Dishware & Cutlery"),
+        ("cutlery",                            "Dishware & Cutlery"),
+        ("stem glass",                         "Stem Glassware"),
+        ("glassware",                          "Stem Glassware"),
+        ("staff",                              "Staff Support"),
+        ("cleanup",                            "Event Cleanup"),
+        ("clean",                              "Event Cleanup"),
+        ("sommelier",                          "Sommelier/Barista Service"),
+        ("barista",                            "Sommelier/Barista Service"),
+        ("bar service",                        "Sommelier/Barista Service"),
+        ("projector",                          "Projector/Display Screen"),
+        ("screen",                             "Projector/Display Screen"),
+        ("display",                            "Projector/Display Screen"),
+        ("extended hour",                      "Extended Hours (after midnight)"),
+        ("after midnight",                     "Extended Hours (after midnight)"),
+    ]
+    _ADDON_CANONICAL = {v for _, v in _ADDON_MAP}
+
+    def _normalise_addon(raw: str) -> str:
+        """Return exact Airtable Add-Ons option, or the raw value if already canonical."""
+        cleaned = _clean_str(raw)
+        if cleaned in _ADDON_CANONICAL:
+            return cleaned  # already exact
+        lower = cleaned.lower()
+        for keyword, canonical in _ADDON_MAP:
+            if keyword in lower:
+                return canonical
+        return cleaned  # unknown — pass through; airtable_client resilience will log it
+
+    def _normalise_addons(raw) -> list:
+        items = raw if isinstance(raw, list) else [raw]
+        seen = []
+        result = []
+        for item in items:
+            if not item:
+                continue
+            norm = _normalise_addon(item)
+            if norm not in seen:
+                seen.append(norm)
+                result.append(norm)
+        return result
+
     # Multi-select fields
     rooms = state.get("rooms")
     if rooms and rooms != last.get("rooms"):
         updates["Rooms Requested"] = _normalise_rooms(rooms)
 
     addons = state.get("addons")
-    # Skip if already pushed deterministically via [at:] widget tag — LLM names won't match
+    # Skip if already pushed deterministically via [at:] widget tag — widget values are exact
     if addons and not last.get("addons_direct_pushed"):
-        updates["Add-Ons"] = _clean_list(addons)
+        normalised = _normalise_addons(addons)
+        if normalised:
+            updates["Add-Ons"] = normalised
+            print(f"[Airtable] Addons normalised: {addons} → {normalised}")
 
     # Community pricing flag
     if state.get("community_pricing") and not last.get("community_pricing"):

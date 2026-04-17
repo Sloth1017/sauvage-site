@@ -52,230 +52,258 @@
 ```mermaid
 flowchart TD
     subgraph Opening
-        start([Client opens chat])
-        autoGreet[System sends auto-greeting]
-        start --> autoGreet
-        autoGreet --> clientFirstMsg[Client sends first message]
+        A[Auto greeting sent by system]
+        B[Client sends first message]
     end
 
     subgraph Event_Details
-        clientFirstMsg --> parseEventType{Event type mentioned?}
-        parseEventType -->|Yes| confirmEventType[Confirm event type\n→ AT: Event Type]
-        parseEventType -->|No| askEventType[Ask: What kind of event?\n→ AT: Event Type]
-        askEventType --> confirmEventType
-        confirmEventType --> updateStage1[Update stage: 1_event_type\n→ AT: Funnel Stage]
+        C{Event type\nstated?}
+        D[Ask event type\n→ AT: Event Type]
+        E[Confirm event type\n→ AT: Event Type]
     end
 
     subgraph Date_Time
-        updateStage1 --> askDate[Ask: What dates?\nInclude 'select your dates']
-        askDate --> triggerDateWidget[[datetime widget]]
-        triggerDateWidget --> clientSelectsDate[Client selects date\n→ AT: Requested Date]
-        clientSelectsDate --> hasTime{Time provided?}
-        hasTime -->|No| askTime[Ask: Start and end time?\n→ AT: Time Slot]
-        hasTime -->|Yes| confirmDateTime[Confirm date + time\n→ AT: Time Slot, Duration]
-        askTime --> confirmDateTime
-        confirmDateTime --> checkCalendar{Check Google Calendar}
-        checkCalendar -->|Available| updateStage2[Update stage: 2_date_time\n→ AT: Funnel Stage]
-        checkCalendar -->|Unavailable| offerAlternatives[Suggest 2-3 alternatives]
-        offerAlternatives --> clientAcceptsAlt{Client accepts?}
-        clientAcceptsAlt -->|Yes| confirmDateTime
-        clientAcceptsAlt -->|No| offerWaitlist[Offer waitlist]
-        offerWaitlist --> clientWaitlist{Joins waitlist?}
-        clientWaitlist -->|Yes| collectWaitlistInfo[Collect waitlist details]
-        collectWaitlistInfo --> saveWaitlist[Save to Waitlist table\n→ AT: Booking Status=waitlisted]
-        saveWaitlist --> endWaitlist([End - Waitlisted])
-        clientWaitlist -->|No| endNoDate([End - No available date])
+        F{Date provided?}
+        G[Ask for dates\nTrigger: datetime widget\n→ AT: Requested Date]
+        H{Time provided?}
+        I[Ask start/end time\n→ AT: Time Slot, Duration]
+        J[Confirm date + time\n→ AT: Requested Date, Time Slot, Duration]
+        K{Date available?}
+        L[Offer alternatives]
+        M{Alternatives work?}
+        N[Offer waitlist]
+        O[Save to Waitlist table]
     end
 
     subgraph Contact_Collection
-        updateStage2 --> askContact[Ask: Name and contact details]
-        askContact --> triggerContactWidget[[contact widget]]
-        triggerContactWidget --> clientSubmitsContact[Client submits form\n→ AT: Client Name, Email, Phone]
-        clientSubmitsContact --> updateStage3[Update stage: 3_contact\n→ AT: Funnel Stage]
+        P[Ask name + email + phone\nTrigger: contact widget\n→ AT: Client Name, Email, Phone]
+        Q[Confirm contact details\n→ AT: Client Name, Email, Phone]
     end
 
     subgraph Customer_Type
-        updateStage3 --> checkCustType{Customer type known?}
-        checkCustType -->|Yes| skipCustType[Skip - already stated]
-        checkCustType -->|No| askCustType[Ask: Private or business booking?]
-        askCustType --> triggerCustTypeWidget[[customer_type widget]]
-        triggerCustTypeWidget --> clientSelectsCustType[Client selects\n→ AT: Customer Type]
-        clientSelectsCustType --> skipCustType
+        R{Customer type\nknown?}
+        S[Ask private or business\nTrigger: customer_type widget\n→ AT: Customer Type]
+        T[Confirm customer type\n→ AT: Customer Type]
     end
 
     subgraph Guest_Count
-        skipCustType --> checkGuestCount{Guest count known?}
-        checkGuestCount -->|Yes| validateGuestCount{Count <= 30?}
-        checkGuestCount -->|No| askGuestCount[Ask: How many guests?\n→ AT: Guest Count]
-        askGuestCount --> validateGuestCount
-        validateGuestCount -->|Yes| confirmGuestCount[Confirm guest count\n→ AT: Guest Count]
-        validateGuestCount -->|No| hardStopCapacity[/Hard stop: Max 30 guests/]
-        hardStopCapacity --> endCapacity([End - Over capacity])
+        U[Ask guest count\n→ AT: Guest Count]
+        V{Count ≤ 30?}
+        W[Confirm count\n→ AT: Guest Count]
+        X[Hard stop: Max 30 guests]:::errorNode
     end
 
     subgraph Room_Selection
-        confirmGuestCount --> shareWalkthrough[Share drone walkthrough video]
-        shareWalkthrough --> recommendRooms{Guest count > 10?}
-        recommendRooms -->|Yes| suggestUpstairsEntrance[Recommend Upstairs + Entrance\nMention bundle discount]
-        recommendRooms -->|No| presentAllRooms[Present room options with photos]
-        suggestUpstairsEntrance --> presentAllRooms
-        presentAllRooms --> clientSelectsRooms[Client selects rooms\n→ AT: Rooms Requested]
-        clientSelectsRooms --> checkFood{Food involved?}
-        checkFood -->|Yes| promptKitchen[Prompt about Kitchen]
-        checkFood -->|No| checkUpstairs
-        promptKitchen --> clientKitchenResponse{Response?}
-        clientKitchenResponse -->|Books Kitchen| addKitchen[Add Kitchen to booking\n→ AT: Rooms Requested]
-        clientKitchenResponse -->|Says Fento| noteFentoCatering[Note Fento catering - not Kitchen room]
-        clientKitchenResponse -->|Declines| warnKitchenEquip[Warn: No equipment use]
-        addKitchen --> checkUpstairs
-        noteFentoCatering --> checkUpstairs
-        warnKitchenEquip --> checkUpstairs
-        checkUpstairs{Upstairs booked?}
-        checkUpstairs -->|Yes| askWallUse[Ask: Wall use needed?]
-        checkUpstairs -->|No| finalizeRooms
-        askWallUse --> clientWallResponse{Needs walls?}
-        clientWallResponse -->|Yes| flagGalleryApproval[Flag for Gallery approval]
-        clientWallResponse -->|No| finalizeRooms
-        flagGalleryApproval --> finalizeRooms
-        finalizeRooms[Finalize room selection]
-        finalizeRooms --> updateStage4[Update stage: 4_rooms\n→ AT: Funnel Stage]
+        Y[Share walkthrough video]
+        Z[Present rooms with photos\nbased on guest count]
+        AA[Client selects rooms\n→ AT: Rooms Requested]
+        AB{Kitchen selected?}
+        AC[Explain kitchen deposit €250\nand usage rules]
+        AD{Upstairs selected?}
+        AE[Ask about wall use]
+        AF{Wall use needed?}
+        AG[Flag for Gallery approval]
+        AH{Food involved?}
+        AI[Prompt Kitchen option]
+        AJ{Ikinari overlap?\nRoom A Wed-Sun before 15:00}
+        AK[Notify Ikinari overlap]
     end
 
-    subgraph AddOns
-        updateStage4 --> triggerAddOnsMsg[Send exact phrase:\n'Here are the available add-ons...']
-        triggerAddOnsMsg --> triggerAddOnsWidget[[addons widget]]
-        triggerAddOnsWidget --> clientSelectsAddOns[Client submits selections\n→ AT: Add-Ons]
-        clientSelectsAddOns --> checkStaffSelected{Staff selected?}
-        checkStaffSelected -->|Yes| assumeFullDuration[Assume 1 staff, full duration]
-        checkStaffSelected -->|No| markSelfManaged[Mark: Self-managed event]
-        assumeFullDuration --> musicNote
-        markSelfManaged --> musicNote
-        musicNote[Mention WiFi speaker + volume note]
-        musicNote --> updateStage5[Update stage: 5_addons\n→ AT: Funnel Stage]
+    subgraph Add_Ons
+        AL[Show add-ons message\nTrigger: addons widget\n→ AT: Add-Ons]
+        AM[Client submits selections\n→ AT: Add-Ons]
+        AN{Staff selected?}
+        AO[Include 1 staff\nfull duration]
+        AP[Self-managed event]
+        AQ{Snacks selected?}
+        AR[Note 7-day deadline]
     end
 
     subgraph Quote_Generation
-        updateStage5 --> checkCommunity{community47 entered?}
-        checkCommunity -->|Yes| applyCommunityPricing[Apply community rates\n→ AT: Community Pricing=true]
-        checkCommunity -->|No| standardPricing[Use standard rates]
-        applyCommunityPricing --> calculateQuote
-        standardPricing --> calculateQuote
-        calculateQuote[Calculate quote:\n1. Room base rates\n2. Bundle discount\n3. Closure premiums\n4. Add-ons\n5. Kitchen cleanup silent]
-        calculateQuote --> generateQuoteSummary[Generate itemised quote\n→ AT: Total Incl VAT, Total Ex VAT, VAT Amount]
-        generateQuoteSummary --> checkKitchenDeposit{Kitchen booked?}
-        checkKitchenDeposit -->|Yes| showKitchenDeposit[Show €300 deposit link]
-        checkKitchenDeposit -->|No| showStandardDeposit[Show €50 deposit link]
-        showKitchenDeposit --> presentQuote
-        showStandardDeposit --> presentQuote
-        presentQuote[Present quote with T&C link]
-        presentQuote --> triggerTandCWidget[[tandc widget]]
-        triggerTandCWidget --> updateStage6[Update stage: 6_quoted\n→ AT: Funnel Stage]
+        AS[Calculate bundle discount]
+        AT[Add closure premiums\nif Full-Day]
+        AU[Sum totals\n→ AT: Total Incl VAT, Total Ex VAT, VAT Amount]
+        AV[Present itemised quote]
+        AW[Include T&C link\nTrigger: tandc widget]
     end
 
-    subgraph TandC_Payment
-        updateStage6 --> clientTandCResponse{Client response?}
-        clientTandCResponse -->|Requests changes| reviseQuote[Revise quote]
-        reviseQuote --> presentQuote
-        clientTandCResponse -->|Accepts T&C| confirmTandCAccepted[Respond: Use pay button below]
-        confirmTandCAccepted --> updateStage7[Update stage: 7_deposit_pending\n→ AT: Funnel Stage]
-        updateStage7 --> awaitPayment[Await Shopify webhook]
-        awaitPayment --> paymentReceived{Payment confirmed?}
-        paymentReceived -->|Yes| confirmPayment[Payment confirmed\n→ AT: Deposit Collected=Yes, Stripe Payment Reference]
-        paymentReceived -->|No timeout 24h| sendFollowUp1[Send follow-up nudge]
-        sendFollowUp1 --> awaitPayment48{Response in 48h?}
-        awaitPayment48 -->|Yes| awaitPayment
-        awaitPayment48 -->|No| markAbandoned[Mark abandoned\n→ AT: Funnel Stage=abandoned]
-        markAbandoned --> notifyHost[Notify attributed host]
-        notifyHost --> endAbandoned([End - Abandoned])
-    end
-
-    subgraph Post_Payment
-        confirmPayment --> updateStage8[Update stage: 8_confirmed\n→ AT: Funnel Stage, Booking Status=confirmed]
-        updateStage8 --> sendConfirmationEmail[Send confirmation email:\n- Summary\n- T&C attached\n- Receipt\n- Balance due date\n- IBAN\n- WiFi details\n- Arrival details]
+    subgraph TC_Payment
+        AX{Client accepts T&C?}
+        AY[Client requests changes]
+        AZ[Confirm T&C accepted\nShow pay button]
+        BA{Payment received?}
+        BB[Waiting for payment\n→ AT: Funnel Stage = 7_deposit_pending]
+        BC[Payment confirmed\n→ AT: Deposit Collected, Stripe Payment Reference]
+        BD[Send confirmation email\nwith all details]
     end
 
     subgraph Attribution
-        sendConfirmationEmail --> askAttribution[Ask: How did you hear about Sauvage?]
-        askAttribution --> triggerAttributionWidget[[attribution widget]]
-        triggerAttributionWidget --> clientSelectsAttribution[Client selects source\n→ AT: Referral Source, Attributed Host, Referred By]
-        clientSelectsAttribution --> silentEnd[No response - silence]
-    end
-
-    subgraph Notifications
-        silentEnd --> triggerNotifications[Trigger internal notifications]
-        triggerNotifications --> checkWine{Wine or Cave?}
-        checkWine -->|Yes| notifySelectionSauvage[Notify Selection Sauvage BV]
-        checkWine -->|No| checkKitchenNotif
-        notifySelectionSauvage --> checkKitchenNotif
-        checkKitchenNotif{Kitchen or snacks?}
-        checkKitchenNotif -->|Yes| notifyFento[Notify Fento BV]
-        checkKitchenNotif -->|No| checkCake
-        notifyFento --> checkCake
-        checkCake{Kitchen date conflict?}
-        checkCake -->|Yes| notifyCake[Notify Cake sub-tenant]
-        checkCake -->|No| checkGallery
-        notifyCake --> checkGallery
-        checkGallery{Upstairs or walls?}
-        checkGallery -->|Yes| notifyGallery[Notify Sauvage Gallery]
-        checkGallery -->|No| checkIkinari
-        notifyGallery --> checkIkinari
-        checkIkinari{Entrance before 15:00 Wed-Sun?}
-        checkIkinari -->|Yes| notifyIkinari[Notify Ikinari Coffee]
-        checkIkinari -->|No| notifyAdmin
-        notifyIkinari --> notifyAdmin
-        notifyAdmin[Notify Sauvage Admin + All Hosts]
-        notifyAdmin --> postToCalendar[Post to Google Calendar]
+        BE[Ask how heard about Sauvage\nTrigger: attribution widget\n→ AT: Referral Source, Attributed Host, Referred By]
+        BF[Silent response\nNo acknowledgment]
     end
 
     subgraph Airtable_Sync
-        postToCalendar --> syncAirtable[Sync all fields to Airtable Inquiries table]
-        syncAirtable --> endSuccess([End - Booking Confirmed])
+        BG[Update Funnel Stage\n→ AT: Funnel Stage]
+        BH[Save all collected data]
+        BI[Mark booking confirmed\n→ AT: Booking Status = confirmed]
     end
 
-    subgraph Automations
-        endSuccess -.-> reminder2hr[Reminder: 2hrs before event]
-        reminder2hr -.-> postEventFollowup[Follow-up: 30min after end]
-        postEventFollowup -.-> feedbackRequest[Request feedback + review]
+    subgraph Notifications
+        BJ{Wine/Cave booked?}
+        BK[Notify Selection Sauvage]
+        BL{Kitchen/Snacks?}
+        BM[Notify Fento]
+        BN{Cake calendar conflict?}
+        BO[Notify Cake sub-tenant]
+        BP{Upstairs/Walls?}
+        BQ[Notify Sauvage Gallery]
+        BR{Ikinari overlap?}
+        BS[Notify Ikinari]
+        BT[Notify Sauvage Admin\nAll hosts]
+        BU[Post to Google Calendar]
+    end
+
+    subgraph Follow_Up
+        BV{30min inactive?}
+        BW[Soft nudge message]
+        BX{24hr inactive?}
+        BY[Abandoned follow-up message\n→ AT: Funnel Stage]
+        BZ{48hr no response?}
+        CA[Mark abandoned\nNotify attributed host\n→ AT: Booking Status = abandoned]
+    end
+
+    subgraph Community_Pricing
+        CB{Code community47\nentered?}
+        CC[Activate community rates\n→ AT: Community Pricing = true]
+        CD[Use Kitchen community rates\n€100 half/€150 full]
     end
 
     subgraph Error_Handling
-        clientFirstMsg --> checkUnrecognised{Unrecognised input?}
-        checkUnrecognised -->|1st| askRephrase[Ask to rephrase]
-        askRephrase --> clientFirstMsg
-        checkUnrecognised -->|2nd| tryDifferent[Try different approach]
-        tryDifferent --> clientFirstMsg
-        checkUnrecognised -->|3rd| escalateHuman[/Escalate to human/]
-        escalateHuman --> handoffGreg[Handoff: Contact Greg\n+31 634 742 988]
-        handoffGreg --> endEscalated([End - Escalated])
+        CE{Unrecognizable input?}
+        CF[First: Ask to rephrase]
+        CG[Second: Try different approach]
+        CH[Third: Escalate to human]:::errorNode
     end
 
-    subgraph Session_Timeout
-        updateStage2 -.-> timeout30{Inactive 30min?}
-        timeout30 -->|Yes| softNudge[Send: Still there?]
-        softNudge -.-> timeout30more{Another 30min?}
-        timeout30more -->|Yes| saveAndClose[Save stage to Airtable]
-        saveAndClose --> markAbandoned
+    subgraph Human_Handoff
+        CI[Handoff to Greg\nProvide WhatsApp link]:::errorNode
     end
 
-    subgraph Restart
-        clientFirstMsg --> checkRestart{Says restart/start over?}
-        checkRestart -->|Yes| saveAbandoned[Save session as abandoned\n→ AT: Funnel Stage=abandoned]
-        saveAbandoned --> resetChat[Reset to opening]
-        resetChat --> autoGreet
-    end
+    A --> B
+    B --> C
+    C -->|No| D
+    C -->|Yes| E
+    D --> E
+    E --> F
+    F -->|No| G
+    F -->|Yes| H
+    G --> H
+    H -->|No| I
+    H -->|Yes| J
+    I --> J
+    J --> K
+    K -->|No| L
+    K -->|Yes| P
+    L --> M
+    M -->|Yes| P
+    M -->|No| N
+    N --> O
+    O --> BG
 
-    %% Styles
-    classDef happy fill:#d4edda,stroke:#28a745,color:#155724
-    classDef decision fill:#fff3cd,stroke:#ffc107,color:#856404
-    classDef widget fill:#cce5ff,stroke:#004085,color:#004085
-    classDef error fill:#f8d7da,stroke:#dc3545,color:#721c24
-    classDef sync fill:#e2e3e5,stroke:#6c757d,color:#383d41
+    P --> Q
+    Q --> R
+    R -->|No| S
+    R -->|Yes| U
+    S --> T
+    T --> U
+    U --> V
+    V -->|No| X
+    V -->|Yes| W
+    W --> Y
+    Y --> Z
+    Z --> AA
+    AA --> AH
+    AH -->|Yes| AI
+    AH -->|No| AB
+    AI --> AB
+    AB -->|Yes| AC
+    AB -->|No| AD
+    AC --> AD
+    AD -->|Yes| AE
+    AD -->|No| AJ
+    AE --> AF
+    AF -->|Yes| AG
+    AF -->|No| AJ
+    AG --> AJ
+    AJ -->|Yes| AK
+    AJ -->|No| AL
+    AK --> AL
 
-    class confirmEventType,confirmDateTime,clientSubmitsContact,clientSelectsCustType,confirmGuestCount,clientSelectsRooms,clientSelectsAddOns,generateQuoteSummary,confirmPayment,updateStage8,endSuccess happy
-    class parseEventType,hasTime,checkCalendar,clientAcceptsAlt,clientWaitlist,checkCustType,checkGuestCount,validateGuestCount,recommendRooms,checkFood,clientKitchenResponse,checkUpstairs,clientWallResponse,checkStaffSelected,checkCommunity,checkKitchenDeposit,clientTandCResponse,paymentReceived,awaitPayment48,checkWine,checkKitchenNotif,checkCake,checkGallery,checkIkinari,checkUnrecognised,timeout30,timeout30more,checkRestart decision
-    class triggerDateWidget,triggerContactWidget,triggerCustTypeWidget,triggerAddOnsWidget,triggerTandCWidget,triggerAttributionWidget widget
-    class hardStopCapacity,endCapacity,endNoDate,markAbandoned,endAbandoned,escalateHuman,endEscalated error
-    class syncAirtable,updateStage1,updateStage2,updateStage3,updateStage4,updateStage5,updateStage6,updateStage7 sync
+    AL --> AM
+    AM --> AN
+    AN -->|Yes| AO
+    AN -->|No| AP
+    AO --> AQ
+    AP --> AQ
+    AQ -->|Yes| AR
+    AQ -->|No| AS
+    AR --> AS
+
+    AS --> AT
+    AT --> AU
+    AU --> AV
+    AV --> AW
+    AW --> AX
+    AX -->|No| AY
+    AY --> AV
+    AX -->|Yes| AZ
+    AZ --> BA
+    BA -->|No| BB
+    BB --> BA
+    BA -->|Yes| BC
+    BC --> BD
+    BD --> BE
+    BE --> BF
+    BF --> BI
+
+    BI --> BJ
+    BJ -->|Yes| BK
+    BJ -->|No| BL
+    BK --> BL
+    BL -->|Yes| BM
+    BL -->|No| BN
+    BM --> BN
+    BN -->|Yes| BO
+    BN -->|No| BP
+    BO --> BP
+    BP -->|Yes| BQ
+    BP -->|No| BR
+    BQ --> BR
+    BR -->|Yes| BS
+    BR -->|No| BT
+    BS --> BT
+    BT --> BU
+
+    BG --> BH
+
+    CB -->|Yes| CC
+    CC --> CD
+    CD --> AS
+
+    BV -->|Yes| BW
+    BW --> BX
+    BX -->|Yes| BY
+    BY --> BZ
+    BZ -->|Yes| CA
+
+    CE -->|1st| CF
+    CF -->|2nd| CG
+    CG -->|3rd| CH
+    CH --> CI
+
+    classDef errorNode fill:#ffcccc,stroke:#cc0000,color:#cc0000
+    classDef widgetNode fill:#e6f3ff,stroke:#0066cc
+    classDef decisionNode fill:#fff3e6,stroke:#ff9900
 ```
     </div>
   </div>
@@ -290,7 +318,7 @@ flowchart TD
     <div class="l-item"><div class="l-dot" style="background:#1a1a1a;"></div>Terminal node</div>
   </div>
 
-  <div class="updated">Auto-generated 17 Apr 2026 11:02 · source: chatbot-prompt-v2.md</div>
+  <div class="updated">Auto-generated 17 Apr 2026 11:06 · source: chatbot-prompt-v2.md</div>
 
   <script>
     mermaid.initialize({ startOnLoad: true, theme: 'neutral', flowchart: { curve: 'basis', padding: 20 } });
