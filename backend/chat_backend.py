@@ -647,9 +647,9 @@ def _determine_widget(state: dict, bot_text: str, sent_widgets: list) -> Optiona
         "timing", "how long are you", "how long is your",
     ]
     if any(ph in t for ph in _date_phrases):
-        return "datetime"
+        return None if "datetime" in sent_widgets else "datetime"
 
-    # Context fallback: event type known but no dates yet → always show calendar
+    # Context fallback: event type known but no dates yet → show calendar once
     if state.get("event_type") and not state.get("dates") and "datetime" not in sent_widgets:
         # Only if the bot response is substantive (not a one-word ack)
         if len(bot_text.strip()) > 30:
@@ -885,6 +885,21 @@ def chat():
         elif any(w in msg_lower for w in ["business", "corporate", "company", "zakelijk", "btw"]):
             state["customer_type"] = "Business"
 
+    # Fast date pre-pass — extract ISO date from message synchronously so the
+    # datetime widget never re-fires after the user has already submitted a date.
+    # The datetime widget sends dates as ISO strings (e.g. "2026-04-19").
+    if not state.get("dates"):
+        _date_iso = re.search(r'\b(\d{4}-\d{2}-\d{2})\b', message)
+        if _date_iso:
+            state["dates"] = _date_iso.group(1)
+        # Also catch time in same message
+    if not state.get("start_time"):
+        _times = re.findall(r'\b(\d{1,2}:\d{2})\b', message)
+        if len(_times) >= 1:
+            state["start_time"] = _times[0]
+        if len(_times) >= 2:
+            state["end_time"] = _times[1]
+
     # Inject live calendar availability into system prompt
     calendar_block = ""
     if _GCAL_ENABLED:
@@ -1097,8 +1112,10 @@ def chat():
     sent_widgets = meta.get("widgets_sent", [])
     widget_hint  = _determine_widget(state, assistant_text, sent_widgets)
 
-    # Track which one-shot widgets have been sent so we never fire them twice
-    if widget_hint and widget_hint != "datetime":
+    # Track which one-shot widgets have been sent so we never fire them twice.
+    # datetime is allowed to re-fire until dates are confirmed in state,
+    # but once dates are known it should never show again.
+    if widget_hint:
         if widget_hint not in sent_widgets:
             meta["widgets_sent"] = sent_widgets + [widget_hint]
             _session_update(session_id, meta=meta)
