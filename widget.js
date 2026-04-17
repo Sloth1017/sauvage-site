@@ -508,8 +508,13 @@
     // Render markdown-lite: bold, links, line breaks
     div.innerHTML = text
       .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      // Named markdown links [text](url) — convert first so bare-URL pass doesn't double-link
       .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
         '<a href="$2" target="_blank" rel="noopener" ' +
+        'style="color:#1a1a1a;font-weight:600;text-decoration:underline;text-underline-offset:2px;">$1</a>')
+      // Bare URLs not already inside an href — auto-linkify
+      .replace(/(?<!href=")(https?:\/\/[^\s<>")\]]+)/g,
+        '<a href="$1" target="_blank" rel="noopener" ' +
         'style="color:#1a1a1a;font-weight:600;text-decoration:underline;text-underline-offset:2px;">$1</a>')
       .replace(/\n/g, "<br>");
     msgs.appendChild(div);
@@ -1182,6 +1187,8 @@
   }
 
   function showArrivalTimePicker() {
+    if (_shownWidgets.has("arrival_time")) return;
+    _shownWidgets.add("arrival_time");
     var msgs = document.getElementById("sv-messages");
     var wrap = document.createElement("div");
     wrap.className = "sv-arrival-wrap";
@@ -1512,9 +1519,10 @@
     // Secret admin code — simulate payment for testing
     if (text.trim() === "sauvage-test-paid") {
       addMessage("Simulating payment confirmation...", "bot");
+      stopPaymentPolling(); // stop polling BEFORE sending confirmation so it can't race
       fetch(API + "/chat/test-confirm/" + sessionId, { method: "POST" })
         .then(function(r){ return r.json(); })
-        .then(function(){ sendMessage("Payment confirmed - deposit received."); })
+        .then(function(){ sendMessage("Payment confirmed \u2705 \u2014 deposit received."); })
         .catch(function(e){ addMessage("Test error: " + e, "bot"); });
       return;
     }

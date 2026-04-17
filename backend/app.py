@@ -17,20 +17,24 @@ def health():
 
 @app.route("/widget.js")
 def widget():
-    # Load widget.js and replace API endpoint dynamically
-    widget_path = "/home/greg/.openclaw/workspace/sauvage/widget.js"
-    
-    try:
-        # Try workspace version first (for live updates)
-        with open(widget_path, 'r') as f:
-            content = f.read()
-    except:
-        # Fall back to local version
+    # Load widget.js and replace API endpoint dynamically.
+    # Try paths in priority order — git repo first so deploys take effect immediately.
+    _widget_candidates = [
+        "/var/www/sauvage/widget.js",                                   # git repo (primary)
+        os.path.join(os.path.dirname(__file__), "..", "widget.js"),     # repo relative path
+        "/home/greg/.openclaw/workspace/sauvage/widget.js",            # legacy workspace
+        os.path.join(os.path.dirname(__file__), "widget.js"),          # backend dir fallback
+    ]
+    content = None
+    for _path in _widget_candidates:
         try:
-            with open(os.path.join(os.path.dirname(__file__), "widget.js"), 'r') as f:
+            with open(_path, 'r') as f:
                 content = f.read()
-        except:
-            return "// Error loading widget.js", 500, {"Content-Type": "application/javascript"}
+            break
+        except OSError:
+            continue
+    if content is None:
+        return "// Error loading widget.js", 500, {"Content-Type": "application/javascript"}
     
     # Ensure the API endpoint is correct
     content = content.replace(
