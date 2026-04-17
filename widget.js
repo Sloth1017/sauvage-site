@@ -1539,7 +1539,7 @@
     // Instant local handoff — triggered by button or by user expressing intent
     if (text === "\uD83D\uDE4B Talk to someone" || wantsHuman(text)) {
       addMessage(text, "user");
-      addMessage("Of course! Greg from the Sauvage team can help you directly.\n\n👉 WhatsApp him here: https://wa.me/31634742988\n\nJust mention what you're looking for and he'll get back to you quickly 👋", "bot");
+      addMessage("Of course! Greg from the Sauvage team can help you directly.\n\n\ud83d\udcde +31 634 742 988\n\ud83d\udcac WhatsApp: https://wa.me/31634742988\n\nJust mention what you're looking for and he'll get back to you quickly \ud83d\udc4b", "bot");
       return;
     }
 
@@ -1581,7 +1581,7 @@
       hideTyping();
 
       if (data.error) {
-        addMessage("Our booking assistant is briefly unavailable. You can reach us directly on WhatsApp in the meantime — Greg will get back to you quickly.", "bot");
+        addMessage("Our booking assistant is briefly unavailable. Reach Greg directly:\n\n\ud83d\udcde +31 634 742 988\n\ud83d\udcac WhatsApp: https://wa.me/31634742988", "bot");
         showQuickReplies(["\uD83D\uDE4B Talk to someone"]);
       } else {
         const botMsg = data.response;
@@ -1633,9 +1633,9 @@
       clearTimeout(_timeout);
       hideTyping();
       if (e.name === "AbortError") {
-        addMessage("The request timed out — please try again.", "bot");
+        addMessage("The request timed out — please try again, or reach Greg directly:\n\n\ud83d\udcde +31 634 742 988\n\ud83d\udcac https://wa.me/31634742988", "bot");
       } else {
-        addMessage("Connection error — please check your internet and try again.", "bot");
+        addMessage("Connection error — please try again, or reach Greg directly:\n\n\ud83d\udcde +31 634 742 988\n\ud83d\udcac https://wa.me/31634742988", "bot");
       }
     } finally {
       sendMessage._inflight = false;
