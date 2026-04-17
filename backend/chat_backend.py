@@ -1284,13 +1284,16 @@ def test_confirm(session_id):
 
     state = (sess or {}).get("state", {})
 
+    airtable_ok = False
     if record_id and _AIRTABLE_ENABLED:
         try:
             confirm_booking(record_id)
+            airtable_ok = True
         except Exception as e:
-            return jsonify({"error": str(e)}), 500, _cors_headers()
-    else:
-        # Airtable not wired — persist the flag so poll endpoint returns confirmed
+            print(f"[test-confirm] Airtable confirm failed (non-fatal): {e}")
+            # Non-fatal — continue so calendar / email still fire during testing
+    if not airtable_ok:
+        # Persist the flag so poll endpoint returns confirmed even without Airtable
         meta["_test_confirmed"] = True
 
     # Mark payment as confirmed in session so Claude stops showing deposit link
