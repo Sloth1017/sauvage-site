@@ -250,7 +250,8 @@ def handle_webhook():
                         airtable_id  = record_id,
                     )
                     cal_link = cal_event.get("htmlLink", "")
-                    update_inquiry(record_id, {"Notes": f"Google Calendar event: {cal_link}"})
+                    if cal_link:
+                        update_inquiry(record_id, {"Calendar Link": cal_link})
                     print(f"[Webhook] Calendar event created: {cal_link}")
                 else:
                     print(f"[Webhook] Skipped calendar — missing start/end datetime "

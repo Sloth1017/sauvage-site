@@ -1324,9 +1324,9 @@ def test_confirm(session_id):
                 )
                 cal_link = cal_event.get("htmlLink", "")
                 print(f"[test-confirm] Calendar event created: {cal_link}")
-                if record_id and _AIRTABLE_ENABLED:
+                if cal_link and record_id and _AIRTABLE_ENABLED:
                     from airtable_client import update_inquiry as _upd
-                    _upd(record_id, {"Notes": f"Google Calendar event: {cal_link}"})
+                    _upd(record_id, {"Calendar Link": cal_link})
             else:
                 print(f"[test-confirm] Skipped calendar — missing dates/times in state")
     except Exception as e:
