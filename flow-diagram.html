@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sauvage Booking Flow</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #f5f3ef; }
+    header {
+      background: #1a1a1a; color: #fff; padding: 20px 32px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 10;
+    }
+    header h1 { font-size: 16px; font-weight: 500; letter-spacing: 1px; }
+    header span { font-size: 11px; color: #666; letter-spacing: 2px; text-transform: uppercase; }
+    .toolbar { display: flex; gap: 10px; }
+    button {
+      background: none; border: 1px solid #444; color: #aaa; padding: 5px 14px;
+      font-size: 11px; border-radius: 3px; cursor: pointer; font-family: inherit;
+    }
+    button:hover { border-color: #fff; color: #fff; }
+    .diagram-wrap { padding: 40px; overflow-x: auto; min-height: calc(100vh - 120px); }
+    .mermaid { max-width: 100%; }
+    .legend {
+      background: #fff; border-radius: 4px; padding: 20px 28px;
+      margin: 0 40px 40px; display: flex; flex-wrap: wrap; gap: 18px;
+      font-size: 12px; color: #555;
+    }
+    .legend h3 { width: 100%; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #999; margin-bottom: 4px; }
+    .l-item { display: flex; align-items: center; gap: 7px; }
+    .l-dot { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; }
+    .updated { font-size: 10px; color: #999; padding: 8px 40px 16px; text-align: right; }
+    @media print { header button { display: none; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <span>Sauvage Amsterdam</span>
+      <h1>Booking Chatbot — Decision Flow</h1>
+    </div>
+    <div class="toolbar">
+      <button onclick="window.print()">Print / PDF</button>
+      <button onclick="location.reload()">Refresh</button>
+    </div>
+  </header>
+
+  <div class="diagram-wrap">
+    <div class="mermaid">
+```mermaid
+flowchart TD
+    %% Styles
+    classDef happy fill:#d4edda,stroke:#28a745,color:#000
+    classDef decision fill:#fff3cd,stroke:#ffc107,color:#000
+    classDef widget fill:#cce5ff,stroke:#007bff,color:#000
+    classDef error fill:#f8d7da,stroke:#dc3545,color:#000
+
+    %% Entry
+    Start([Client Opens Chat]):::happy --> AutoGreeting[System Sends Auto Greeting]:::happy
+    AutoGreeting --> ClientFirst[Client First Message]
+
+    %% Step 1: Event Type
+    ClientFirst --> ParseEvent{Event Type Stated?}:::decision
+    ParseEvent -->|Yes| StoreEventType[Store Event Type]:::happy
+    ParseEvent -->|No| AskEventType[Ask Event Type]
+    AskEventType --> ClientEventReply[Client Replies]
+    ClientEventReply --> StoreEventType
+    StoreEventType --> Stage1[Stage: 1_event_type]:::happy
+
+    %% Step 2: Date/Time
+    Stage1 --> AskDateTime[Ask Date - trigger datetime widget]
+    AskDateTime --> DateTimeWidget[[datetime Widget]]:::widget
+    DateTimeWidget --> ClientDateReply[Client Selects/States Date]
+    ClientDateReply --> ParseDateTime{Both Date AND Time?}:::decision
+    ParseDateTime -->|Date Only| AskTime[Ask Start/End Time]
+    ParseDateTime -->|Time Only| AskDate[Ask Date]
+    ParseDateTime -->|Both| StoreDateTime[Store Date + Time]:::happy
+    AskTime --> ClientTimeReply[Client Replies Time]
+    ClientTimeReply --> StoreDateTime
+    AskDate --> DateTimeWidget2[[datetime Widget]]:::widget
+    DateTimeWidget2 --> ClientDateReply2[Client Selects Date]
+    ClientDateReply2 --> StoreDateTime
+
+    %% Calendar Check
+    StoreDateTime --> CheckCalendar{Check Google Calendar}:::decision
+    CheckCalendar -->|Available| Stage2[Stage: 2_date_time]:::happy
+    CheckCalendar -->|Conflict| DateConflict[Inform Date Taken]:::error
+    DateConflict --> OfferAlternatives[Suggest Alternative Dates]
+    OfferAlternatives --> ClientAltResponse{Client Response}:::decision
+    ClientAltResponse -->|Accepts Alt| StoreDateTime
+    ClientAltResponse -->|None Work| OfferWaitlist[Offer Waitlist]
+    OfferWaitlist --> WaitlistResponse{Wants Waitlist?}:::decision
+    WaitlistResponse -->|Yes| CollectWaitlistInfo[Collect Waitlist Details]
+    CollectWaitlistInfo --> SaveWaitlist[Save to Waitlist Table]:::happy
+    SaveWaitlist --> WaitlistEnd([Waitlisted - End]):::happy
+    WaitlistResponse -->|No| EndNoBook([End - No Booking]):::error
+
+    %% Step 3: Contact Details
+    Stage2 --> AskContact[Ask Name + Contact]
+    AskContact --> ContactWidget[[contact Widget]]:::widget
+    ContactWidget --> ClientContactReply[Client Provides Details]
+    ClientContactReply --> StoreContact[Store Name/Email/Phone]:::happy
+    StoreContact --> GDPRNotice[Send GDPR Data Notice]:::happy
+    GDPRNotice --> Stage3[Stage: 3_contact]:::happy
+
+    %% Step 4: Customer Type
+    Stage3 --> CheckCustType{Customer Type Known?}:::decision
+    CheckCustType -->|Already Stated| SkipCustType[Skip Question]:::happy
+    CheckCustType -->|Unknown| AskCustType[Ask Private or Business]
+    AskCustType --> CustTypeWidget[[customer_type Widget]]:::widget
+    CustTypeWidget --> ClientCustReply[Client Selects]
+    ClientCustReply --> StoreCustType[Store Customer Type]:::happy
+    SkipCustType --> ProceedRooms
+    StoreCustType --> ProceedRooms
+
+    %% Step 5: Guest Count
+    ProceedRooms --> AskGuestCount[Ask Guest Count]
+    AskGuestCount --> ClientGuestReply[Client States Number]
+    ClientGuestReply --> ValidateGuests{Guests <= 30?}:::decision
+    ValidateGuests -->|Yes| StoreGuests[Store Guest Count]:::happy
+    ValidateGuests -->|No - Over 30| RejectCapacity[Reject - Max 30]:::error
+    RejectCapacity --> AskReduceGuests[Ask to Reduce]
+    AskReduceGuests --> ClientGuestReply
+
+    %% Step 6: Rooms
+    StoreGuests --> ShareWalkthrough[Share Drone Walkthrough Video]:::happy
+    ShareWalkthrough --> ApplyRoomRules{Apply Capacity Rules}:::decision
+    ApplyRoomRules -->|Over 10 Guests| RecommendUpstairsEntrance[Recommend Upstairs + Entrance]
+    ApplyRoomRules -->|10 or Less| PresentAllRooms[Present All Room Options]
+    RecommendUpstairsEntrance --> PresentRoomLinks[Show Room Photo Links]
+    PresentAllRooms --> PresentRoomLinks
+    PresentRoomLinks --> ClientRoomReply[Client Selects Rooms]
+    ClientRoomReply --> StoreRooms[Store Rooms]:::happy
+
+    %% Kitchen Check
+    StoreRooms --> CheckFood{Food Involved?}:::decision
+    CheckFood -->|Yes| PromptKitchen[Prompt Kitchen Option]
+    CheckFood -->|No| SkipKitchenPrompt
+    PromptKitchen --> KitchenResponse{Kitchen Response}:::decision
+    KitchenResponse -->|Book Kitchen| AddKitchen[Add Kitchen to Booking]:::happy
+    KitchenResponse -->|Says Fento| NoteFentoCatering[Note Fento Catering Add-on]:::happy
+    KitchenResponse -->|Declines| KitchenWarning[Warn: No Equipment Use]:::happy
+    AddKitchen --> Stage4
+    NoteFentoCatering --> Stage4
+    KitchenWarning --> Stage4
+    SkipKitchenPrompt --> Stage4
+    Stage4[Stage: 4_rooms]:::happy
+
+    %% Step 7: Add-ons
+    Stage4 --> TriggerAddons[Send Add-ons Trigger Phrase]
+    TriggerAddons --> AddonsWidget[[addons Widget]]:::widget
+    AddonsWidget --> ClientAddonsReply[Client Submits Selections]
+    ClientAddonsReply --> ParseAddons[Parse Add-on Selections]:::happy
+    ParseAddons --> CheckStaff{Staff Selected?}:::decision
+    CheckStaff -->|Yes| CalcStaffDefault[1 Staff x Full Duration]:::happy
+    CheckStaff -->|No| MarkSelfManaged[Mark Self-Managed]:::happy
+    CalcStaffDefault --> Stage5
+    MarkSelfManaged --> Stage5
+    Stage5[Stage: 5_addons]:::happy
+
+    %% Gallery Wall Check
+    Stage5 --> CheckUpstairs{Upstairs Booked?}:::decision
+    CheckUpstairs -->|Yes| AskWallUse[Ask About Wall Use]
+    CheckUpstairs -->|No| SkipWallUse
+    AskWallUse --> WallResponse{Needs Walls?}:::decision
+    WallResponse -->|Yes| FlagGalleryApproval[Flag for Gallery Approval]:::happy
+    WallResponse -->|No| SkipWallUse
+    FlagGalleryApproval --> MusicNote
+    SkipWallUse --> MusicNote
+
+    %% Music Note
+    MusicNote[State Music/Noise Policy]:::happy --> Attribution
+
+    %% Step 8: Attribution
+    Attribution --> AskAttribution[Ask: How did you hear about Sauvage?]
+    AskAttribution --> AttributionWidget[[attribution Widget]]:::widget
+    AttributionWidget --> ClientAttrReply[Client Selects Source]
+    ClientAttrReply --> StoreAttribution[Store Attribution - No Response]:::happy
+
+    %% Step 9: Calculate Quote
+    StoreAttribution --> CalcQuote[Calculate Full Quote]:::happy
+    
+    subgraph QuoteCalculation[Quote Calculation Logic]
+        CalcQuote --> GetBaseRates[Get Room Base Rates]
+        GetBaseRates --> CheckCommunity{community47 Code?}:::decision
+        CheckCommunity -->|Yes| ApplyCommunityRates[Use Community Kitchen Rates]
+        CheckCommunity -->|No| UseStandardRates[Use Standard Rates]
+        ApplyCommunityRates --> CalcRoomTotal
+        UseStandardRates --> CalcRoomTotal
+        CalcRoomTotal[Calculate Room Subtotal] --> ApplyBundleDiscount[Apply Bundle Discount]
+        ApplyBundleDiscount --> AddClosurePremiums{Full-Day Entrance/Kitchen?}:::decision
+        AddClosurePremiums -->|Yes| AddPremiums[Add Closure Premiums]
+        AddClosurePremiums -->|No| SkipPremiums
+        AddPremiums --> AddAddons
+        SkipPremiums --> AddAddons
+        AddAddons[Add Add-on Costs] --> CheckKitchenCleanup{Kitchen Booked?}:::decision
+        CheckKitchenCleanup -->|Yes| AddCleanupSilent[Add €60 Cleanup Silently]
+        CheckKitchenCleanup -->|No| SkipCleanup
+        AddCleanupSilent --> CalcVAT
+        SkipCleanup --> CalcVAT
+        CalcVAT[Calculate VAT Breakdown] --> CalcDeposit{Kitchen Booked?}:::decision
+        CalcDeposit -->|Yes| Deposit300[Deposit: €300]
+        CalcDeposit -->|No| Deposit50[Deposit: €50]
+    end
+
+    Deposit300 --> PresentQuote
+    Deposit50 --> PresentQuote
+    PresentQuote[Present Itemized Quote]:::happy --> Stage6[Stage: 6_quoted]:::happy
+
+    %% Step 10: Quote Confirmation
+    Stage6 --> ClientQuoteResponse{Client Approves Quote?}:::decision
+    ClientQuoteResponse -->|Wants Changes| ModifyQuote[Modify Booking Details]
+    ModifyQuote --> CalcQuote
+    ClientQuoteResponse -->|Approves| AskTandC[Ask T&C Acceptance]
+
+    %% T&C
+    AskTandC --> TandCWidget[[tandc Widget]]:::widget
+    TandCWidget --> ClientTandCReply{T&C Accepted?}:::decision
+    ClientTandCReply -->|Yes| ConfirmTandC[Confirm - Show Payment Link Above]:::happy
+    ClientTandCReply -->|No| TandCRequired[T&C Required to Proceed]:::error
+    TandCRequired --> AskTandC
+    ConfirmTandC --> Stage7[Stage: 7_deposit_pending]:::happy
+
+    %% Step 11: Payment
+    Stage7 --> AwaitPayment{Shopify Payment Received?}:::decision
+    AwaitPayment -->|Yes| PaymentConfirmed[Payment Confirmed]:::happy
+    AwaitPayment -->|No - Timeout| CheckTimeout{30 min inactive?}:::decision
+    CheckTimeout -->|Yes| SoftNudge[Send Soft Nudge]
+    SoftNudge --> AwaitPayment
+    CheckTimeout -->|24hr+| AbandonedFlow
+
+    %% Confirmation
+    PaymentConfirmed --> SendConfirmation[Send Confirmation Email/Message]:::happy
+    SendConfirmation --> Stage8[Stage: 8_confirmed]:::happy
+
+    subgraph Airtable[Airtable Sync]
+        Stage8 --> SaveBooking[Save Complete Booking Record]
+        SaveBooking --> UpdateCalendar[Post to Google Calendar]
+        UpdateCalendar --> TriggerNotifications[Trigger Internal Notifications]
+    end
+
+    TriggerNotifications --> NotifyResidents{Which Residents?}:::decision
+    NotifyResidents -->|Wine/Cave| NotifySelection[Notify Selection Sauvage]
+    NotifyResidents -->|Kitchen/Snacks| NotifyFento[Notify Fento BV]
+    NotifyResidents -->|Upstairs/Walls| NotifyGallery[Notify Sauvage Gallery]
+    NotifyResidents -->|Entrance AM| NotifyIkinari[Notify Ikinari Coffee]
+    NotifyResidents -->|Always| NotifyAdmin[Notify Sauvage Admin]
+    NotifySelection --> BookingComplete
+    NotifyFento --> BookingComplete
+    NotifyGallery --> BookingComplete
+    NotifyIkinari --> BookingComplete
+    NotifyAdmin --> BookingComplete([Booking Complete]):::happy
+
+    %% Post-Booking Automations
+    BookingComplete --> Reminder2Hr[2hr Before: Send Reminder]:::happy
+    Reminder2Hr --> PostEventFollowup[30min After End: Send Feedback Request]:::happy
+
+    %% Abandoned Flow
+    subgraph AbandonedHandling[Abandoned Conversation Flow]
+        AbandonedFlow[24hr No Response] --> SendFollowup[Send 1 Follow-up Message]
+        SendFollowup --> WaitResponse{Response in 48hr?}:::decision
+        WaitResponse -->|Yes| ResumeConversation[Resume Where Left Off]:::happy
+        WaitResponse -->|No| MarkAbandoned[Mark as Abandoned]:::error
+        MarkAbandoned --> SavePartialData[Save Partial Data to Airtable]
+        SavePartialData --> NotifyHost{Contact Captured?}:::decision
+        NotifyHost -->|Yes| NotifyAttributedHost[Notify Attributed Host for Follow-up]
+        NotifyHost -->|No| NotifyAdminAbandoned[Notify Admin]
+    end
+
+    ResumeConversation --> Stage1
+
+    %% Error Handling
+    ClientFirst --> ErrorCheck{Unrecognizable Input?}:::decision
+    ErrorCheck -->|Strike 1| AskRephrase[Ask to Rephrase]
+    AskRephrase --> ClientRetry[Client Retries]
+    ClientRetry --> ErrorCheck
+    ErrorCheck -->|Strike 2| TryDifferent[Try Different Approach]
+    TryDifferent --> ClientRetry2[Client Retries]
+    ClientRetry2 --> ErrorCheck
+    ErrorCheck -->|Strike 3| HumanHandoff[Escalate to Human]:::error
+    ErrorCheck -->|Valid| ParseEvent
+
+    %% Human Handoff
+    HumanHandoff --> ProvideGreg[Provide Greg Contact Info]:::error
+    ProvideGreg --> HandoffEnd([Handed Off]):::error
+
+    %% Restart
+    ClientFirst --> CheckRestart{Says restart/start over?}:::decision
+    CheckRestart -->|Yes| SaveAbandoned[Save Session as Abandoned]
+    SaveAbandoned --> ResetSession[Reset to Opening]:::happy
+    ResetSession --> AskEventType
+    CheckRestart -->|No| ParseEvent
+```
+    </div>
+  </div>
+
+  <div class="legend">
+    <h3>Legend</h3>
+    <div class="l-item"><div class="l-dot" style="background:#fff;border:1px solid #ccc;"></div>Happy path step</div>
+    <div class="l-item"><div class="l-dot" style="background:#f5f3ef;border:1px solid #ccc;"></div>Decision / branch</div>
+    <div class="l-item"><div class="l-dot" style="background:#e8f0fe;"></div>Widget triggered</div>
+    <div class="l-item"><div class="l-dot" style="background:#e6f4ea;"></div>Airtable sync</div>
+    <div class="l-item"><div class="l-dot" style="background:#ffeeee;"></div>Warning / hard stop</div>
+    <div class="l-item"><div class="l-dot" style="background:#1a1a1a;"></div>Terminal node</div>
+  </div>
+
+  <div class="updated">Auto-generated 17 Apr 2026 09:15 · source: chatbot-prompt-v2.md</div>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral', flowchart: { curve: 'basis', padding: 20 } });
+  </script>
+</body>
+</html>
