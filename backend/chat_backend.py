@@ -365,10 +365,17 @@ def _state_block(state: dict) -> str:
 # ── Airtable helpers ──────────────────────────────────────────────────────────
 
 def _ensure_airtable_record(session_id: str, state: dict, meta: dict) -> Optional[str]:
-    """Create an Airtable inquiry record the first time we have an event type."""
+    """Create an Airtable inquiry record the first time we have an event type.
+    Re-reads from DB right before creating to avoid double-creation race condition
+    between concurrent gunicorn workers."""
     if not _AIRTABLE_ENABLED:
         return None
     if "record_id" not in meta and state.get("event_type"):
+        # Re-read meta from DB — another worker may have already created the record
+        fresh = _session_get(session_id)
+        if fresh and fresh["meta"].get("record_id"):
+            meta["record_id"] = fresh["meta"]["record_id"]
+            return meta["record_id"]
         try:
             record_id = create_inquiry(session_id, _clean_str(state["event_type"]))
             meta["record_id"] = record_id
@@ -449,7 +456,8 @@ def _sync_airtable(session_id: str, state: dict, meta: dict) -> None:
     # Attribution — push all three fields together when referral_source is first seen
     _HOST_NAMES = {"greg", "dorian", "bart"}
     ref_src = state.get("referral_source")
-    if ref_src and ref_src != last.get("referral_source"):
+    # Skip if already pushed deterministically via [ref:] widget tag
+    if ref_src and not last.get("referral_direct_pushed") and ref_src != last.get("referral_source"):
         cleaned_src = _clean_str(ref_src)
         updates["Referral Source"] = cleaned_src
         # Derive attributed host: person > channel
@@ -503,6 +511,9 @@ def _sync_airtable(session_id: str, state: dict, meta: dict) -> None:
             updates["Total Incl VAT"] = incl_vat
             updates["Total Ex VAT"]   = ex_vat
             updates["VAT Amount"]     = vat_amount
+            deposit = 50.0 if not (state.get("rooms") and "Kitchen" in str(state.get("rooms", []))) else 300.0
+            updates["Deposit Amount Due"] = deposit
+            print(f"[Airtable] Quote sync: €{incl_vat} incl VAT, deposit €{deposit}")
 
     # Time Slot — combine start + end into "HH:MM-HH:MM"
     start = state.get("start_time")
@@ -542,7 +553,8 @@ def _sync_airtable(session_id: str, state: dict, meta: dict) -> None:
         updates["Rooms Requested"] = _normalise_rooms(rooms)
 
     addons = state.get("addons")
-    if addons and addons != last.get("addons"):
+    # Skip if already pushed deterministically via [at:] widget tag — LLM names won't match
+    if addons and not last.get("addons_direct_pushed"):
         updates["Add-Ons"] = _clean_list(addons)
 
     # Community pricing flag
@@ -780,6 +792,7 @@ def chat():
                 _upd_at(_r_id, {"Add-Ons": _at_addons})
                 # Mark in meta so _sync_airtable doesn't re-push with LLM values
                 sess["meta"].setdefault("last_pushed", {})["addons"] = _at_addons
+                sess["meta"]["last_pushed"]["addons_direct_pushed"] = True
                 _session_update(session_id, meta=sess["meta"])
                 print(f"[Addons] Direct sync → {_at_addons}")
             except Exception as _e:
@@ -800,6 +813,7 @@ def chat():
                     _ref_fields["Attributed Host"] = "Unattributed"
                 _upd_at(_r_id, _ref_fields)
                 sess["meta"].setdefault("last_pushed", {})["referral"] = _ref_value
+                sess["meta"]["last_pushed"]["referral_direct_pushed"] = True
                 _session_update(session_id, meta=sess["meta"])
                 print(f"[Referral] Direct sync → {_ref_fields}")
             except Exception as _e:
