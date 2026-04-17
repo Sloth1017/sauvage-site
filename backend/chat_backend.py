@@ -871,7 +871,7 @@ def chat():
                 latest_sess = _session_get(sid)
                 base_state = latest_sess["state"] if latest_sess else {}
                 merged = {**base_state, **new_state} if new_state else base_state
-                # Regex pre-pass on last user message
+                # Regex pre-pass on last user message — catch fields the LLM often misses
                 last_user = next((m["content"] for m in reversed(hist) if m["role"] == "user"), "")
                 msg_lower = last_user.lower()
                 if not merged.get("customer_type"):
@@ -879,6 +879,15 @@ def chat():
                         merged["customer_type"] = "Private"
                     elif any(w in msg_lower for w in ["business", "corporate", "company", "zakelijk", "btw"]):
                         merged["customer_type"] = "Business"
+                # Arrival time — widget sends "I'll arrive at HH:MM for setup."
+                if not merged.get("arrival_time"):
+                    _arr = re.search(r"\barrive\b.*?(\d{1,2}:\d{2})", msg_lower)
+                    if not _arr:
+                        _arr = re.search(r"(\d{1,2}:\d{2}).*?\bsetup\b", msg_lower)
+                    if not _arr:
+                        _arr = re.search(r"\barrival\b.*?(\d{1,2}:\d{2})", msg_lower)
+                    if _arr:
+                        merged["arrival_time"] = _arr.group(1)
                 if merged != base_state:
                     _session_update(sid, state=merged)
                 cur_state = merged
