@@ -215,7 +215,7 @@ _EXTRACT_SYSTEM = (
     "  community_pricing, referral_source, attributed_host, referred_by.\n"
     "Rules:\n"
     "- event_type: one of Dinner, Birthday, Corporate, Community, Pop-up, Art Gallery, Wine Tasting, Workshop, Wedding, Other\n"
-    "- dates: ISO format YYYY-MM-DD, e.g. '2026-05-10'. Current year is 2026 unless the client specifies otherwise.\n"
+    "- dates: ISO format YYYY-MM-DD for single day, or a JSON array for multi-day e.g. ['2026-05-10','2026-05-11','2026-05-12']. Current year is 2026 unless the client specifies otherwise.\n"
     "- rooms: JSON array of room names, e.g. [\"Upstairs (Gallery)\", \"Entrance\"]\n"
     "- duration: 'Hourly', 'Half-Day', or 'Full-Day'\n"
     "- hours: integer, only if duration is Hourly\n"
@@ -394,17 +394,34 @@ def _sync_airtable(session_id: str, state: dict, meta: dict) -> None:
         if ref_by:
             updates["Referred By"] = _clean_str(ref_by)
 
-    # Requested Date — Airtable only accepts a single ISO date string.
-    # If the LLM extracted a list (multi-day booking), use the first date.
+    # Requested Date, End Date, Number of Days, Booking Block
     dates_val = state.get("dates")
     if dates_val and dates_val != last.get("dates"):
         if isinstance(dates_val, list):
-            first_date = _clean_str(dates_val[0]) if dates_val else None
+            date_list = [_clean_str(d) for d in dates_val if d]
         else:
-            first_date = _clean_str(str(dates_val))
-        # Validate it looks like an ISO date before sending
+            # Handle "2026-05-16 to 2026-05-18" range strings
+            _range = re.findall(r'\d{4}-\d{2}-\d{2}', str(dates_val))
+            date_list = _range if _range else [_clean_str(str(dates_val))]
+
+        first_date = date_list[0] if date_list else None
+        last_date  = date_list[-1] if len(date_list) > 1 else None
+        num_days   = len(date_list) if len(date_list) > 1 else 1
+
         if first_date and re.match(r'^\d{4}-\d{2}-\d{2}$', first_date):
             updates["Requested Date"] = first_date
+        if last_date and re.match(r'^\d{4}-\d{2}-\d{2}$', last_date):
+            updates["End Date"]      = last_date
+            updates["Number of Days"] = num_days
+            # Derive Booking Block from day count
+            if num_days >= 28:
+                updates["Booking Block"] = "Month (28+ days)"
+            elif num_days >= 7:
+                updates["Booking Block"] = "Week (7+ days)"
+            elif num_days >= 2:
+                updates["Booking Block"] = "Weekend (3 days)"
+        else:
+            updates["Booking Block"] = "Single Day"
 
     # Guest Count — must be an integer
     gc = state.get("guest_count")
