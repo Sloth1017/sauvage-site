@@ -108,6 +108,11 @@ def update_inquiry(record_id: str, fields: dict) -> dict:
     Update any fields on an existing inquiry.
     Use this to progressively add data as the conversation moves forward.
 
+    Multi-select fields (Rooms Requested, Add-Ons Requested, Special Flags) are
+    coerced to lists. If Airtable rejects a multi-select value (unrecognised option),
+    we retry without that field and save the raw value in Notes instead — so the rest
+    of the update always lands.
+
     Example:
         update_inquiry(record_id, {
             "Client Name": "Anna",
@@ -117,11 +122,33 @@ def update_inquiry(record_id: str, fields: dict) -> dict:
         })
     """
     table = _get_table(INQUIRIES_TABLE)
-    # Rooms and add-ons are multi-select — ensure they're lists
-    for multi_field in ["Rooms Requested", "Add-Ons Requested", "Special Flags"]:
-        if multi_field in fields:
-            fields[multi_field] = _safe_list(fields[multi_field])
-    return table.update(record_id, fields)
+    MULTI_FIELDS = ["Rooms Requested", "Add-Ons Requested", "Special Flags"]
+
+    # Ensure multi-select fields are lists
+    for mf in MULTI_FIELDS:
+        if mf in fields:
+            fields[mf] = _safe_list(fields[mf])
+
+    try:
+        return table.update(record_id, fields)
+    except Exception as e:
+        err = str(e)
+        if "INVALID_MULTIPLE_CHOICE_OPTIONS" in err or "INVALID_VALUE_FOR_COLUMN" in err:
+            # Strip offending multi-select fields, stash their raw values in Notes
+            notes_parts = []
+            safe_fields = {}
+            for k, v in fields.items():
+                if k in MULTI_FIELDS:
+                    notes_parts.append(f"{k}: {v}")
+                else:
+                    safe_fields[k] = v
+            if notes_parts:
+                existing_notes = safe_fields.get("Notes", "")
+                extra = " | ".join(notes_parts)
+                safe_fields["Notes"] = f"{existing_notes} [{extra}]".strip(" |")
+            print(f"[Airtable] Multi-select validation error — retrying without: {notes_parts}. Error: {e}")
+            return table.update(record_id, safe_fields)
+        raise
 
 
 def advance_stage(record_id: str, stage: str, extra_fields: dict = None) -> dict:

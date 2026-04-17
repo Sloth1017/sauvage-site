@@ -1001,6 +1001,8 @@
   }
 
   function showAddonsWidget() {
+    if (_shownWidgets.has("addons")) return;
+    _shownWidgets.add("addons");
     var msgs = document.getElementById("sv-messages");
     var wrap = document.createElement("div");
     wrap.className = "sv-addons-wrap";
@@ -1149,7 +1151,7 @@
     wrap.innerHTML =
       '<div class="sv-tandc-label" id="sv-tc-row">' +
         '<div class="sv-tandc-box" id="sv-tc-box"></div>' +
-        '<span>I have read and accept the <a class="sv-tandc-link" href="https://booking.selectionsauvage.nl/terms" target="_blank">Terms of Use</a></span>' +
+        '<span>I have read and accept the <a class="sv-tandc-link" href="https://www.sauvage.amsterdam/terms" target="_blank">Terms of Use</a></span>' +
       '</div>' +
       '<button class="sv-tandc-btn" id="sv-tc-ok" disabled>Confirm &amp; continue</button>';
 
@@ -1569,8 +1571,8 @@
         };
         var _nextWidget = data.widget || null;
         if (!_nextWidget) {
-          if      (isAskingDateTime(botMsg))     _nextWidget = "datetime";
-          else if (isAskingAddons(botMsg))       _nextWidget = "addons";
+          if      (isAskingDateTime(botMsg))                                         _nextWidget = "datetime";
+          else if (!_shownWidgets.has("addons") && isAskingAddons(botMsg))           _nextWidget = "addons";
           else if (!_shownWidgets.has("contact")       && isAskingContact(botMsg))       _nextWidget = "contact";
           else if (!_shownWidgets.has("customer_type") && isAskingCustomerType(botMsg))  _nextWidget = "customer_type";
           else if (!_shownWidgets.has("attribution")   && isAskingAttribution(botMsg))   _nextWidget = "attribution";
