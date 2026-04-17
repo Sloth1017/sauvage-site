@@ -51,179 +51,307 @@
     <div class="mermaid">
 ```mermaid
 flowchart TD
-    subgraph Entry
-        A[Client sends first message]
+    subgraph Opening
+        A[System sends auto-greeting]
+        B[Client first message]
     end
 
     subgraph Event_Details
-        B[Identify event type\n→ AT: Event Type]
-        C{Event type\nclear?}
-        D[Ask for clarification]
-        E[Ask for date\ntrigger datetime widget]
-        F[Capture date\n→ AT: Requested Date]
-        G{Date\navailable?}
-        H[Offer alternatives or waitlist]
-        I{Client wants\nwaitlist?}
-        J[Save to Waitlist table]
-        K[Ask for start and end time]
-        L[Capture time and duration\n→ AT: Time Slot, Duration]
+        C{Event type stated?}
+        D[Confirm event type\n→ AT: Event Type]
+        E[Ask event type]
     end
 
-    subgraph Contact_Collection
-        M[Ask for name and contact\ntrigger contact widget]
-        N[Capture name email phone\n→ AT: Client Name, Email, Phone]
+    subgraph Date_Time
+        F[Ask date - trigger calendar widget\n'select your dates']
+        G{Date provided?}
+        H[Confirm date\n→ AT: Requested Date]
+        I{Time provided?}
+        J[Ask start/end time]
+        K[Confirm time\n→ AT: Time Slot, Duration]
+    end
+
+    subgraph Contact_Info
+        L[Ask name + email + phone\nTrigger contact widget]
+        M[Collect contact details\n→ AT: Client Name, Email, Phone]
     end
 
     subgraph Customer_Type
-        O{Customer type\nalready known?}
-        P[Ask private or business\ntrigger customer_type widget]
+        N{Customer type known?}
+        O[Skip - already stated]
+        P[Ask private or business\nTrigger customer_type widget]
         Q[Capture customer type\n→ AT: Customer Type]
     end
 
+    subgraph Availability_Check
+        R[Check Google Calendar]
+        S{Date available?}
+        T[Proceed to rooms]
+        U[Offer alternatives or waitlist]
+        V{Client wants waitlist?}
+        W[Add to waitlist table\n→ AT: Funnel Stage = waitlisted]
+        X[Client selects alternative date]
+    end
+
     subgraph Guest_Count
-        R[Ask for guest count]
-        S[Capture guest count\n→ AT: Guest Count]
-        T{Count over 30?}
-        U[Hard stop: max 30 guests]:::errorNode
+        Y[Ask guest count]
+        Z{Count <= 30?}
+        AA[Confirm guest count\n→ AT: Guest Count]
+        AB[Hard stop: max 30 guests]:::errorNode
     end
 
     subgraph Room_Selection
-        V[Share walkthrough video]
-        W[Present room options with\ncapacity-based guidance]
-        X[Capture rooms selected\n→ AT: Rooms Requested]
-        Y{Kitchen\nselected?}
-        Z[Note kitchen deposit required]
-        AA{Upstairs\nselected?}
-        AB[Ask about wall use]
-        AC[Flag Gallery approval if needed]
+        AC[Share walkthrough video]
+        AD[Present rooms with photo links\nbased on guest count]
+        AE{Over 10 guests?}
+        AF[Require Upstairs + Entrance]
+        AG[Recommend based on event]
+        AH{Food involved?}
+        AI[Prompt Kitchen option]
+        AJ{Client wants Kitchen?}
+        AK[Add Kitchen to booking]
+        AL[Explain kitchen equipment rules]
+        AM[Mention Cave as option]
+        AN[Capture room selection\n→ AT: Rooms Requested]
     end
 
-    subgraph AddOns
-        AD[Trigger add-ons widget\nExact phrase only]:::widgetNode
-        AE[Capture add-ons\n→ AT: Add-Ons]
-        AF[Mention music policy as note]
+    subgraph Kitchen_Rules
+        AO{Using dishwasher?}
+        AP[Add Kitchen charge]
+        AQ[No kitchen charge]
     end
 
-    subgraph Quote_Presentation
-        AG[Calculate quote\napply bundle discounts\nadd closure premiums]
-        AH[Present itemized quote\n→ AT: Total Incl VAT, Total Ex VAT, VAT Amount]
-        AI[Include T&C link\ntrigger tandc widget]:::widgetNode
+    subgraph Gallery_Walls
+        AR{Upstairs booked?}
+        AS[Ask about wall use]
+        AT{Walls needed?}
+        AU[Flag for Gallery approval]
+        AV[No wall use]
     end
 
-    subgraph Payment_Flow
-        AJ{Client requests\nchanges?}
-        AK[Revise quote and re-present]
-        AL[Client accepts T&C]
-        AM[Send deposit payment link]
-        AN{Payment\nreceived?}
-        AO[Await payment\nsoft nudge at 30min]
-        AP[Mark deposit collected\n→ AT: Deposit Collected, Stripe Payment Reference]
-        AQ[Update booking status to confirmed\n→ AT: Booking Status]
+    subgraph Addons
+        AW[Send exact phrase:\n'Here are the available add-ons...'\nTrigger addons widget]:::widgetNode
+        AX[Client submits add-on selections\n→ AT: Add-Ons]
+        AY[Calculate staff at default:\n1 person full duration]
+    end
+
+    subgraph Music_Note
+        AZ[Mention WiFi speaker +\nneighbour volume rules]
+    end
+
+    subgraph Quote_Generation
+        BA[Calculate room rates]
+        BB[Apply bundle discount]
+        BC{Full-Day booking?}
+        BD[Add closure premiums]
+        BE[Add add-on costs]
+        BF[Calculate totals\n→ AT: Total Incl VAT, Total Ex VAT, VAT Amount]
+        BG[Present itemised quote\nwith T&C link at bottom\nTrigger tandc widget]:::widgetNode
+    end
+
+    subgraph Terms_Payment
+        BH{Client requests changes?}
+        BI[Update quote and re-present]
+        BJ[Client accepts T&C via widget]
+        BK[Respond with deposit link only\nNO confirmation language]
+        BL{Kitchen booked?}
+        BM[Show €300 deposit link]
+        BN[Show €50 deposit link]
+    end
+
+    subgraph Payment_Confirmation
+        BO[Shopify webhook fires]
+        BP[Mark deposit collected\n→ AT: Deposit Collected, Stripe Payment Reference]
+        BQ[Send confirmation with:\nsummary, T&C, receipt, IBAN,\nWiFi details, arrival info]
+        BR[Update booking status\n→ AT: Booking Status = confirmed]
     end
 
     subgraph Attribution
-        AR[Ask how heard about Sauvage\ntrigger attribution widget]:::widgetNode
-        AS[Capture attribution\n→ AT: Referral Source, Attributed Host, Referred By]
-        AT[No response to submission]
+        BS[Ask 'Last thing - how did you\nhear about Sauvage?'\nTrigger attribution widget]:::widgetNode
+        BT[Client selects attribution\n→ AT: Referral Source, Attributed Host, Referred By]
+        BU[NO response to attribution\nSilence is correct]
+    end
+
+    subgraph Internal_Notifications
+        BV[Notify Selection Sauvage\nif wine/Cave]
+        BW[Notify Fento\nif Kitchen/snacks]
+        BX[Check Cake sub-tenant calendar]
+        BY[Notify Gallery\nif Upstairs/walls]
+        BZ[Notify Ikinari\nif Entrance before 15:00]
+        CA[Notify all hosts + admin]
+        CB[Post to Google Calendar]
     end
 
     subgraph Airtable_Sync
-        AU[Update funnel stage throughout\n→ AT: Funnel Stage]
-        AV[Save community pricing flag if used\n→ AT: Community Pricing]
-        AW[Save arrival time if provided\n→ AT: Arrival Time]
+        CC[Update Funnel Stage throughout\n→ AT: Funnel Stage]
+        CD[Save all collected data\nto Inquiries table]
+        CE[Log community_pricing if applicable\n→ AT: Community Pricing]
     end
 
-    subgraph Notifications
-        AX[Send confirmation email with details]
-        AY[Notify relevant residents]
-        AZ[Post to Google Calendar]
+    subgraph Session_Management
+        CF{30 min inactive?}
+        CG[Send soft nudge]
+        CH{Response?}
+        CI[Continue conversation]
+        CJ[Save stage, close session]
+        CK{24 hr inactive?}
+        CL[Send follow-up message]
+        CM{48 hr more?}
+        CN[Mark abandoned\n→ AT: Funnel Stage = abandoned]
+        CO[Notify attributed host for follow-up]
     end
 
-    subgraph DropOff_Handling
-        BA[Session inactive 30min\nsend soft nudge]
-        BB[No response 24hr\nsend follow-up]
-        BC[No response 48hr more\nmark abandoned\n→ AT: Funnel Stage = abandoned]:::errorNode
+    subgraph Error_Handling
+        CP{Unrecognisable input?}
+        CQ[Ask to rephrase - strike 1]
+        CR{Second bad input?}
+        CS[Offer help differently - strike 2]
+        CT{Third bad input?}
+        CU[Escalate to human]:::errorNode
     end
 
-    subgraph Escalation
-        BD[Client frustrated or\ncomplex request]
-        BE[Handoff to human with context]:::errorNode
+    subgraph Human_Handoff
+        CV{Handoff trigger?}
+        CW[Send Greg contact:\nphone + WhatsApp link]:::errorNode
+        CX[Summarise collected details]
+    end
+
+    subgraph Community_Pricing
+        CY{Client types 'community47'?}
+        CZ[Activate community mode silently]
+        DA[Use community Kitchen rates\n€100 half / €150 full]
+        DB[Log community_pricing: true\n→ AT: Community Pricing]
     end
 
     A --> B
     B --> C
-    C -- No --> D
-    D --> B
-    C -- Yes --> E
-    E --> F
+    C -->|Yes| D
+    C -->|No| E
+    E --> D
+    D --> F
     F --> G
-    G -- No --> H
+    G -->|Yes| H
+    G -->|No| F
     H --> I
-    I -- Yes --> J
-    J --> BC
-    I -- No --> E
-    G -- Yes --> K
+    I -->|Yes| K
+    I -->|No| J
+    J --> K
     K --> L
     L --> M
     M --> N
-    N --> O
-    O -- Yes --> R
-    O -- No --> P
+    N -->|Already known| O
+    N -->|Unknown| P
     P --> Q
+    O --> R
     Q --> R
     R --> S
-    S --> T
-    T -- Yes --> U
-    T -- No --> V
-    V --> W
-    W --> X
-    X --> Y
-    Y -- Yes --> Z
-    Z --> AA
-    Y -- No --> AA
-    AA -- Yes --> AB
-    AB --> AC
+    S -->|Yes| T
+    S -->|No| U
+    U --> V
+    V -->|Yes| W
+    V -->|No| X
+    X --> R
+    T --> Y
+    Y --> Z
+    Z -->|Yes| AA
+    Z -->|No| AB
+    AA --> AC
     AC --> AD
-    AA -- No --> AD
     AD --> AE
-    AE --> AF
-    AF --> AG
+    AE -->|Yes| AF
+    AE -->|No| AG
+    AF --> AH
     AG --> AH
-    AH --> AI
+    AH -->|Yes| AI
+    AH -->|No| AM
     AI --> AJ
-    AJ -- Yes --> AK
-    AK --> AH
-    AJ -- No --> AL
+    AJ -->|Yes| AK
+    AJ -->|No| AL
+    AK --> AM
     AL --> AM
     AM --> AN
-    AN -- No --> AO
-    AO --> AN
-    AN -- Yes --> AP
-    AP --> AQ
+    AN --> AO
+    AO -->|Yes| AP
+    AO -->|No| AQ
+    AP --> AR
     AQ --> AR
-    AR --> AS
+    AR -->|Yes| AS
+    AR -->|No| AW
     AS --> AT
-    AT --> AX
+    AT -->|Yes| AU
+    AT -->|No| AV
+    AU --> AW
+    AV --> AW
+    AW --> AX
     AX --> AY
     AY --> AZ
+    AZ --> BA
+    BA --> BB
+    BB --> BC
+    BC -->|Yes| BD
+    BC -->|No| BE
+    BD --> BE
+    BE --> BF
+    BF --> BG
+    BG --> BH
+    BH -->|Yes| BI
+    BI --> BG
+    BH -->|No| BJ
+    BJ --> BK
+    BK --> BL
+    BL -->|Yes| BM
+    BL -->|No| BN
+    BM --> BO
+    BN --> BO
+    BO --> BP
+    BP --> BQ
+    BQ --> BR
+    BR --> BS
+    BS --> BT
+    BT --> BU
+    BU --> BV
+    BV --> BW
+    BW --> BX
+    BX --> BY
+    BY --> BZ
+    BZ --> CA
+    CA --> CB
 
-    AU -.-> B
-    AU -.-> L
-    AU -.-> N
-    AU -.-> X
-    AU -.-> AE
-    AU -.-> AH
-    AU -.-> AM
-    AU -.-> AQ
-    AV -.-> AG
-    AW -.-> AX
+    CC -.-> D
+    CC -.-> K
+    CC -.-> M
+    CC -.-> AN
+    CC -.-> AX
+    CC -.-> BF
+    CC -.-> BP
+    CC -.-> BR
 
-    BA -.-> AO
-    BB -.-> BC
-    BD -.-> BE
+    CF -->|Yes| CG
+    CG --> CH
+    CH -->|Yes| CI
+    CH -->|No| CJ
+    CJ --> CK
+    CK -->|Yes| CL
+    CL --> CM
+    CM -->|Yes| CN
+    CN --> CO
+    CM -->|No| CI
 
-    classDef widgetNode fill:#e1f5fe,stroke:#0288d1,stroke-width:2px
-    classDef errorNode fill:#ffebee,stroke:#c62828,stroke-width:2px
+    CP -->|Yes| CQ
+    CQ --> CR
+    CR -->|Yes| CS
+    CS --> CT
+    CT -->|Yes| CU
+
+    CV -->|Yes| CW
+    CW --> CX
+
+    CY -->|Yes| CZ
+    CZ --> DA
+    DA --> DB
+
+    classDef errorNode fill:#ffcccc,stroke:#cc0000,color:#000
+    classDef widgetNode fill:#cce5ff,stroke:#0066cc,color:#000
 ```
     </div>
   </div>
@@ -238,7 +366,7 @@ flowchart TD
     <div class="l-item"><div class="l-dot" style="background:#1a1a1a;"></div>Terminal node</div>
   </div>
 
-  <div class="updated">Auto-generated 17 Apr 2026 10:05 · source: chatbot-prompt-v2.md</div>
+  <div class="updated">Auto-generated 17 Apr 2026 10:15 · source: chatbot-prompt-v2.md</div>
 
   <script>
     mermaid.initialize({ startOnLoad: true, theme: 'neutral', flowchart: { curve: 'basis', padding: 20 } });

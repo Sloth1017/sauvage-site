@@ -78,6 +78,27 @@ def _get_session_state(session_id: str) -> dict:
         print(f"[Webhook] Session state lookup error: {e}")
         return {}
 
+def _set_payment_confirmed(session_id: str) -> None:
+    """Mark payment as confirmed in the session meta so Claude stops showing deposit link."""
+    if not session_id:
+        return
+    try:
+        conn = sqlite3.connect(_DB_PATH)
+        row  = conn.execute(
+            "SELECT meta FROM sessions WHERE session_id = ?", (session_id,)
+        ).fetchone()
+        meta = json.loads(row[0]) if row else {}
+        meta["payment_confirmed"] = True
+        conn.execute(
+            "UPDATE sessions SET meta = ?, updated_at = unixepoch() WHERE session_id = ?",
+            (json.dumps(meta), session_id)
+        )
+        conn.commit()
+        conn.close()
+        print(f"[Webhook] payment_confirmed set for session {session_id}")
+    except Exception as e:
+        print(f"[Webhook] _set_payment_confirmed error: {e}")
+
 def _build_dt(date_val, time_str: str) -> Optional[datetime]:
     """Combine a date (ISO string or list) and HH:MM time into a datetime."""
     try:
@@ -167,6 +188,9 @@ def handle_webhook():
             "Booking Status":           "confirmed",
         })
         print(f"[Webhook] Airtable confirmed: {record_id}")
+
+        # Mark session so Claude stops showing deposit link
+        _set_payment_confirmed(_extract_session_id(order))
 
         # 2. Send branded confirmation email to client
         try:

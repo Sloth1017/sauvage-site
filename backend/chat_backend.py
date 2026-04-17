@@ -288,6 +288,7 @@ _STATE_LABELS = {
     "referred_by":        "Referred by (person name, if mentioned)",
     "arrival_time":       "Setup arrival time",
     "tandc_accepted":     "Terms of Use accepted this session",
+    "payment_confirmed":  "Deposit payment confirmed — booking is locked in",
 }
 
 _EXTRACT_SYSTEM = (
@@ -810,9 +811,11 @@ def chat():
     state = dict(sess["state"])
     meta  = sess["meta"]
 
-    # Inject T&C acceptance flag into state so it appears in the state block for Claude
+    # Inject T&C acceptance and payment flags into state so Claude sees them
     if meta.get("tandc_accepted"):
         state["tandc_accepted"] = True
+    if meta.get("payment_confirmed"):
+        state["payment_confirmed"] = True
 
     # Fast regex pre-pass — catch customer_type directly from the raw message
     # so the bot never re-asks even if the LLM extractor missed it
@@ -1077,10 +1080,13 @@ def test_confirm(session_id):
     else:
         # Airtable not wired — persist the flag so poll endpoint returns confirmed
         meta["_test_confirmed"] = True
-        if sess:
-            _session_update(session_id, meta=meta)
-        else:
-            _session_create(session_id, [], meta=meta)
+
+    # Mark payment as confirmed in session so Claude stops showing deposit link
+    meta["payment_confirmed"] = True
+    if sess:
+        _session_update(session_id, meta=meta)
+    else:
+        _session_create(session_id, [], meta=meta)
 
     # Create Google Calendar event for the test booking
     try:
