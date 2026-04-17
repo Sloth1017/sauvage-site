@@ -19,10 +19,7 @@ import uuid
 import json
 import sqlite3
 import threading
-import smtplib
 from contextlib import contextmanager
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from flask import Blueprint, request, jsonify
 from typing import Optional
 import anthropic
@@ -140,89 +137,7 @@ DEPOSIT_URL_KIT = "https://www.selectionsauvage.nl/products/event-deposit-copy"
 _AIRTABLE_ENABLED = False
 _SHOPIFY_ENABLED  = False
 
-# ── Email configuration ───────────────────────────────────────────────────────
-SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER", "")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@sauvage.amsterdam")
-
-def send_confirmation_email(client_name: str, client_email: str, event_type: str, dates: str, start_time: str, end_time: str, guest_count: str, rooms: str, calendar_link: str = ""):
-    """Send branded confirmation email to client after payment"""
-    if not SMTP_USER or not SMTP_PASSWORD:
-        print("[Email] SMTP credentials not configured, skipping confirmation email")
-        return False
-    
-    try:
-        # Build HTML email
-        html_body = f"""
-        <html>
-            <body style="font-family: Arial, sans-serif; color: #333; background-color: #faf9f7; padding: 20px;">
-                <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 4px;">
-                    <h2 style="color: #1a1a1a; margin-bottom: 10px;">Thank You for Booking Sauvage! 🎉</h2>
-                    
-                    <p>Hi <strong>{client_name}</strong>,</p>
-                    
-                    <p>We're thrilled you've booked your <strong>{event_type}</strong> with us on <strong>{dates}</strong> from <strong>{start_time}</strong> to <strong>{end_time}</strong> for <strong>{guest_count}</strong> guests.</p>
-                    
-                    <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-                    
-                    <h3 style="color: #1a1a1a;">Your Booking Details</h3>
-                    <ul style="color: #666;">
-                        <li><strong>Event:</strong> {event_type}</li>
-                        <li><strong>Date:</strong> {dates}</li>
-                        <li><strong>Time:</strong> {start_time} - {end_time}</li>
-                        <li><strong>Guests:</strong> {guest_count}</li>
-                        <li><strong>Rooms:</strong> {rooms}</li>
-                        {f'<li><strong>📅 Calendar Link:</strong> <a href="{calendar_link}">{calendar_link}</a></li>' if calendar_link else ''}
-                    </ul>
-                    
-                    <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-                    
-                    <h3 style="color: #1a1a1a;">Terms & Conditions</h3>
-                    <p style="color: #666;">By booking with Sauvage, you agree to our <a href="https://sauvage.amsterdam/terms">Terms of Use</a>. Please review them before your event.</p>
-                    
-                    <h3 style="color: #1a1a1a;">Emergency Contact</h3>
-                    <p style="color: #666;">
-                        If you need to reach us before your event:<br>
-                        <strong>Phone:</strong> +31 (0)6 12345678<br>
-                        <strong>Email:</strong> <a href="mailto:contact@selectionsauvage.nl">contact@selectionsauvage.nl</a>
-                    </p>
-                    
-                    <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-                    
-                    <p style="color: #999; font-size: 14px;">Looking forward to hosting you at Sauvage!</p>
-                    
-                    <div style="background-color: #f3f0eb; padding: 15px; border-radius: 4px; margin-top: 20px;">
-                        <p style="margin: 0; color: #666;"><strong>Sauvage</strong><br>
-                        Potgieterstraat 47H, Amsterdam West<br>
-                        <a href="https://sauvage.amsterdam" style="color: #d4a574;">sauvage.amsterdam</a></p>
-                    </p>
-                </div>
-            </body>
-        </html>
-        """
-        
-        # Create email
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = f"Thank You for Booking Sauvage! 🎉"
-        msg["From"] = FROM_EMAIL
-        msg["To"] = client_email
-        
-        msg.attach(MIMEText(html_body, "html"))
-        
-        # Send via SMTP
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SMTP_USER, SMTP_PASSWORD)
-            server.send_message(msg)
-        
-        print(f"[Email] Confirmation sent to {client_email}")
-        return True
-    
-    except Exception as e:
-        print(f"[Email] Error sending confirmation: {e}")
-        return False
+# send_confirmation_email removed — replaced by confirmation_email.send_booking_confirmation
 
 try:
     from airtable_client import (
@@ -1044,19 +959,16 @@ def payment_status(session_id):
                 booking_status = record.get("fields", {}).get("Booking Status", "")
                 if booking_status == "confirmed":
                     status = "confirmed"
-                    # Send confirmation email to client
-                    state = (sess or {}).get("state", {})
-                    send_confirmation_email(
-                        client_name=state.get("client_name", "Guest"),
-                        client_email=state.get("email", ""),
-                        event_type=state.get("event_type", "Event"),
-                        dates=state.get("dates", ""),
-                        start_time=state.get("start_time", ""),
-                        end_time=state.get("end_time", ""),
-                        guest_count=str(state.get("guest_count", "")),
-                        rooms=", ".join(state.get("rooms", [])) if state.get("rooms") else "N/A",
-                        calendar_link=meta.get("calendar_link", "")
-                    )
+                    # Send branded confirmation email via confirmation_email.py
+                    if not meta.get("confirmation_email_sent"):
+                        try:
+                            from confirmation_email import send_booking_confirmation
+                            state = (sess or {}).get("state", {})
+                            send_booking_confirmation(meta.get("record_id"), state)
+                            meta["confirmation_email_sent"] = True
+                            _session_update(session_id, meta=meta)
+                        except Exception as _e:
+                            print(f"[Email] payment_status confirmation failed: {_e}")
                 elif booking_status in ("deposit_pending", "inquiry"):
                     status = "pending"
         except Exception as e:
