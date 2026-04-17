@@ -92,7 +92,8 @@ def _api(method: str, path: str, body: Optional[dict] = None) -> dict:
     )
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
-            return json.loads(resp.read())
+            body = resp.read()
+            return json.loads(body) if body else {}
     except urllib.error.HTTPError as e:
         error_body = e.read().decode()
         raise RuntimeError(f"Calendar API {method} {path} failed ({e.code}): {error_body}")
