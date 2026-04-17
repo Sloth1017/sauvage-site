@@ -637,9 +637,23 @@ def _determine_widget(state: dict, bot_text: str, sent_widgets: list) -> Optiona
         """Return key only if it hasn't been sent yet this session."""
         return key if key not in sent_widgets else None
 
-    # Date/time picker — can show multiple times (different question)
-    if "select your dates" in t or "select a date" in t:
+    # Date/time picker — fires whenever the bot is asking about dates/timing.
+    # Broad match so it catches any phrasing, not just the exact trigger phrase.
+    _date_phrases = [
+        "select your dates", "select a date",
+        "what dates", "which dates", "specific dates", "dates in mind",
+        "do you have a date", "dates are you", "date are you",
+        "when would you", "when are you thinking", "when is the event",
+        "timing", "how long are you", "how long is your",
+    ]
+    if any(ph in t for ph in _date_phrases):
         return "datetime"
+
+    # Context fallback: event type known but no dates yet → always show calendar
+    if state.get("event_type") and not state.get("dates") and "datetime" not in sent_widgets:
+        # Only if the bot response is substantive (not a one-word ack)
+        if len(bot_text.strip()) > 30:
+            return "datetime"
 
     # Contact form — only if we're genuinely missing at least one contact field
     has_all_contact = state.get("client_name") and state.get("email") and state.get("phone")

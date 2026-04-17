@@ -1285,7 +1285,14 @@
     // The system prompt instructs the bot to say "select your dates" when asking for dates.
     // This prevents the calendar firing on time-only follow-ups or confirmations.
     if (t.includes("arrive") || t.includes("arrival") || t.includes("setup")) return false;
-    return t.includes("select your dates") || t.includes("select a date");
+    const _datePhrases = [
+      "select your dates", "select a date",
+      "what dates", "which dates", "specific dates", "dates in mind",
+      "do you have a date", "dates are you", "date are you",
+      "when would you", "when are you thinking", "when is the event",
+      "how long are you", "how long is your",
+    ];
+    return _datePhrases.some(function(ph){ return t.includes(ph); });
   }
 
   function showDateTimePicker() {
