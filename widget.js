@@ -312,6 +312,31 @@
       cursor: pointer; font-family: inherit; transition: background 0.15s; outline: none;
     }
     .sv-addon-confirm:hover { background: #333; }
+    /* Tooltip */
+    .sv-addon-tip {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid #bbb;
+      font-size: 8px; font-weight: 700; color: #888; cursor: default;
+      margin-left: 4px; vertical-align: middle; flex-shrink: 0; position: relative;
+      user-select: none;
+    }
+    .sv-aon .sv-addon-tip { border-color: rgba(255,255,255,0.5); color: rgba(255,255,255,0.7); }
+    .sv-addon-tip:hover::after {
+      content: attr(data-tip);
+      position: absolute; left: 50%; bottom: calc(100% + 6px);
+      transform: translateX(-50%);
+      background: #222; color: #fff; font-size: 10px; font-weight: 400;
+      border-radius: 5px; padding: 5px 9px; white-space: nowrap;
+      pointer-events: none; z-index: 99;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    }
+    .sv-addon-tip:hover::before {
+      content: "";
+      position: absolute; left: 50%; bottom: calc(100% + 2px);
+      transform: translateX(-50%);
+      border: 4px solid transparent; border-top-color: #222;
+      pointer-events: none; z-index: 99;
+    }
 
     /* ── Arrival time picker ── */
     .sv-arrival-wrap {
@@ -1013,7 +1038,8 @@
       { id:"glass-st",  name:"Glassware — stem glasses",  sub:"25 pax · upgrade", price:35,  type:"flat",  at:"Stem Glassware" },
       { id:"staff",     name:"Staff support",             sub:"€35/hr · full event duration", price:35, type:"staff", at:"Staff Support" },
       { id:"cleanup",   name:"Event cleanup",             sub:"flat fee",          price:60,  type:"flat",  at:"Event Cleanup" },
-      { id:"snacks",    name:"Snacks / Fento",            sub:"€10 per person",    price:10,  type:"pax",   at:"Snacks Fento", qty:10 },
+      { id:"light-snacks", name:"Light snacks / Fento",    sub:"€5 per person",     price:5,   type:"pax",   at:"Light Snacks Fento", qty:10, tip:"2–3 light bites per person from Fento" },
+      { id:"snacks",    name:"Snacks / Fento",            sub:"€10 per person",    price:10,  type:"pax",   at:"Snacks Fento", qty:10, tip:"4–5 pieces per person from Fento — fuller spread" },
       { id:"bar",       name:"Sommelier / barista service", sub:"€50/hr",          price:50,  type:"hr",    at:"Sommelier/Barista Service", qty:1 },
       { id:"projector", name:"Projector / screen",        sub:"flat fee",          price:25,  type:"flat",  at:"Projector/Display Screen" }
     ];
@@ -1060,10 +1086,13 @@
               '<button class="sv-addon-qbtn" data-id="' + item.id + '" data-dir="1">+</button>' +
             '</div>'
           : '';
+        var tipHtml = item.tip
+          ? '<span class="sv-addon-tip" data-tip="' + item.tip + '" onclick="event.stopPropagation()">i</span>'
+          : '';
         rows.push('<div class="sv-addon-row' + on + '" data-id="' + item.id + '">' +
           '<div class="sv-addon-left">' +
             '<div class="sv-addon-chk">✓</div>' +
-            '<div><div class="sv-addon-name">' + item.name + '</div>' +
+            '<div><div class="sv-addon-name">' + item.name + tipHtml + '</div>' +
             '<div class="sv-addon-sub">' + item.sub + '</div></div>' +
           '</div>' +
           '<div class="sv-addon-right">' + qrow +
