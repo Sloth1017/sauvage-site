@@ -490,12 +490,16 @@ def _sync_airtable(session_id: str, state: dict, meta: dict) -> None:
         if parsed is not None:
             updates["Hours"] = parsed
 
-    # Quote total — must be a number
+    # Quote total — derive all three VAT fields from incl-VAT (rate is fixed at 21%)
     qt = state.get("quote_total")
     if qt and qt != last.get("quote_total"):
-        parsed = _to_float(qt)
-        if parsed is not None:
-            updates["Total Incl VAT"] = parsed
+        incl_vat = _to_float(qt)
+        if incl_vat is not None:
+            ex_vat     = round(incl_vat / 1.21, 2)
+            vat_amount = round(incl_vat - ex_vat, 2)
+            updates["Total Incl VAT"] = incl_vat
+            updates["Total Ex VAT"]   = ex_vat
+            updates["VAT Amount"]     = vat_amount
 
     # Time Slot — combine start + end into "HH:MM-HH:MM"
     start = state.get("start_time")
