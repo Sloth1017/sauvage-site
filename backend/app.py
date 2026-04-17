@@ -43,11 +43,14 @@ def widget():
         'const API = "https://sauvage.amsterdam"'
     )
     
+    import hashlib
+    etag = hashlib.md5(content.encode()).hexdigest()
     resp = make_response(content)
     resp.headers["Content-Type"] = "application/javascript"
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     resp.headers["Pragma"] = "no-cache"
     resp.headers["Expires"] = "0"
+    resp.headers["ETag"] = etag
     return resp
 
 @app.route("/terms")
