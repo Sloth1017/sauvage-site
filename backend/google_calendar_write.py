@@ -115,6 +115,10 @@ _ROOM_ALIASES: dict[str, str] = {
     "upstairs":           "gallery",
     "upstairs gallery":   "gallery",
     "gallery upstairs":   "gallery",
+    "upstairs — gallery": "gallery",   # em-dash variant
+    "upstairs - gallery": "gallery",   # hyphen variant
+    "gallery — upstairs": "gallery",
+    "gallery - upstairs": "gallery",
 }
 
 def _norm_room(r: str) -> str:
