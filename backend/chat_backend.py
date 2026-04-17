@@ -1019,6 +1019,28 @@ def chat():
     except Exception as e:
         print(f"_inject_checkout_url error: {e}")
 
+    # ── Synchronous room extraction from bot response ────────────────────────
+    # When the bot recommends rooms (e.g. "you'll need Upstairs and Entrance"),
+    # extract them immediately so Airtable gets them even if session drops off.
+    if not state.get("rooms"):
+        _ROOM_MENTIONS = [
+            ("upstairs", "Upstairs (Gallery)"),
+            ("gallery",  "Upstairs (Gallery)"),
+            ("entrance", "Entrance"),
+            ("kitchen",  "Kitchen"),
+            ("cave",     "Cave"),
+        ]
+        _bot_lower = assistant_text.lower()
+        _detected_rooms = []
+        for _kw, _canonical in _ROOM_MENTIONS:
+            if _kw in _bot_lower:
+                if _canonical not in _detected_rooms:
+                    _detected_rooms.append(_canonical)
+        # Only auto-set if bot mentioned 2+ rooms (single mention is just info, not a booking)
+        if len(_detected_rooms) >= 2:
+            state["rooms"] = _detected_rooms
+            print(f"[Chat] Rooms extracted from bot text: {_detected_rooms}")
+
     # ── Deterministic quote_total extraction ─────────────────────────────────
     # Parse "Total incl VAT: €X" from the bot response right now — synchronously,
     # before saving to DB — so _sync_airtable always has the correct value.
