@@ -345,6 +345,22 @@ def get_inquiry(record_id: str) -> dict:
     return table.get(record_id)
 
 
+def get_confirmed_inquiry_by_email(email: str) -> Optional[dict]:
+    """
+    Find the most recent confirmed booking for a given email address.
+    Used to link a selectionsauvage.nl wine order back to a booking record.
+    """
+    table = _get_table(INQUIRIES_TABLE)
+    formula = (
+        f"AND("
+        f"  {{Email}} = '{email}', "
+        f"  {{Booking Status}} = 'confirmed'"
+        f")"
+    )
+    records = table.all(formula=formula, sort=[("Timestamp", "desc")])
+    return records[0] if records else None
+
+
 def get_inquiry_by_session(session_id: str) -> Optional[dict]:
     """
     Look up an existing inquiry by your chatbot's session ID.

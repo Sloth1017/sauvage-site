@@ -22,6 +22,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
+from calendar_links import google_calendar_url, ics_download_url
 
 # ── Config ────────────────────────────────────────────────────────────────────
 SMTP_SERVER   = os.getenv("SMTP_SERVER",   "smtp.gmail.com")
@@ -94,6 +95,32 @@ def send_booking_confirmation(
 
     time_str = f"{start_time} to {end_time}" if start_time and end_time else start_time or "TBC"
     deposit  = "€300" if "kitchen" in rooms_str.lower() else "€50"
+
+    from urllib.parse import urlencode as _ue
+    wine_params = _ue({"booking": record_id, "name": client_name,
+                       "email": client_email, "event": event_type, "ref": "confirmation"})
+    wine_url = f"{BASE_URL}/wines?{wine_params}"
+
+    gcal_url = google_calendar_url(
+        f"{event_type} at Sauvage", date_str, start_time, end_time,
+        "Sauvage Space · Potgieterstraat 47H, Amsterdam"
+    )
+    ical_url = ics_download_url(
+        BASE_URL, f"{event_type} at Sauvage", date_str, start_time, end_time,
+        "Sauvage Space · Potgieterstraat 47H, Amsterdam"
+    )
+    gcal_icon = f"{BASE_URL}/media/icon-google-calendar.png"
+    ical_icon = f"{BASE_URL}/media/icon-apple-calendar.png"
+    cal_widget = (
+        f'<p style="margin:8px 0 0;font-size:0;line-height:0;">'
+        f'<a href="{gcal_url}" style="display:inline-block;vertical-align:middle;margin-right:8px;text-decoration:none;">'
+        f'<img src="{gcal_icon}" alt="Add to Google Calendar" width="32" height="32"'
+        f' style="display:inline-block;border:0;border-radius:6px;vertical-align:middle;"></a>'
+        f'<a href="{ical_url}" style="display:inline-block;vertical-align:middle;text-decoration:none;">'
+        f'<img src="{ical_icon}" alt="Add to Apple Calendar" width="26" height="26"'
+        f' style="display:inline-block;border:0;border-radius:5px;vertical-align:middle;"></a>'
+        f'</p>'
+    ) if gcal_url and ical_url else ""
 
     arrival_token = generate_arrival_token(record_id)
     arrival_url   = f"{BASE_URL}/arrival?record={record_id}&token={arrival_token}"
@@ -191,6 +218,7 @@ def send_booking_confirmation(
                         <td width="50%" style="padding:0 0 12px;vertical-align:top;">
                           <p style="margin:0 0 2px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;">Date</p>
                           <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">{date_str}</p>
+                          {cal_widget}
                         </td>
                         <td width="50%" style="padding:0 0 12px;vertical-align:top;">
                           <p style="margin:0 0 2px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;">Time</p>
@@ -219,6 +247,40 @@ def send_booking_confirmation(
                       </tr>'''}
                     </table>
                   </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Wine pre-order -->
+          <tr>
+            <td style="padding:0 40px 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background:#1a1a18;border-radius:2px;overflow:hidden;">
+                <tr>
+                  <td style="padding:24px 28px 20px;">
+                    <p style="margin:0 0 6px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                               font-size:9px;letter-spacing:0.2em;text-transform:uppercase;
+                               color:#8b6f47;">Selection Sauvage</p>
+                    <p style="margin:0 0 10px;font-family:Georgia,serif;font-size:17px;
+                               font-weight:300;font-style:italic;color:#ffffff;line-height:1.4;">
+                      Want to pre-order wines for your event?
+                    </p>
+                    <p style="margin:0 0 18px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                               font-size:13px;line-height:1.7;color:rgba(255,255,255,0.6);">
+                      Browse our natural wine selection and place your order ahead of time.
+                      We'll have everything ready for you on the day.
+                    </p>
+                    <a href="{wine_url}"
+                       style="display:inline-block;background:#ffffff;color:#1a1a18;
+                              text-decoration:none;padding:12px 24px;border-radius:1px;
+                              font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                              font-size:10px;font-weight:600;letter-spacing:0.18em;
+                              text-transform:uppercase;">Place your order</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="background:#8b6f47;height:2px;font-size:0;line-height:0;">&nbsp;</td>
                 </tr>
               </table>
             </td>

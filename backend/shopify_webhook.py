@@ -22,6 +22,9 @@ try:
 except ImportError:
     SHOPIFY_WEBHOOK_SECRET = os.getenv("SHOPIFY_WEBHOOK_SECRET")
 
+# Separate secret for the selectionsauvage.nl Shopify store
+SELECTION_SAUVAGE_WEBHOOK_SECRET = os.getenv("SELECTION_SAUVAGE_WEBHOOK_SECRET", "")
+
 # ── Make.com / Routines webhook (optional) ────────────────────────────────────
 # Set MAKE_WEBHOOK_URL in your .env to enable booking summary emails via Make.com
 MAKE_WEBHOOK_URL = os.getenv("MAKE_WEBHOOK_URL", "")
@@ -326,5 +329,70 @@ def handle_webhook():
                 "Notes": f"Shopify order #{order_number} was cancelled",
             })
             print(f"[Webhook] Airtable reverted: {record_id}")
+
+    return jsonify({"status": "ok"}), 200
+
+
+# ── Selection Sauvage wine order webhook ──────────────────────────────────────
+
+@webhook_bp.route("/shopify/wines-order", methods=["POST"])
+def handle_wines_order():
+    payload     = request.get_data()
+    hmac_header = request.headers.get("X-Shopify-Hmac-SHA256", "")
+    topic       = request.headers.get("X-Shopify-Topic", "")
+
+    # Verify using the selectionsauvage.nl store secret
+    if SELECTION_SAUVAGE_WEBHOOK_SECRET:
+        digest   = hmac.new(SELECTION_SAUVAGE_WEBHOOK_SECRET.encode(), payload, hashlib.sha256).digest()
+        computed = base64.b64encode(digest).decode()
+        if not hmac.compare_digest(computed, hmac_header):
+            return jsonify({"error": "Invalid signature"}), 401
+
+    if topic not in ("orders/create", "orders/paid"):
+        return jsonify({"status": "ignored"}), 200
+
+    try:
+        order = json.loads(payload)
+    except json.JSONDecodeError:
+        return jsonify({"error": "Invalid JSON"}), 400
+
+    customer_email = (order.get("email") or "").strip().lower()
+    order_number   = str(order.get("order_number", ""))
+    order_date     = order.get("created_at", "")[:10]
+    total          = float(order.get("total_price", 0))
+
+    # Build a readable summary of what was purchased
+    lines = []
+    for item in order.get("line_items", []):
+        title    = item.get("title", "Unknown")
+        variant  = item.get("variant_title") or ""
+        qty      = item.get("quantity", 1)
+        price    = float(item.get("price", 0)) * qty
+        label    = f"{title} ({variant})" if variant and variant != "Default Title" else title
+        lines.append(f"{qty}x {label} — €{price:.2f}")
+
+    purchase_summary = "\n".join(lines) if lines else "No items"
+
+    print(f"[WinesWebhook] Order #{order_number} from {customer_email}: {purchase_summary}")
+
+    if not customer_email:
+        return jsonify({"status": "skipped — no email"}), 200
+
+    # Match to a confirmed Airtable booking by email
+    try:
+        from airtable_client import get_confirmed_inquiry_by_email, update_inquiry
+        record = get_confirmed_inquiry_by_email(customer_email)
+        if record:
+            record_id = record["id"]
+            update_inquiry(record_id, {
+                "Wine Purchase":    purchase_summary,
+                "Wine Order Total": round(total, 2),
+                "Wine Order #":     order_number,
+            })
+            print(f"[WinesWebhook] Airtable updated: {record_id}")
+        else:
+            print(f"[WinesWebhook] No confirmed booking found for {customer_email}")
+    except Exception as e:
+        print(f"[WinesWebhook] Airtable update failed: {e}")
 
     return jsonify({"status": "ok"}), 200
