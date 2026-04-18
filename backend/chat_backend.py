@@ -1448,6 +1448,45 @@ def test_confirm(session_id):
     }), 200, _cors_headers()
 
 
+# ── Quote PDF export ──────────────────────────────────────────────────────────
+
+@chat_bp.route("/chat/quote-pdf/<session_id>", methods=["GET", "OPTIONS"])
+def quote_pdf(session_id):
+    """
+    Generate and return a proforma quote PDF from the current session state.
+    Called by the widget's 'Export as PDF' button.
+    """
+    if request.method == "OPTIONS":
+        return "", 200, _cors_headers()
+
+    sess = _session_get(session_id)
+    if not sess:
+        return jsonify({"error": "session not found"}), 404, _cors_headers()
+
+    state = sess.get("state", {})
+    if not state.get("quote_total") and not state.get("rooms"):
+        return jsonify({"error": "no quote data yet"}), 400, _cors_headers()
+
+    try:
+        from invoice_generator import build_quote_pdf
+        from flask import Response
+        pdf_bytes = build_quote_pdf(state)
+        client = state.get("client_name", "quote").replace(" ", "-").lower()
+        filename = f"sauvage-quote-{client}.pdf"
+        resp = Response(
+            pdf_bytes,
+            mimetype="application/pdf",
+            headers={
+                "Content-Disposition": f'inline; filename="{filename}"',
+                **_cors_headers(),
+            },
+        )
+        return resp
+    except Exception as e:
+        print(f"[QuotePDF] Error: {e}")
+        return jsonify({"error": str(e)}), 500, _cors_headers()
+
+
 # ── Arrival time form ─────────────────────────────────────────────────────────
 
 @chat_bp.route("/arrival", methods=["GET"])

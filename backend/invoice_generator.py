@@ -1,12 +1,16 @@
 """
 invoice_generator.py
 --------------------
-Generates PDF invoices for Sauvage bookings in the style of RNR-2026-NNN.
+Generates PDF invoices / quote PDFs for Sauvage bookings (RNR-YYYY-NNN format).
 Issued by Roots & Remedies Stichting on behalf of Sauvage DAO.
 
-Usage:
-    from invoice_generator import build_invoice, next_invoice_number
-    invoice_num, pdf_bytes = build_invoice(state, deposit_amount, record_id)
+Public API:
+    compute_line_items(state)  → list of line-item dicts with full pricing breakdown
+    build_quote_pdf(state)     → bytes  (proforma / "Export as PDF" button)
+    build_invoice(state, ...)  → (invoice_number, bytes)  (confirmed booking)
+    save_invoice(num, bytes)   → path
+    invoice_url(num)           → HMAC-gated URL string
+    verify_invoice_token(num, token) → bool
 """
 
 import io
@@ -18,48 +22,313 @@ from typing import Optional
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
-from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas as rl_canvas
-from reportlab.platypus import (
-    SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable,
-)
-from reportlab.lib.styles import ParagraphStyle
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
 
-# ── Constants ──────────────────────────────────────────────────────────────────
-COMPANY_NAME    = "Roots & Remedies Stichting"
-COMPANY_ADDR    = "Potgieterstraat 47 H · 1053XS Amsterdam · Netherlands"
-COMPANY_KVK     = "KvK: 76681629"
-COMPANY_BTW     = "BTW: NL860744875B01"
-COMPANY_IBAN    = "NL42 TRIO 0788 8783 60"
-COMPANY_BIC     = "TRIONL2U"
-COMPANY_EMAIL   = "hello@rootsandremedies.earth"
-COMPANY_BEHALF  = "Issued on behalf of Sauvage DAO"
+# ── Business constants ─────────────────────────────────────────────────────────
+COMPANY_NAME   = "Roots & Remedies Stichting"
+COMPANY_ADDR   = "Potgieterstraat 47 H · 1053XS Amsterdam · Netherlands"
+COMPANY_KVK    = "KvK: 76681629"
+COMPANY_BTW    = "BTW: NL860744875B01"
+COMPANY_IBAN   = "NL42 TRIO 0788 8783 60"
+COMPANY_BIC    = "TRIONL2U"
+COMPANY_EMAIL  = "hello@rootsandremedies.earth"
+COMPANY_BEHALF = "Issued on behalf of Sauvage DAO"
 
-VAT_RATE        = 0.21
-DUE_DAYS        = 7          # invoice due N days after issue
+VAT_RATE   = 0.21
+DUE_DAYS   = 7
 
-_DB_PATH        = os.path.join(os.path.dirname(__file__), "sessions.db")
-_INV_DIR        = os.path.join(os.path.dirname(__file__), "invoices")
+_DB_PATH   = os.path.join(os.path.dirname(__file__), "sessions.db")
+_INV_DIR   = os.path.join(os.path.dirname(__file__), "invoices")
 
-# Colours matching the sample
-C_BLACK  = colors.HexColor("#1a1a1a")
-C_GOLD   = colors.HexColor("#b8860b")
-C_GRAY   = colors.HexColor("#888888")
-C_LGRAY  = colors.HexColor("#cccccc")
-C_BGROW  = colors.HexColor("#f5f3ef")
-C_NOTE   = colors.HexColor("#faf8f0")
-C_WHITE  = colors.white
+# ── Colour palette ─────────────────────────────────────────────────────────────
+C_BLACK = colors.HexColor("#1a1a1a")
+C_GOLD  = colors.HexColor("#b8860b")
+C_GRAY  = colors.HexColor("#888888")
+C_LGRAY = colors.HexColor("#cccccc")
+C_BG    = colors.HexColor("#f5f3ef")
+C_NOTE  = colors.HexColor("#faf8f0")
+C_WHITE = colors.white
+
+# ── Pricing tables (all incl 21% VAT) ─────────────────────────────────────────
+_ROOM_ALIASES = {
+    "gallery":            "gallery",
+    "upstairs":           "gallery",
+    "upstairs (gallery)": "gallery",
+    "gallery (upstairs)": "gallery",
+    "upstairs — gallery": "gallery",
+    "upstairs - gallery": "gallery",
+    "gallery — upstairs": "gallery",
+    "entrance":           "entrance",
+    "kitchen":            "kitchen",
+    "cave":               "cave",
+}
+
+_ROOM_LABELS = {
+    "gallery":  "Upstairs — Gallery",
+    "entrance": "Entrance",
+    "kitchen":  "Kitchen",
+    "cave":     "Cave",
+}
+
+_ROOM_RATES = {
+    # key: (hourly, half_day, full_day)   — all incl VAT
+    "gallery":  (25,  70,  140),
+    "entrance": (56,  130, 250),
+    "kitchen":  (120, 300, 500),
+    "cave":     (55,  100, 175),
+}
+
+_BUNDLE_DISCOUNTS = {1: 0.0, 2: 0.20, 3: 0.40, 4: 0.50}
+
+_CLOSURE_FEES = {"entrance": 200, "kitchen": 100}  # full-day only, incl VAT
+
+# Add-on prices incl VAT; "pp" = per person, "hr" = per hour, "flat" = fixed
+_ADDON_RATES = {
+    "light snacks fento":           (5,  "pp"),
+    "snacks fento":                 (10, "pp"),
+    "snacks light fento":           (5,  "pp"),
+    "event cleanup":                (60, "flat"),
+    "stemless glassware":           (25, "flat"),
+    "stem glassware":               (35, "flat"),
+    "dishware & cutlery":           (25, "flat"),
+    "dishware and cutlery":         (25, "flat"),
+    "staff support":                (35, "hr"),
+    "sommelier/barista service":    (50, "hr"),
+    "sommelier barista service":    (50, "hr"),
+    "projector/display screen":     (25, "flat"),
+    "projector display screen":     (25, "flat"),
+    "extended hours (after midnight)": (50, "hr"),
+    "extended hours after midnight":   (50, "hr"),
+}
+
+def _norm_room(r: str) -> str:
+    return _ROOM_ALIASES.get(r.strip().lower(), "")
+
+def _norm_addon(a: str) -> str:
+    """Normalise an add-on name to the key used in _ADDON_RATES."""
+    s = re.sub(r"[^a-z0-9 /]", " ", a.strip().lower())
+    s = re.sub(r"\s+", " ", s).strip()
+    if s in _ADDON_RATES:
+        return s
+    for key in _ADDON_RATES:
+        if key in s or s in key:
+            return key
+    # keyword fallback
+    if "light" in s and ("snack" in s or "fento" in s):
+        return "light snacks fento"
+    if "fento" in s or "snack" in s:
+        return "snacks fento"
+    if "cleanup" in s or "clean" in s:
+        return "event cleanup"
+    if "stemless" in s or ("glass" in s and "stem" not in s):
+        return "stemless glassware"
+    if "stem" in s and "glass" in s:
+        return "stem glassware"
+    if "dish" in s or "cutlery" in s:
+        return "dishware & cutlery"
+    if "staff" in s:
+        return "staff support"
+    if "sommelier" in s or "barista" in s:
+        return "sommelier/barista service"
+    if "projector" in s or "screen" in s or "display" in s:
+        return "projector/display screen"
+    if "extended" in s or "midnight" in s:
+        return "extended hours (after midnight)"
+    return ""
 
 
-# ── Invoice number counter ─────────────────────────────────────────────────────
+# ── Pricing engine ─────────────────────────────────────────────────────────────
+
+def compute_line_items(state: dict) -> list[dict]:
+    """
+    Build a fully itemised list of line items from session state.
+
+    Each item is a dict:
+        description  str
+        qty          float
+        unit_str     str   e.g. "hr", "pax", "flat"
+        unit_incl    float  unit price incl VAT
+        total_incl   float  line total incl VAT
+        total_ex     float  line total ex VAT
+        vat_amt      float  VAT amount
+        vat_rate     float  e.g. 0.21
+        is_discount  bool
+        is_deposit   bool
+    """
+    rooms_raw  = state.get("rooms") or []
+    if isinstance(rooms_raw, str):
+        rooms_raw = [rooms_raw]
+    rooms = [_norm_room(r) for r in rooms_raw if _norm_room(r)]
+    rooms = list(dict.fromkeys(rooms))   # deduplicate, preserve order
+
+    duration   = str(state.get("duration") or "Hourly").lower()
+    hours      = float(state.get("hours") or 0)
+    dates_val  = state.get("dates")
+    guest      = int(state.get("guest_count") or 0)
+    addons_raw = state.get("addons") or []
+    if isinstance(addons_raw, str):
+        addons_raw = [addons_raw]
+
+    # Number of days for multi-day
+    if isinstance(dates_val, list) and len(dates_val) >= 2:
+        try:
+            d0 = datetime.strptime(str(dates_val[0]).strip(),  "%Y-%m-%d")
+            d1 = datetime.strptime(str(dates_val[-1]).strip(), "%Y-%m-%d")
+            num_days = (d1 - d0).days + 1
+        except ValueError:
+            num_days = 1
+    else:
+        num_days = 1
+
+    is_hourly   = "hour" in duration or hours > 0
+    is_full_day = "full" in duration
+    # half-day if explicitly stated or hours 4-5
+    is_half_day = "half" in duration or (not is_full_day and not is_hourly and 3 <= hours <= 5)
+
+    items = []
+
+    def _line(desc, qty, unit_str, unit_incl, vat_rate=VAT_RATE,
+              is_discount=False, is_deposit=False):
+        total_incl = round(qty * unit_incl, 2)
+        total_ex   = round(total_incl / (1 + vat_rate), 2)
+        vat_amt    = round(total_incl - total_ex, 2)
+        items.append({
+            "description": desc,
+            "qty":         qty,
+            "unit_str":    unit_str,
+            "unit_incl":   unit_incl,
+            "total_incl":  total_incl,
+            "total_ex":    total_ex,
+            "vat_amt":     vat_amt,
+            "vat_rate":    vat_rate,
+            "is_discount": is_discount,
+            "is_deposit":  is_deposit,
+        })
+
+    # ── Room line items ────────────────────────────────────────────────────────
+    room_pre_discount = 0.0
+    for r in rooms:
+        label = _ROOM_LABELS.get(r, r.title())
+        rates = _ROOM_RATES.get(r, (0, 0, 0))
+        hourly_rate, half_rate, full_rate = rates
+
+        if is_hourly and hours > 0:
+            unit   = hourly_rate
+            qty    = hours * num_days
+            u_str  = f"hr{'s' if qty != 1 else ''}"
+            desc   = f"Space rental — {label}"
+            if num_days > 1:
+                desc += f" ({hours} hrs/day × {num_days} days)"
+        elif is_full_day:
+            unit  = full_rate
+            qty   = num_days
+            u_str = "day"
+            desc  = f"Space rental — {label} (full day)"
+        else:  # half-day default
+            unit  = half_rate
+            qty   = num_days
+            u_str = "day"
+            desc  = f"Space rental — {label} (half day)"
+
+        room_pre_discount += unit * qty
+        _line(desc, qty, u_str, unit)
+
+    # Bundle discount
+    n_rooms = len(rooms)
+    discount_pct = _BUNDLE_DISCOUNTS.get(n_rooms, 0.0)
+    if discount_pct > 0 and room_pre_discount > 0:
+        discount_amt = round(room_pre_discount * discount_pct, 2)
+        _line(
+            f"Bundle discount ({n_rooms} rooms, {int(discount_pct*100)}%)",
+            1, "", -discount_amt,
+            is_discount=True,
+        )
+
+    # Full-day closure premiums
+    if is_full_day:
+        for r in rooms:
+            if r in _CLOSURE_FEES:
+                fee = _CLOSURE_FEES[r] * num_days
+                _line(
+                    f"{_ROOM_LABELS.get(r, r.title())} closure fee"
+                    + (f" × {num_days} days" if num_days > 1 else ""),
+                    1, "flat", fee,
+                )
+
+    # ── Add-on line items ──────────────────────────────────────────────────────
+    for raw in addons_raw:
+        key = _norm_addon(raw)
+        if not key or key not in _ADDON_RATES:
+            continue
+        price, unit_type = _ADDON_RATES[key]
+        label = " ".join(w.capitalize() for w in key.split())
+
+        if unit_type == "pp":
+            qty_a  = guest or 1
+            u_str  = "pax"
+            desc   = f"{label} × {qty_a} guests"
+        elif unit_type == "hr":
+            qty_a  = hours or 1
+            u_str  = "hr"
+            desc   = f"{label} × {qty_a} hrs"
+        else:
+            qty_a  = 1
+            u_str  = "flat"
+            desc   = label
+        _line(desc, qty_a, u_str, price)
+
+    return items
+
+
+def _sum_items(items: list[dict]) -> dict:
+    total_ex  = round(sum(i["total_ex"]  for i in items if not i.get("is_deposit")), 2)
+    total_vat = round(sum(i["vat_amt"]   for i in items if not i.get("is_deposit")), 2)
+    total_inc = round(sum(i["total_incl"] for i in items if not i.get("is_deposit")), 2)
+    deposit   = round(sum(i["total_incl"] for i in items if     i.get("is_deposit")), 2)
+    return {
+        "total_ex":  total_ex,
+        "total_vat": total_vat,
+        "total_inc": total_inc,
+        "deposit":   deposit,
+        "total_due": round(total_inc + deposit, 2),
+    }
+
+
+# ── Date / room helpers ────────────────────────────────────────────────────────
+
+def _fmt_date_range(dates) -> str:
+    if not dates:
+        return ""
+    if isinstance(dates, list) and len(dates) >= 2:
+        try:
+            d0 = datetime.strptime(str(dates[0]).strip(),  "%Y-%m-%d")
+            d1 = datetime.strptime(str(dates[-1]).strip(), "%Y-%m-%d")
+            if d0.month == d1.month:
+                return f"{d0.day}–{d1.day} {d0.strftime('%B %Y')}"
+            return f"{d0.strftime('%-d %b')}–{d1.strftime('%-d %b %Y')}"
+        except ValueError:
+            return f"{dates[0]}–{dates[-1]}"
+    if isinstance(dates, list):
+        val = dates[0]
+    else:
+        val = dates
+    try:
+        return datetime.strptime(str(val).strip(), "%Y-%m-%d").strftime("%-d %B %Y")
+    except ValueError:
+        return str(val)
+
+
+def _fmt_rooms(rooms) -> str:
+    if not rooms:
+        return "Sauvage Space"
+    if isinstance(rooms, list):
+        return " + ".join(rooms)
+    return str(rooms)
+
+
+# ── Invoice counter ────────────────────────────────────────────────────────────
 
 def next_invoice_number(year: Optional[int] = None) -> str:
-    """
-    Auto-increment RNR-YYYY-NNN counter stored in sessions.db.
-    Returns e.g. 'RNR-2026-007'.
-    """
     if year is None:
         year = datetime.now().year
     os.makedirs(os.path.dirname(_DB_PATH), exist_ok=True)
@@ -82,82 +351,337 @@ def next_invoice_number(year: Optional[int] = None) -> str:
     return f"RNR-{year}-{new_num:03d}"
 
 
-# ── Data helpers ───────────────────────────────────────────────────────────────
+# ── PDF renderer ───────────────────────────────────────────────────────────────
 
-def _fmt_date_range(dates) -> str:
-    """Return a human-readable date string from a date or list of dates."""
-    if not dates:
-        return ""
-    if isinstance(dates, list) and len(dates) >= 2:
-        try:
-            d0 = datetime.strptime(str(dates[0]).strip(), "%Y-%m-%d")
-            d1 = datetime.strptime(str(dates[-1]).strip(), "%Y-%m-%d")
-            if d0.month == d1.month:
-                return f"{d0.day}–{d1.day} {d0.strftime('%B %Y')}"
-            return f"{d0.strftime('%-d %b')}–{d1.strftime('%-d %b %Y')}"
-        except ValueError:
-            return f"{dates[0]}–{dates[-1]}"
-    if isinstance(dates, list):
-        return str(dates[0])
-    # Single string — try to parse
-    try:
-        d = datetime.strptime(str(dates).strip(), "%Y-%m-%d")
-        return d.strftime("%-d %B %Y")
-    except ValueError:
-        return str(dates)
+def _money(v: float) -> str:
+    if v < 0:
+        return f"-€ {abs(v):,.2f}".replace(",", "\u202f")
+    return f"€ {v:,.2f}".replace(",", "\u202f")
 
 
-def _fmt_rooms(rooms) -> str:
-    if not rooms:
-        return "Sauvage Space"
-    if isinstance(rooms, list):
-        return " + ".join(r for r in rooms)
-    return str(rooms)
+def _render_pdf(
+    state:          dict,
+    line_items:     list[dict],
+    totals:         dict,
+    invoice_number: str = "",       # empty → "QUOTE / PRO-FORMA"
+    issued_date:    Optional[datetime] = None,
+    deposit_paid:   float = 0.0,
+    record_id:      str = "",
+) -> bytes:
+    """Core PDF renderer — used by both build_quote_pdf and build_invoice."""
+
+    if issued_date is None:
+        issued_date = datetime.now()
+    due_date = issued_date + timedelta(days=DUE_DAYS)
+
+    is_quote   = not invoice_number
+    doc_title  = "QUOTE" if is_quote else "INVOICE"
+    badge_text = "ESTIMATE — NOT A TAX INVOICE" if is_quote else "AWAITING PAYMENT"
+    badge_gold = is_quote                          # gold border only for invoice
+
+    client  = state.get("client_name", "Client")
+    email   = state.get("email", "")
+    evt     = state.get("event_type", "Event")
+    date_s  = _fmt_date_range(state.get("dates"))
+    rooms_s = _fmt_rooms(state.get("rooms"))
+    reference = f"{invoice_number} · {client.split()[0].upper()}" if invoice_number else ""
+
+    buf = io.BytesIO()
+    c   = rl_canvas.Canvas(buf, pagesize=A4)
+    W, H = A4
+    L = 50; R = W - 50; CW = R - L
+
+    # ── helpers ────────────────────────────────────────────────────────────────
+    def rule(y, clr=C_LGRAY, t=0.5):
+        c.setStrokeColor(clr); c.setLineWidth(t); c.line(L, y, R, y)
+
+    def sf(size, bold=False):
+        c.setFont("Helvetica-Bold" if bold else "Helvetica", size)
+
+    def txt(text, x, y, size=10, color=C_BLACK, bold=False, right=False):
+        c.setFillColor(color); sf(size, bold)
+        if right:
+            c.drawRightString(x, y, str(text))
+        else:
+            c.drawString(x, y, str(text))
+
+    def lbl(text, x, y):
+        txt(text.upper(), x, y, size=7.5, color=C_GRAY)
+
+    def wrap_text(text, x, y, max_w, size=9, line_h=13):
+        """Draw wrapped text, return final y."""
+        sf(size)
+        words = str(text).split()
+        buf2 = []
+        for w in words:
+            test = " ".join(buf2 + [w])
+            if c.stringWidth(test, "Helvetica", size) > max_w and buf2:
+                c.drawString(x, y, " ".join(buf2))
+                y -= line_h
+                buf2 = [w]
+            else:
+                buf2.append(w)
+        if buf2:
+            c.drawString(x, y, " ".join(buf2))
+            y -= line_h
+        return y
+
+    # ── PAGE ───────────────────────────────────────────────────────────────────
+    y = H - 50
+
+    # Title
+    c.setFillColor(C_BLACK); c.setFont("Times-Bold", 32)
+    c.drawString(L, y, doc_title)
+
+    # Status badge
+    bw, bh = (200, 22) if is_quote else (150, 22)
+    bx = R - bw
+    c.setStrokeColor(C_GOLD if badge_gold else C_LGRAY)
+    c.setLineWidth(1.2 if badge_gold else 0.8)
+    c.rect(bx, y - 4, bw, bh, stroke=1, fill=0)
+    c.setFillColor(C_GOLD if badge_gold else C_GRAY)
+    c.setFont("Helvetica-Bold", 7.5)
+    c.drawCentredString(bx + bw / 2, y + 5, badge_text)
+
+    y -= 28
+
+    # Company block (left)
+    txt(COMPANY_NAME, L, y, bold=True)
+    # Meta block (right)
+    mx_l = R - 145; mx_r = R
+    if invoice_number:
+        txt("Invoice", mx_l, y, size=9, color=C_GRAY)
+        txt(invoice_number, mx_r, y, size=9, bold=True, right=True)
+        y -= 14
+        txt(COMPANY_ADDR, L, y, size=9, color=C_GRAY)
+        txt("Issued", mx_l, y, size=9, color=C_GRAY)
+        txt(issued_date.strftime("%-d %B %Y"), mx_r, y, size=9, bold=True, right=True)
+        y -= 14
+        txt(f"{COMPANY_KVK} · {COMPANY_BTW}", L, y, size=9, color=C_GRAY)
+        txt("Due date", mx_l, y, size=9, color=C_GRAY)
+        txt(due_date.strftime("%-d %B %Y"), mx_r, y, size=9, bold=True, right=True)
+    else:
+        txt(COMPANY_ADDR, L, y, size=9, color=C_GRAY)
+        txt("Prepared", mx_l, y, size=9, color=C_GRAY)
+        txt(issued_date.strftime("%-d %B %Y"), mx_r, y, size=9, bold=True, right=True)
+        y -= 14
+        txt(f"{COMPANY_KVK} · {COMPANY_BTW}", L, y, size=9, color=C_GRAY)
+        txt("Valid for", mx_l, y, size=9, color=C_GRAY)
+        txt("7 days", mx_r, y, size=9, bold=True, right=True)
+    y -= 14
+    txt(f"IBAN: {COMPANY_IBAN}", L, y, size=9, color=C_GRAY)
+    y -= 28
+
+    # Bill-to box
+    bx_h = 52
+    c.setFillColor(C_BG); c.setStrokeColor(colors.HexColor("#e8e4de")); c.setLineWidth(0.5)
+    c.rect(L, y - bx_h + 14, CW, bx_h, stroke=1, fill=1)
+    c.setFillColor(colors.HexColor("#c8c4bc")); c.rect(L, y - bx_h + 14, 3, bx_h, stroke=0, fill=1)
+    lbl("BILL TO", L + 10, y + 4)
+    y -= 14
+    txt(client, L + 10, y, size=11, bold=True)
+    if email:
+        y -= 14; txt(email, L + 10, y, size=9, color=C_GRAY)
+    y -= 28
+
+    # Description
+    lbl("DESCRIPTION", L, y)
+    y -= 4; rule(y); y -= 16
+    desc_text = (
+        f"{evt} at Sauvage Space"
+        + (f" · {date_s}" if date_s else "")
+        + (f". Spaces: {rooms_s}." if rooms_s else ".")
+        + f"  Invoiced by {COMPANY_NAME} on behalf of Sauvage DAO."
+    )
+    c.setFillColor(C_BLACK); sf(10)
+    y = wrap_text(desc_text, L, y, CW, size=10, line_h=15)
+    y -= 14
+
+    # ── LINE ITEMS table ───────────────────────────────────────────────────────
+    lbl("LINE ITEMS", L, y); y -= 4; rule(y); y -= 4
+
+    # Column widths (sum = CW)
+    raw_widths = [185, 38, 70, 34, 63, 56, 70]
+    scale = CW / sum(raw_widths)
+    cw = [w * scale for w in raw_widths]
+    hdrs = ["DESCRIPTION", "QTY", "UNIT INCL", "VAT", "LINE EX VAT", "VAT AMT", "LINE INCL"]
+    HDR_H = 20
+
+    def draw_row_bg(row_y, row_h, bg):
+        c.setFillColor(bg); c.setStrokeColor(colors.HexColor("#e8e4de")); c.setLineWidth(0.3)
+        c.rect(L, row_y - row_h + 4, CW, row_h, stroke=1, fill=1)
+
+    def draw_cells(cols, row_y, row_h, bold=False, size=8.5, italic=False):
+        xs = L
+        for i, (val, w) in enumerate(zip(cols, cw)):
+            c.setFillColor(C_BLACK); sf(size, bold)
+            if italic:
+                c.setFont("Helvetica-Oblique", size)
+            if i == 0:
+                c.drawString(xs + 4, row_y - row_h + 7, str(val))
+            else:
+                c.drawRightString(xs + w - 3, row_y - row_h + 7, str(val))
+            xs += w
+
+    # Header row
+    draw_row_bg(y, HDR_H, C_BG)
+    draw_cells(hdrs, y, HDR_H, bold=True, size=7.5)
+    y -= HDR_H
+
+    for item in line_items:
+        is_disc = item.get("is_discount")
+        desc = item["description"]
+        # Measure wrapped description height
+        sf(8.5)
+        words = desc.split(); buf3 = []; dlines = []
+        for w in words:
+            test = " ".join(buf3 + [w])
+            if c.stringWidth(test, "Helvetica", 8.5) > cw[0] - 10 and buf3:
+                dlines.append(" ".join(buf3)); buf3 = [w]
+            else:
+                buf3.append(w)
+        if buf3: dlines.append(" ".join(buf3))
+        row_h = max(18, len(dlines) * 12 + 8)
+
+        bg = C_BG if y % 36 < 18 else C_WHITE  # alternate shading
+        draw_row_bg(y, row_h, bg)
+
+        # Description (multi-line)
+        c.setFillColor(C_GRAY if is_disc else C_BLACK); sf(8.5)
+        dy = y - 7
+        for dl in dlines:
+            c.drawString(L + 4, dy, dl); dy -= 12
+
+        # Numeric columns
+        if is_disc:
+            # Discount: show only line incl (negative)
+            vals = ["", "", "", "", "", _money(item["total_incl"])]
+        else:
+            qty_s   = f"{int(item['qty'])}" if item["qty"] == int(item["qty"]) else f"{item['qty']:.1f}"
+            unit_s  = _money(item["unit_incl"]) if item["unit_incl"] >= 0 else ""
+            vat_pct = f"{int(item['vat_rate']*100)}%" if not is_disc else ""
+            vals = [
+                qty_s,
+                unit_s,
+                vat_pct,
+                _money(item["total_ex"]),
+                _money(item["vat_amt"]),
+                _money(item["total_incl"]),
+            ]
+        xs = L + cw[0]
+        for i, (val, w) in enumerate(zip(vals, cw[1:])):
+            c.setFillColor(C_GRAY if is_disc else C_BLACK)
+            sf(8.5, bold=(i == 5 and not is_disc))
+            c.drawRightString(xs + w - 3, y - row_h + 7, val)
+            xs += w
+        y -= row_h
+
+    y -= 8
+
+    # ── TOTALS ─────────────────────────────────────────────────────────────────
+    tx = R - 165; vx = R
+
+    def tot_line(lbl_t, val_t, bold=False, italic=False, top_rule=False, color=C_BLACK):
+        nonlocal y
+        if top_rule:
+            c.setStrokeColor(C_LGRAY); c.setLineWidth(0.5)
+            c.line(tx - 10, y + 12, R, y + 12)
+        c.setFillColor(C_GRAY if not bold else color)
+        if italic: c.setFont("Helvetica-Oblique", 9)
+        else: sf(9, bold)
+        c.drawString(tx, y, lbl_t)
+        c.setFillColor(color); sf(9, bold)
+        c.drawRightString(vx, y, val_t)
+        y -= 14
+
+    tot_line("Space rental ex VAT", _money(totals["total_ex"]))
+    tot_line("VAT (21%)", _money(totals["total_vat"]))
+    if totals.get("deposit", 0) > 0:
+        tot_line("Refundable deposit (0% VAT)", _money(totals["deposit"]), italic=True)
+    if deposit_paid > 0:
+        tot_line("Deposit paid", f"- {_money(deposit_paid)}")
+        balance = totals["total_due"] - deposit_paid
+        tot_line("Total incl VAT", _money(totals["total_inc"]), top_rule=True)
+        tot_line("Balance due", _money(balance), bold=True)
+    else:
+        tot_line("Total incl VAT", _money(totals["total_inc"]), top_rule=True)
+        tot_line("Total due", _money(totals["total_due"]), bold=True)
+
+    y -= 16
+
+    if invoice_number:
+        # ── PAYMENT DETAILS ────────────────────────────────────────────────────
+        lbl("PAYMENT DETAILS", L, y); y -= 4; rule(y); y -= 18
+        for plbl, pval in [
+            ("IBAN",         COMPANY_IBAN),
+            ("BIC",          COMPANY_BIC),
+            ("ACCOUNT NAME", COMPANY_NAME),
+            ("REFERENCE",    reference),
+            ("DUE DATE",     due_date.strftime("%-d %B %Y")),
+        ]:
+            txt(plbl, L, y, size=8, color=C_GRAY)
+            txt(pval, L + 122, y, size=9, bold=True)
+            y -= 16
+        y -= 8
+
+    # ── Notes box ─────────────────────────────────────────────────────────────
+    notes = []
+    if is_quote:
+        notes.append(
+            "This is an estimate only — not a tax invoice. "
+            "Prices include 21% BTW. A formal invoice will be issued upon payment."
+        )
+    else:
+        notes.append(
+            f"This invoice is issued pursuant to the booking agreement between "
+            f"{client} and Sauvage Space ({COMPANY_NAME})."
+        )
+        notes.append("VAT treatment: space rental subject to 21% BTW. Refundable deposits exempt.")
+
+    # Measure
+    sf(9)
+    note_lines = []
+    for note in notes:
+        ws = note.split(); lb = []
+        for w in ws:
+            t = " ".join(lb + [w])
+            if c.stringWidth(t, "Helvetica", 9) > CW - 30 and lb:
+                note_lines.append(" ".join(lb)); lb = [w]
+            else:
+                lb.append(w)
+        if lb: note_lines.append(" ".join(lb))
+        note_lines.append("")
+    bh2 = len(note_lines) * 13 + 18
+    c.setFillColor(C_NOTE); c.setStrokeColor(colors.HexColor("#e8e4de")); c.setLineWidth(0.5)
+    c.rect(L, y - bh2 + 10, CW, bh2, stroke=1, fill=1)
+    ny = y - 2
+    txt("Notes:", L + 10, ny, size=9, bold=True); ny -= 13
+    sf(9); c.setFillColor(C_BLACK)
+    for nl in note_lines:
+        if nl: c.drawString(L + 10, ny, nl)
+        ny -= 13
+
+    # ── Footer ─────────────────────────────────────────────────────────────────
+    rule(58)
+    c.setFont("Helvetica", 7.5); c.setFillColor(C_GRAY)
+    c.drawCentredString(W / 2, 46, f"{COMPANY_NAME} · {COMPANY_KVK} · {COMPANY_BTW}")
+    c.drawCentredString(W / 2, 34, f"{COMPANY_BEHALF} · {COMPANY_EMAIL}")
+
+    c.save()
+    return buf.getvalue()
 
 
-def _parse_quote(state: dict) -> dict:
+# ── Public API ─────────────────────────────────────────────────────────────────
+
+def build_quote_pdf(state: dict) -> bytes:
     """
-    Return a dict with: total_incl, total_ex, vat_amt,
-    deposit_ex (0% VAT kitchen deposit), total_due.
+    Generate a proforma quote PDF (no invoice number, 'QUOTE' heading).
+    Used by the 'Export as PDF' button in the widget.
     """
-    qt = float(state.get("quote_total") or 0)
-    # Kitchen deposit: refundable, 0% VAT
-    rooms_lower = str(state.get("rooms", "")).lower()
-    kitchen_dep = 500.0 if "kitchen" in rooms_lower else 0.0
+    items  = compute_line_items(state)
+    totals = _sum_items(items)
+    return _render_pdf(state, items, totals)
 
-    # Space rental is quote_total incl 21% VAT
-    rental_ex  = round(qt / (1 + VAT_RATE), 2)
-    vat_amt    = round(qt - rental_ex, 2)
-
-    # Add-on line items parsed from addons list
-    addon_lines = _parse_addon_lines(state)
-
-    return {
-        "rental_incl":  qt,
-        "rental_ex":    rental_ex,
-        "vat_amt":      vat_amt,
-        "kitchen_dep":  kitchen_dep,
-        "addon_lines":  addon_lines,
-        "total_due":    round(qt + kitchen_dep, 2),
-    }
-
-
-def _parse_addon_lines(state: dict) -> list[dict]:
-    """
-    Return extra line items for notable add-ons (Fento, Staff, etc.)
-    that are already factored into quote_total — listed for transparency.
-    """
-    # For now we list add-ons informatively but they're included in quote_total
-    addons = state.get("addons") or []
-    if isinstance(addons, str):
-        addons = [addons]
-    lines = []
-    for a in addons:
-        lines.append({"description": a, "note": "included in space rental"})
-    return lines
-
-
-# ── PDF builder ────────────────────────────────────────────────────────────────
 
 def build_invoice(
     state:          dict,
@@ -167,416 +691,26 @@ def build_invoice(
     issued_date:    Optional[datetime] = None,
 ) -> tuple[str, bytes]:
     """
-    Build a PDF invoice.
+    Generate a numbered invoice PDF.
     Returns (invoice_number, pdf_bytes).
     """
     if issued_date is None:
         issued_date = datetime.now()
-    due_date = issued_date + timedelta(days=DUE_DAYS)
-
     if invoice_number is None:
         invoice_number = next_invoice_number(issued_date.year)
-
-    q       = _parse_quote(state)
-    client  = state.get("client_name", "Client")
-    email   = state.get("email", "")
-    evt     = state.get("event_type", "Event")
-    date_s  = _fmt_date_range(state.get("dates"))
-    rooms_s = _fmt_rooms(state.get("rooms"))
-
-    # Reference on payment slip: "RNR-2026-007 · {client}"
-    reference = f"{invoice_number} · {client.split()[0].upper()}"
-
-    buf = io.BytesIO()
-    c   = rl_canvas.Canvas(buf, pagesize=A4)
-    W, H = A4                      # 595.28 × 841.89
-
-    L = 50                         # left margin
-    R = W - 50                     # right margin
-    CW = R - L                     # content width
-
-    # ── Helpers ──────────────────────────────────────────────────────────────
-
-    def setf(name, size, bold=False):
-        c.setFont("Helvetica-Bold" if bold else "Helvetica", size)
-
-    def rule(y, color=C_LGRAY, thickness=0.5):
-        c.setStrokeColor(color)
-        c.setLineWidth(thickness)
-        c.line(L, y, R, y)
-
-    def label(text, x, y, size=8, color=C_GRAY):
-        c.setFillColor(color)
-        setf("Helvetica", size)
-        c.drawString(x, y, text.upper())
-
-    def body(text, x, y, size=10, color=C_BLACK, bold=False):
-        c.setFillColor(color)
-        setf("Helvetica", size, bold=bold)
-        c.drawString(x, y, text)
-
-    def rbody(text, x, y, size=10, color=C_BLACK, bold=False):
-        c.setFillColor(color)
-        setf("Helvetica", size, bold=bold)
-        c.drawRightString(x, y, text)
-
-    def money(v: float) -> str:
-        return f"€ {v:,.2f}".replace(",", "\xa0")   # thin-space thousands
-
-    # ── Page 1 ──────────────────────────────────────────────────────────────
-
-    y = H - 50
-
-    # INVOICE heading
-    c.setFillColor(C_BLACK)
-    c.setFont("Times-Bold", 32)
-    c.drawString(L, y, "INVOICE")
-
-    # Status badge — gold border box
-    badge_w, badge_h = 148, 22
-    badge_x = R - badge_w
-    badge_y = y - 4
-    c.setStrokeColor(C_GOLD)
-    c.setLineWidth(1.2)
-    c.rect(badge_x, badge_y, badge_w, badge_h, stroke=1, fill=0)
-    c.setFillColor(C_GOLD)
-    c.setFont("Helvetica-Bold", 8.5)
-    c.drawCentredString(badge_x + badge_w / 2, badge_y + 7, "AWAITING PAYMENT")
-
-    y -= 28
-
-    # Company details (left) + invoice meta (right)
-    c.setFont("Helvetica-Bold", 10)
-    c.setFillColor(C_BLACK)
-    c.drawString(L, y, COMPANY_NAME)
-
-    # Invoice meta labels (right column)
-    meta_lx = R - 140
-    meta_vx = R
-    c.setFont("Helvetica", 9)
-    c.setFillColor(C_GRAY)
-    c.drawString(meta_lx, y, "Invoice")
-    c.setFillColor(C_BLACK)
-    c.setFont("Helvetica-Bold", 9)
-    c.drawRightString(meta_vx, y, invoice_number)
-
-    y -= 14
-    c.setFont("Helvetica", 9)
-    c.setFillColor(C_GRAY)
-    c.drawString(L, y, COMPANY_ADDR)
-    c.drawString(meta_lx, y, "Issued")
-    c.setFillColor(C_BLACK)
-    c.setFont("Helvetica-Bold", 9)
-    c.drawRightString(meta_vx, y, issued_date.strftime("%-d %B %Y"))
-
-    y -= 14
-    c.setFont("Helvetica", 9)
-    c.setFillColor(C_GRAY)
-    c.drawString(L, y, f"{COMPANY_KVK} · {COMPANY_BTW}")
-    c.drawString(meta_lx, y, "Due date")
-    c.setFillColor(C_BLACK)
-    c.setFont("Helvetica-Bold", 9)
-    c.drawRightString(meta_vx, y, due_date.strftime("%-d %B %Y"))
-
-    y -= 14
-    c.setFont("Helvetica", 9)
-    c.setFillColor(C_GRAY)
-    c.drawString(L, y, f"IBAN: {COMPANY_IBAN}")
-
-    y -= 28
-
-    # BILL TO box
-    box_h = 52
-    c.setFillColor(C_BGROW)
-    c.setStrokeColor(colors.HexColor("#e8e4de"))
-    c.setLineWidth(0.5)
-    c.rect(L, y - box_h + 14, CW, box_h, stroke=1, fill=1)
-
-    # left accent bar
-    c.setFillColor(colors.HexColor("#c8c4bc"))
-    c.rect(L, y - box_h + 14, 3, box_h, stroke=0, fill=1)
-
-    label("BILL TO", L + 10, y + 4, size=7.5, color=C_GRAY)
-    y -= 14
-    c.setFont("Helvetica-Bold", 11)
-    c.setFillColor(C_BLACK)
-    c.drawString(L + 10, y, client)
-    if email:
-        y -= 14
-        c.setFont("Helvetica", 9)
-        c.setFillColor(C_GRAY)
-        c.drawString(L + 10, y, email)
-
-    y -= 26
-
-    # DESCRIPTION section
-    label("DESCRIPTION", L, y, size=7.5)
-    y -= 4
-    rule(y)
-    y -= 16
-
-    # Description paragraph (multi-line wrapping)
-    desc = (
-        f"{evt} at Sauvage Space"
-        + (f" · {date_s}" if date_s else "") + "."
-    )
-    if rooms_s:
-        desc += f"  Spaces: {rooms_s}."
-    desc += f"  Invoiced by {COMPANY_NAME} on behalf of Sauvage DAO."
-
-    c.setFont("Helvetica", 10)
-    c.setFillColor(C_BLACK)
-    # Simple word-wrap
-    max_w = CW
-    words = desc.split()
-    line_buf = []
-    line_h = 15
-    for word in words:
-        test = " ".join(line_buf + [word])
-        if c.stringWidth(test, "Helvetica", 10) > max_w and line_buf:
-            c.drawString(L, y, " ".join(line_buf))
-            y -= line_h
-            line_buf = [word]
-        else:
-            line_buf.append(word)
-    if line_buf:
-        c.drawString(L, y, " ".join(line_buf))
-        y -= line_h
-
-    y -= 14
-
-    # LINE ITEMS section
-    label("LINE ITEMS", L, y, size=7.5)
-    y -= 4
-    rule(y)
-    y -= 4
-
-    # Table header
-    col_widths = [200, 28, 72, 36, 65, 58, 72]  # sum ≈ 531 → trim to CW
-    scale = CW / sum(col_widths)
-    cw = [w * scale for w in col_widths]
-
-    headers = ["DESCRIPTION", "QTY", "UNIT EX VAT", "VAT", "LINE EX VAT", "VAT AMT", "LINE INCL VAT"]
-    hdr_h   = 22
-
-    def draw_row(cols, x_start, row_y, row_h, bg=None, bold=False, size=9):
-        if bg:
-            c.setFillColor(bg)
-            c.setStrokeColor(colors.HexColor("#e8e4de"))
-            c.setLineWidth(0.3)
-            c.rect(x_start, row_y - row_h + 4, CW, row_h, stroke=1, fill=1)
-        xs = x_start
-        for i, (text, w) in enumerate(zip(cols, cw)):
-            c.setFillColor(C_BLACK)
-            c.setFont("Helvetica-Bold" if bold else "Helvetica", size)
-            if i == 0:
-                c.drawString(xs + 4, row_y - row_h + 8, str(text))
-            else:
-                c.drawRightString(xs + w - 4, row_y - row_h + 8, str(text))
-            xs += w
-
-    draw_row(headers, L, y, hdr_h, bg=C_BGROW, bold=True, size=8)
-    y -= hdr_h
-
-    # Rental line item
-    rental_desc = f"Space rental — {rooms_s}"
-    if date_s:
-        rental_desc += f" · {date_s}"
-    rental_row = [
-        rental_desc, "1",
-        money(q["rental_ex"]),
-        "21%",
-        money(q["rental_ex"]),
-        money(q["vat_amt"]),
-        money(q["rental_incl"]),
-    ]
-    # Multi-line rental description
-    desc_words = rental_desc.split()
-    desc_lines = []
-    buf2 = []
-    for w in desc_words:
-        test2 = " ".join(buf2 + [w])
-        if c.stringWidth(test2, "Helvetica", 9) > cw[0] - 10 and buf2:
-            desc_lines.append(" ".join(buf2))
-            buf2 = [w]
-        else:
-            buf2.append(w)
-    if buf2:
-        desc_lines.append(" ".join(buf2))
-    item_h = max(20, len(desc_lines) * 14 + 10)
-
-    # Draw row bg
-    c.setFillColor(colors.white)
-    c.setStrokeColor(colors.HexColor("#e8e4de"))
-    c.setLineWidth(0.3)
-    c.rect(L, y - item_h + 4, CW, item_h, stroke=1, fill=1)
-
-    # Description column (multi-line)
-    c.setFillColor(C_BLACK)
-    c.setFont("Helvetica", 9)
-    dl_y = y - 8
-    for dl in desc_lines:
-        c.drawString(L + 4, dl_y, dl)
-        dl_y -= 13
-    # Sub-note in gray
-    c.setFont("Helvetica", 7.5)
-    c.setFillColor(C_GRAY)
-    c.drawString(L + 4, dl_y, "Invoiced on behalf of Sauvage DAO")
-
-    # Numeric columns
-    xs = L + cw[0]
-    for i, (text, w) in enumerate(zip(rental_row[1:], cw[1:])):
-        c.setFillColor(C_BLACK)
-        c.setFont("Helvetica", 9)
-        c.drawRightString(xs + w - 4, y - item_h + 10, text)
-        xs += w
-    y -= item_h
-
-    # Kitchen deposit line (if applicable)
-    if q["kitchen_dep"] > 0:
-        dep_row = [
-            "Kitchen deposit — refundable upon satisfactory completion",
-            "1",
-            money(q["kitchen_dep"]),
-            "0%",
-            money(q["kitchen_dep"]),
-            money(0.0),
-            money(q["kitchen_dep"]),
-        ]
-        draw_row(dep_row, L, y, 22, bg=C_BGROW, size=9)
-        y -= 22
-
-    y -= 16
-
-    # ── Totals block (right-aligned) ────────────────────────────────────────
-    tx = R - 160   # label start
-    vx = R         # value right-align
-
-    def tot_row(lbl, val, bold=False, italic=False, top_rule=False):
-        nonlocal y
-        if top_rule:
-            c.setStrokeColor(C_LGRAY)
-            c.setLineWidth(0.5)
-            c.line(tx - 10, y + 12, R, y + 12)
-        c.setFillColor(C_GRAY if not bold else C_BLACK)
-        if italic:
-            c.setFont("Helvetica-Oblique", 9)
-        else:
-            c.setFont("Helvetica-Bold" if bold else "Helvetica", 9)
-        c.drawString(tx, y, lbl)
-        c.setFillColor(C_BLACK)
-        c.setFont("Helvetica-Bold" if bold else "Helvetica", 9)
-        c.drawRightString(vx, y, val)
-        y -= 14
-
-    tot_row(f"Space rental ex VAT", money(q["rental_ex"]))
-    tot_row(f"VAT (21%)", money(q["vat_amt"]))
-    tot_row("Space rental incl VAT", money(q["rental_incl"]))
-    if q["kitchen_dep"] > 0:
-        tot_row("Kitchen deposit (excl VAT)", money(q["kitchen_dep"]), italic=True)
-    if deposit_paid > 0:
-        tot_row(f"Deposit paid", f"- {money(deposit_paid)}")
-        balance = q["total_due"] - deposit_paid
-        tot_row("Total due", money(balance), bold=True, top_rule=True)
-    else:
-        tot_row("Total due", money(q["total_due"]), bold=True, top_rule=True)
-
-    y -= 20
-
-    # ── PAYMENT DETAILS ──────────────────────────────────────────────────────
-    label("PAYMENT DETAILS", L, y, size=7.5)
-    y -= 4
-    rule(y)
-    y -= 18
-
-    pay_rows = [
-        ("IBAN",         COMPANY_IBAN),
-        ("BIC",          COMPANY_BIC),
-        ("ACCOUNT NAME", COMPANY_NAME),
-        ("REFERENCE",    reference),
-        ("DUE DATE",     due_date.strftime("%-d %B %Y")),
-    ]
-    lbl_x = L
-    val_x = L + 120
-    for plbl, pval in pay_rows:
-        c.setFont("Helvetica", 8)
-        c.setFillColor(C_GRAY)
-        c.drawString(lbl_x, y, plbl)
-        c.setFont("Helvetica-Bold", 9)
-        c.setFillColor(C_BLACK)
-        c.drawString(val_x, y, pval)
-        y -= 16
-
-    y -= 10
-
-    # ── Notes box ────────────────────────────────────────────────────────────
-    notes = []
-    if q["kitchen_dep"] > 0:
-        notes.append(
-            f"Kitchen deposit of {money(q['kitchen_dep'])} is refundable upon "
-            f"satisfactory completion of the booking."
-        )
-    notes.append(
-        f"This invoice is issued pursuant to the booking agreement between "
-        f"{client} and Sauvage Space ({COMPANY_NAME})."
-    )
-    notes.append(
-        "VAT treatment: space rental fee subject to 21% BTW. "
-        + ("Kitchen deposit exempt." if q["kitchen_dep"] > 0 else "")
-    )
-
-    # Measure notes height
-    note_lines = []
-    for note in notes:
-        ws = note.split()
-        lb = []
-        for w in ws:
-            t = " ".join(lb + [w])
-            if c.stringWidth(t, "Helvetica", 9) > CW - 30 and lb:
-                note_lines.append(" ".join(lb))
-                lb = [w]
-            else:
-                lb.append(w)
-        if lb:
-            note_lines.append(" ".join(lb))
-        note_lines.append("")  # gap between paragraphs
-
-    box_height = len(note_lines) * 13 + 18
-    c.setFillColor(C_NOTE)
-    c.setStrokeColor(colors.HexColor("#e8e4de"))
-    c.setLineWidth(0.5)
-    c.rect(L, y - box_height + 10, CW, box_height, stroke=1, fill=1)
-
-    ny = y - 2
-    c.setFont("Helvetica-Bold", 9)
-    c.setFillColor(C_BLACK)
-    c.drawString(L + 10, ny, "Notes:")
-    ny -= 13
-    c.setFont("Helvetica", 9)
-    for nl in note_lines:
-        if nl:
-            c.drawString(L + 10, ny, nl)
-        ny -= 13
-
-    y = ny - 20
-
-    # ── Footer ────────────────────────────────────────────────────────────────
-    rule(60)
-    c.setFont("Helvetica", 7.5)
-    c.setFillColor(C_GRAY)
-    footer1 = f"{COMPANY_NAME} · {COMPANY_KVK} · {COMPANY_BTW}"
-    footer2 = f"{COMPANY_BEHALF} · {COMPANY_EMAIL}"
-    c.drawCentredString(W / 2, 48, footer1)
-    c.drawCentredString(W / 2, 36, footer2)
-
-    c.save()
-    return invoice_number, buf.getvalue()
+    items  = compute_line_items(state)
+    totals = _sum_items(items)
+    pdf    = _render_pdf(state, items, totals,
+                         invoice_number=invoice_number,
+                         issued_date=issued_date,
+                         deposit_paid=deposit_paid,
+                         record_id=record_id)
+    return invoice_number, pdf
 
 
 # ── File persistence ───────────────────────────────────────────────────────────
 
 def save_invoice(invoice_number: str, pdf_bytes: bytes) -> str:
-    """Save PDF to disk and return the file path."""
     os.makedirs(_INV_DIR, exist_ok=True)
     path = os.path.join(_INV_DIR, f"{invoice_number}.pdf")
     with open(path, "wb") as f:
@@ -586,7 +720,6 @@ def save_invoice(invoice_number: str, pdf_bytes: bytes) -> str:
 
 
 def invoice_url(invoice_number: str, base_url: str = "") -> str:
-    """Return the public URL for an invoice (served by Flask /invoice/ route)."""
     if not base_url:
         base_url = os.getenv("BASE_URL", "https://sauvage.amsterdam")
     import hmac as _hmac, hashlib as _hl
@@ -604,16 +737,24 @@ def verify_invoice_token(invoice_number: str, token: str) -> bool:
 
 # ── Quick test ─────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    sample_state = {
+    test_state = {
         "client_name": "Carmen Santana",
         "email":       "carmen@fuli.nl",
         "event_type":  "Pop-up",
         "dates":       ["2026-05-18", "2026-05-31"],
         "rooms":       ["Entrance", "Upstairs — Gallery"],
+        "duration":    "Hourly",
+        "hours":       5,
         "guest_count": 30,
-        "quote_total": 1000.00,
         "addons":      ["Light Snacks Fento", "Event Cleanup"],
+        "quote_total": 1000.00,
     }
-    num, pdf = build_invoice(sample_state, deposit_paid=50.0, record_id="TEST")
-    save_invoice(num, pdf)
-    print(f"Invoice {num} written to invoices/{num}.pdf")
+    # Quote PDF
+    pdf_q = build_quote_pdf(test_state)
+    with open("/tmp/test-quote.pdf", "wb") as f: f.write(pdf_q)
+    print("Quote → /tmp/test-quote.pdf")
+
+    # Invoice PDF
+    num, pdf_i = build_invoice(test_state, deposit_paid=50.0)
+    save_invoice(num, pdf_i)
+    print(f"Invoice {num} → invoices/{num}.pdf")
