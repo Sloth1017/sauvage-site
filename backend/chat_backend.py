@@ -833,6 +833,10 @@ def chat():
         _at_addons = [v.strip() for v in raw.split(",") if v.strip()]
         # Strip the tag so Claude never sees it
         message = (message[:_at_match.start()] + message[_at_match.end():]).strip()
+        # Always persist addons to session state so revenue breakdown can use them
+        if _at_addons:
+            sess["state"]["addons"] = _at_addons
+            _session_update(session_id, state=sess["state"])
 
     # ── Deterministic referral source sync ───────────────────────────────────
     # The attribution widget embeds [ref:Value] — push directly to Airtable.
