@@ -1586,7 +1586,7 @@ def test_confirm(session_id):
             order_number        = record_id or "—",
             airtable_id         = record_id or "",
             cal_link            = cal_link if _GCAL_WRITE else "",
-            quote_total_inc_vat = state.get("quote_total") or None,
+            state               = state,
         )
     except Exception as e:
         print(f"[test-confirm] Telegram notification failed (non-fatal): {e}")

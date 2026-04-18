@@ -324,6 +324,58 @@ def _sum_items(items: list[dict]) -> dict:
     }
 
 
+def compute_revenue_breakdown(state: dict) -> dict:
+    """
+    Split the event total into rental fees vs pass-through add-ons.
+
+    70%/30% split applies to rental fees only (rooms + bundle discounts).
+    Fento snacks, wines, and other add-ons are pass-throughs — not split.
+
+    Returns:
+      {
+        "rental_inc_vat":  float,   # rooms (after bundle discount) inc VAT
+        "rental_ex_vat":   float,   # rooms ex VAT  → apply 70/30 to this
+        "host_earn":       float,   # 70% of rental_ex_vat
+        "dao_earn":        float,   # 30% of rental_ex_vat
+        "addons_inc_vat":  float,   # add-ons total inc VAT (pass-through)
+        "addons_lines":    list,    # [{"description": str, "total_incl": float}, ...]
+        "total_inc_vat":   float,
+        "total_ex_vat":    float,
+      }
+    """
+    HOST_SHARE = 0.70
+    items = _build_line_items(state)
+
+    rental_items = [i for i in items
+                    if i["description"].startswith("Space rental")
+                    or i.get("is_discount")
+                    or "closure fee" in i["description"]]
+
+    addon_items  = [i for i in items
+                    if not i["description"].startswith("Space rental")
+                    and not i.get("is_discount")
+                    and "closure fee" not in i["description"]
+                    and not i.get("is_deposit")]
+
+    rental_inc = round(sum(i["total_incl"] for i in rental_items), 2)
+    rental_ex  = round(sum(i["total_ex"]   for i in rental_items), 2)
+    addons_inc = round(sum(i["total_incl"] for i in addon_items),  2)
+
+    totals = _sum_items(items)
+
+    return {
+        "rental_inc_vat": rental_inc,
+        "rental_ex_vat":  rental_ex,
+        "host_earn":      round(rental_ex * HOST_SHARE, 2),
+        "dao_earn":       round(rental_ex * (1 - HOST_SHARE), 2),
+        "addons_inc_vat": addons_inc,
+        "addons_lines":   [{"description": i["description"],
+                            "total_incl":  i["total_incl"]} for i in addon_items],
+        "total_inc_vat":  totals["total_inc"],
+        "total_ex_vat":   totals["total_ex"],
+    }
+
+
 # ── Date / room helpers ────────────────────────────────────────────────────────
 
 def _fmt_date_range(dates) -> str:

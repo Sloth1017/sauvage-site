@@ -31,11 +31,11 @@ import requests
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID   = os.getenv("TELEGRAM_CHAT_ID",   "")
 BASE_URL           = os.getenv("BASE_URL", "https://sauvage.amsterdam")
+AIRTABLE_BASE_ID   = os.getenv("AIRTABLE_BASE_ID", "")
+# Inquiries table ID — used to build a direct Airtable record URL
+_AIRTABLE_TABLE_ID = "tbledNkWpyzbT8J27"
 
 _API = "https://api.telegram.org/bot{token}/{method}"
-
-VAT_RATE   = 0.21   # Netherlands standard rate
-HOST_SHARE = 0.70   # Host earns 70% of ex-VAT
 
 
 # ── Internal HTTP helper ──────────────────────────────────────────────────────
@@ -62,21 +62,11 @@ def _fmt_eur(amount) -> str:
         return "—"
 
 
-def _price_breakdown(quote_total_inc_vat) -> dict | None:
-    """Return dict with inc_vat, ex_vat, host_earnings, dao_earnings or None."""
-    try:
-        inc_vat      = float(quote_total_inc_vat)
-        ex_vat       = inc_vat / (1 + VAT_RATE)
-        host_earn    = ex_vat * HOST_SHARE
-        dao_earn     = ex_vat * (1 - HOST_SHARE)
-        return {
-            "inc_vat":    inc_vat,
-            "ex_vat":     ex_vat,
-            "host_earn":  host_earn,
-            "dao_earn":   dao_earn,
-        }
-    except (TypeError, ValueError):
-        return None
+def _airtable_url(record_id: str) -> str:
+    base = AIRTABLE_BASE_ID or os.getenv("AIRTABLE_BASE_ID", "")
+    if base and record_id:
+        return f"https://airtable.com/{base}/{_AIRTABLE_TABLE_ID}/{record_id}"
+    return ""
 
 
 # ── Message builder ───────────────────────────────────────────────────────────
@@ -92,7 +82,7 @@ def _build_message(
     order_number: str,
     cal_link:     str = "",
     airtable_id:  str = "",
-    breakdown:    dict = None,
+    revenue:      dict = None,
     host_claimed: str = "",
 ) -> str:
     rooms_str = ", ".join(rooms) if isinstance(rooms, list) else str(rooms or "—")
@@ -111,18 +101,30 @@ def _build_message(
 
     if cal_link:
         lines.append(f"<b>Calendar:</b> <a href=\"{cal_link}\">View event ↗</a>")
-    if airtable_id:
-        lines.append(f"<b>Airtable:</b> <a href=\"https://airtable.com/{airtable_id}\">Open record ↗</a>")
 
-    # Price breakdown
-    if breakdown:
+    at_url = _airtable_url(airtable_id)
+    if at_url:
+        lines.append(f"<b>Airtable:</b> <a href=\"{at_url}\">Open record ↗</a>")
+
+    # Revenue breakdown — rental split 70/30, add-ons shown as pass-throughs
+    if revenue:
         lines += [
             "",
             "💰 <b>Revenue</b>",
-            f"  Inc VAT:          {_fmt_eur(breakdown['inc_vat'])}",
-            f"  Ex VAT:           {_fmt_eur(breakdown['ex_vat'])}",
-            f"  Host (70%):       <b>{_fmt_eur(breakdown['host_earn'])}</b>",
-            f"  DAO (30%):        {_fmt_eur(breakdown['dao_earn'])}",
+            "",
+            f"<b>Room rental</b>  ({_fmt_eur(revenue['rental_inc_vat'])} inc VAT  |  {_fmt_eur(revenue['rental_ex_vat'])} ex VAT)",
+            f"  Host 70%:  <b>{_fmt_eur(revenue['host_earn'])}</b>",
+            f"  DAO  30%:  {_fmt_eur(revenue['dao_earn'])}",
+        ]
+
+        if revenue.get("addons_lines"):
+            lines += ["", "<b>Add-ons</b> (pass-through — not split)"]
+            for a in revenue["addons_lines"]:
+                lines.append(f"  {a['description']}:  {_fmt_eur(a['total_incl'])}")
+
+        lines += [
+            "",
+            f"<b>Total:  {_fmt_eur(revenue['total_inc_vat'])} inc VAT  |  {_fmt_eur(revenue['total_ex_vat'])} ex VAT</b>",
         ]
 
     # Host line
@@ -150,25 +152,34 @@ def _host_keyboard(record_id: str) -> dict:
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def notify_booking_confirmed(
-    client_name:          str,
-    event_type:           str,
-    event_date:           str,
-    start_time:           str,
-    end_time:             str,
+    client_name:    str,
+    event_type:     str,
+    event_date:     str,
+    start_time:     str,
+    end_time:       str,
     guest_count,
     rooms,
-    deposit_amount:       str,
-    order_number:         str,
-    airtable_id:          str = "",
-    cal_link:             str = "",
-    quote_total_inc_vat        = None,
+    deposit_amount: str,
+    order_number:   str,
+    airtable_id:    str  = "",
+    cal_link:       str  = "",
+    state:          dict = None,
+    # legacy fallback — ignored if state provided
+    quote_total_inc_vat  = None,
 ) -> None:
     """Send the booking notification + host selection buttons to the group."""
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         print("[Telegram] Not configured — skipping booking notification")
         return
 
-    breakdown = _price_breakdown(quote_total_inc_vat)
+    # Compute line-itemised revenue breakdown from session state
+    revenue = None
+    if state:
+        try:
+            from invoice_generator import compute_revenue_breakdown
+            revenue = compute_revenue_breakdown(state)
+        except Exception as e:
+            print(f"[Telegram] Revenue breakdown failed (non-fatal): {e}")
 
     text = _build_message(
         client_name  = client_name,
@@ -181,7 +192,7 @@ def notify_booking_confirmed(
         order_number = order_number,
         cal_link     = cal_link,
         airtable_id  = airtable_id,
-        breakdown    = breakdown,
+        revenue      = revenue,
     )
 
     keyboard = _host_keyboard(airtable_id) if airtable_id else None

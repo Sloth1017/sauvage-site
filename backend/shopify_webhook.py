@@ -343,7 +343,7 @@ def handle_webhook():
                     order_number         = order_number,
                     airtable_id          = record_id,
                     cal_link             = cal_link if _GCAL_WRITE else "",
-                    quote_total_inc_vat  = email_state.get("quote_total") or None,
+                    state                = email_state,
                 )
             except Exception as e:
                 print(f"[Webhook] Telegram notification failed (non-fatal): {e}")
