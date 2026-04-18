@@ -15,6 +15,7 @@ the legitimate client link can write to their Airtable record.
 """
 
 import os
+import base64
 import hmac
 import hashlib
 import smtplib
@@ -92,12 +93,22 @@ def send_booking_confirmation(
     date_str     = _fmt_date(state.get("dates"))
     start_time   = state.get("start_time",  "")
     end_time     = state.get("end_time",    "")
-    rooms_str    = _fmt_rooms(state.get("rooms"))
+    is_wine_tasting = "wine tasting" in event_type.lower()
+    rooms_raw    = state.get("rooms")
+    # Default room to Cave for wine tastings if not already set
+    if is_wine_tasting and not rooms_raw:
+        rooms_raw = ["Cave"]
+    rooms_str    = _fmt_rooms(rooms_raw)
     guest_count  = state.get("guest_count", "")
     quote_total  = state.get("quote_total", "")
 
     time_str = f"{start_time} to {end_time}" if start_time and end_time else start_time or "TBC"
-    deposit  = "€300" if "kitchen" in rooms_str.lower() else "€50"
+    if is_wine_tasting:
+        deposit = "N/A"
+    elif "kitchen" in rooms_str.lower():
+        deposit = "€300"
+    else:
+        deposit = "€50"
 
     from urllib.parse import urlencode as _ue
     wine_params = _ue({"booking": record_id, "name": client_name,
@@ -112,8 +123,15 @@ def send_booking_confirmation(
         BASE_URL, f"{event_type} at Sauvage", date_str, start_time, end_time,
         "Sauvage Space · Potgieterstraat 47H, Amsterdam"
     )
-    gcal_icon = f"{BASE_URL}/media/icon-google-calendar.png"
-    ical_icon = f"{BASE_URL}/media/icon-apple-calendar.png"
+    # Embed icons as base64 so they never break in email clients
+    def _b64_icon(path):
+        try:
+            with open(os.path.join(os.path.dirname(__file__), "..", path), "rb") as _f:
+                return "data:image/png;base64," + base64.b64encode(_f.read()).decode()
+        except Exception:
+            return ""
+    gcal_icon = _b64_icon("media/icon-google-calendar.png")
+    ical_icon = _b64_icon("media/icon-apple-calendar.png")
     cal_widget = (
         f'<p style="margin:8px 0 0;font-size:0;line-height:0;">'
         f'<a href="{gcal_url}" style="display:inline-block;vertical-align:middle;margin-right:8px;text-decoration:none;">'
