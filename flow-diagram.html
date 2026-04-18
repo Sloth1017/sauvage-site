@@ -51,248 +51,212 @@
     <div class="mermaid">
 ```mermaid
 flowchart TD
-    %% Styles
-    classDef happy fill:#d4edda,stroke:#28a745,color:#000
-    classDef decision fill:#fff3cd,stroke:#ffc107,color:#000
-    classDef widget fill:#cce5ff,stroke:#007bff,color:#000
-    classDef error fill:#f8d7da,stroke:#dc3545,color:#000
-    classDef sync fill:#e2e3e5,stroke:#6c757d,color:#000
+    subgraph Styles
+        direction TB
+        classDef happy fill:#d4edda,stroke:#28a745,color:#155724
+        classDef decision fill:#fff3cd,stroke:#ffc107,color:#856404
+        classDef widget fill:#cce5ff,stroke:#007bff,color:#004085
+        classDef error fill:#f8d7da,stroke:#dc3545,color:#721c24
+        classDef sync fill:#e2e3e5,stroke:#6c757d,color:#383d41
+    end
 
-    %% Entry
-    autoGreeting[Auto Greeting Sent by System]:::happy
-    clientFirst[Client Sends First Message]
-
-    autoGreeting --> clientFirst
-    clientFirst --> parseEventType
-
-    %% Step 1: Event Type
-    parseEventType{Event type mentioned?}:::decision
-    parseEventType -->|Yes| storeEventType[Store Event Type\n→ AT: Event Type, Funnel Stage]:::happy
+    start([Client opens chat]):::happy --> autoGreeting[System sends auto-greeting]:::happy
+    autoGreeting --> clientFirstMsg[Client sends first message]:::happy
+    clientFirstMsg --> parseEventType{Event type<br>mentioned?}:::decision
+    
+    parseEventType -->|Yes| captureEventType[Capture event type\n→ AT: Event Type]:::happy
     parseEventType -->|No| askEventType[Ask: What kind of event?]:::happy
-    askEventType --> clientEventType[Client Responds]
-    clientEventType --> storeEventType
-
-    storeEventType --> checkDates
-
-    %% Step 2: Date & Time
-    checkDates{Date & time known?}:::decision
-    checkDates -->|Both known| storeDates[Store Date & Time\n→ AT: Requested Date, Time Slot, Duration, Funnel Stage]:::happy
-    checkDates -->|Date only| askTime[Ask: Start and end time?]:::happy
-    checkDates -->|Time only| askDate[Ask: What date?\nTrigger calendar widget]:::happy
-    checkDates -->|Neither| askDateTime[Ask: What dates?\nTrigger calendar widget]:::happy
-
-    askDateTime --> dateTimeWidget[DateTime Widget]:::widget
-    askDate --> dateTimeWidget
-    dateTimeWidget --> clientDateTime[Client Selects Date/Time]
-    clientDateTime --> storeDates
-
-    askTime --> clientTime[Client Provides Time]
-    clientTime --> storeDates
-
-    storeDates --> checkAvailability
-
-    %% Availability Check
-    checkAvailability{Date available?}:::decision
-    checkAvailability -->|Yes| askContact
-    checkAvailability -->|No| offerAlternatives[Offer 2-3 Alternative Dates]:::happy
-    offerAlternatives --> clientAltResponse{Client accepts alternative?}:::decision
-    clientAltResponse -->|Yes| storeDates
-    clientAltResponse -->|No| offerWaitlist[Offer Waitlist]:::happy
-    offerWaitlist --> clientWaitlistResponse{Client wants waitlist?}:::decision
-    clientWaitlistResponse -->|Yes| collectWaitlistInfo[Collect Waitlist Info\n→ AT: Funnel Stage = waitlisted]:::happy
-    clientWaitlistResponse -->|No| endNoBooking[End: No Booking]:::error
-    collectWaitlistInfo --> endWaitlisted[End: On Waitlist]:::happy
-
-    %% Step 3: Contact Details
-    askContact[Ask: Name and contact details?]:::happy
-    askContact --> contactWidget[Contact Form Widget]:::widget
-    contactWidget --> clientContact[Client Submits Contact]
-    clientContact --> storeContact[Store Contact\n→ AT: Client Name, Email, Phone, Funnel Stage]:::happy
-
-    storeContact --> checkCustomerType
-
-    %% Step 4: Customer Type
-    checkCustomerType{Customer type known from context?}:::decision
-    checkCustomerType -->|Yes - mentioned private/business| storeCustomerType[Store Customer Type\n→ AT: Customer Type]:::happy
-    checkCustomerType -->|No| askCustomerType[Ask: Private or business booking?]:::happy
-    askCustomerType --> customerTypeWidget[Customer Type Toggle Widget]:::widget
-    customerTypeWidget --> clientCustomerType[Client Selects Type]
-    clientCustomerType --> storeCustomerType
-
-    storeCustomerType --> checkGuestCount
-
-    %% Step 5: Guest Count
-    checkGuestCount{Guest count known?}:::decision
-    checkGuestCount -->|Yes| validateGuestCount
-    checkGuestCount -->|No| askGuestCount[Ask: How many guests?]:::happy
-    askGuestCount --> clientGuestCount[Client Provides Count]
-    clientGuestCount --> validateGuestCount
-
-    validateGuestCount{Count ≤ 30?}:::decision
-    validateGuestCount -->|Yes| storeGuestCount[Store Guest Count\n→ AT: Guest Count, Funnel Stage]:::happy
-    validateGuestCount -->|No| rejectOverCapacity[Hard Stop: Max 30 guests]:::error
-
-    storeGuestCount --> presentRooms
-
-    %% Step 6: Rooms
-    presentRooms[Share Walkthrough Video +\nPresent Room Options with Photos\nApply capacity-based guidance]:::happy
-    presentRooms --> clientRoomSelection[Client Selects Rooms]
-    clientRoomSelection --> storeRooms[Store Rooms\n→ AT: Rooms Requested, Funnel Stage]:::happy
-
-    storeRooms --> checkKitchenSelected
-
-    %% Kitchen Special Handling
-    checkKitchenSelected{Kitchen room selected?}:::decision
-    checkKitchenSelected -->|Yes| kitchenNotice[Mention Kitchen Deposit €250\nFento manages space]:::happy
-    checkKitchenSelected -->|No| kitchenDeclinedNotice[Remind: No kitchen equipment use\nDishwasher triggers charge]:::happy
-
-    kitchenNotice --> checkUpstairs
-    kitchenDeclinedNotice --> checkUpstairs
-
-    %% Upstairs Wall Use
-    checkUpstairs{Upstairs booked?}:::decision
-    checkUpstairs -->|Yes| askWallUse[Ask: Will you use the walls?]:::happy
-    checkUpstairs -->|No| triggerAddons
-
-    askWallUse --> clientWallResponse{Client needs walls?}:::decision
-    clientWallResponse -->|Yes| flagGalleryApproval[Flag for Gallery Approval]:::happy
-    clientWallResponse -->|No| triggerAddons
-    flagGalleryApproval --> triggerAddons
-
-    %% Step 7: Add-ons
-    triggerAddons[Send exact phrase:\nHere are the available add-ons...]:::happy
-    triggerAddons --> addonsWidget[Add-ons Checkbox Widget]:::widget
-    addonsWidget --> clientAddons[Client Submits Add-ons]
-    clientAddons --> storeAddons[Store Add-ons\n→ AT: Add-Ons, Funnel Stage]:::happy
-
-    storeAddons --> checkStaffSelected
-
-    %% Staff Handling
-    checkStaffSelected{Staff support selected?}:::decision
-    checkStaffSelected -->|Yes| calcStaffDefault[Default: 1 staff, full duration\nUnless client specified otherwise]:::happy
-    checkStaffSelected -->|No| confirmSelfManaged[Confirm: Self-managed event]:::happy
-
-    calcStaffDefault --> calculateQuote
-    confirmSelfManaged --> calculateQuote
-
-    %% Step 8: Quote Calculation
-    calculateQuote[Calculate Quote:\n- Room rates by duration\n- Multi-day if applicable\n- Bundle discount\n- Closure premiums\n- Add-ons\n- Kitchen cleanup silent]:::happy
-    calculateQuote --> checkCommunityCode
-
-    checkCommunityCode{community47 code entered?}:::decision
-    checkCommunityCode -->|Yes| applyCommunityPricing[Apply Community Kitchen Rates\n→ AT: Community Pricing = true]:::happy
-    checkCommunityCode -->|No| standardPricing[Standard Pricing]:::happy
-
-    applyCommunityPricing --> presentQuote
-    standardPricing --> presentQuote
-
-    %% Step 9: Present Quote
-    presentQuote[Present Itemised Quote\nPlain text - no markdown tables\nInclude T&C link at bottom\nInclude deposit payment link\n→ AT: Total Incl VAT, Total Ex VAT, VAT Amount, Funnel Stage]:::happy
-    presentQuote --> tandcWidget[T&C Widget Auto-fires]:::widget
-
-    tandcWidget --> clientTandcResponse{Client response?}:::decision
-    clientTandcResponse -->|Requests changes| updateQuote[Update Quote Per Request]:::happy
-    updateQuote --> presentQuote
-    clientTandcResponse -->|Accepts T&C| tandcAccepted[T&C Accepted\nShow pay button message]:::happy
-
-    tandcAccepted --> awaitPayment[Await Payment\n→ AT: Funnel Stage = deposit_pending]:::happy
-    awaitPayment --> paymentWebhook{Shopify webhook received?}:::decision
-    paymentWebhook -->|Yes| paymentConfirmed[Payment Confirmed\n→ AT: Deposit Collected, Stripe Payment Reference, Booking Status, Funnel Stage]:::happy
-    paymentWebhook -->|No - 24hr timeout| abandonedFollowup
-
-    %% Step 10: Confirmation
-    paymentConfirmed --> sendConfirmation[Send Confirmation Email:\n- Event summary\n- Itemised quote\n- T&C attached\n- Deposit receipt\n- Balance due date\n- Fento deadline if applicable\n- Wine code IN-HOUSE\n- IBAN for balance\n- WiFi details\n- Arrival info]:::happy
-
-    sendConfirmation --> askAttribution
-
-    %% Step 11: Attribution
-    askAttribution[Ask: How did you hear about Sauvage?\nExact phrase only - no list]:::happy
-    askAttribution --> attributionWidget[Attribution Widget]:::widget
-    attributionWidget --> clientAttribution[Client Selects Source]
-    clientAttribution --> storeAttribution[Store Attribution - NO RESPONSE TO CLIENT\n→ AT: Referral Source, Attributed Host, Referred By]:::happy
-
-    storeAttribution --> bookingComplete[Booking Complete\n→ AT: Funnel Stage = confirmed]:::happy
-
-    %% Internal Notifications Subgraph
-    subgraph Notifications[Internal Notifications - Triggered on Confirmation]
-        notifyAdmin[Notify Sauvage Admin]:::sync
-        notifySelection{Wine or Cave?}:::decision
-        notifyFento{Kitchen or Snacks?}:::decision
-        notifyCake{Kitchen date conflict?}:::decision
-        notifyGallery{Upstairs or Walls?}:::decision
-        notifyIkinari{Entrance before 15:00 Wed-Sun?}:::decision
-        postCalendar[Post to Google Calendar]:::sync
+    askEventType --> clientEventResponse[Client responds]:::happy
+    clientEventResponse --> captureEventType
+    
+    captureEventType --> updateStage1[Update stage: 1_event_type\n→ AT: Funnel Stage]:::sync
+    updateStage1 --> checkCommunityCode{Client typed\n'community47'?}:::decision
+    
+    checkCommunityCode -->|Yes| enableCommunity[Enable community pricing\n→ AT: Community Pricing = true]:::happy
+    checkCommunityCode -->|No| askDateTime
+    enableCommunity --> askDateTime
+    
+    askDateTime[Ask: What dates? Select your dates\nTrigger calendar widget]:::happy --> dateTimeWidget([DateTime Widget]):::widget
+    dateTimeWidget --> clientDateResponse[Client selects/enters date]:::happy
+    
+    clientDateResponse --> checkDateTime{Both date AND\ntime provided?}:::decision
+    checkDateTime -->|Date only| askTime[Confirm date, ask for time]:::happy
+    askTime --> clientTimeResponse[Client provides time]:::happy
+    clientTimeResponse --> captureDateTimeAll
+    
+    checkDateTime -->|Time only| askDate[Confirm time, ask for date]:::happy
+    askDate --> clientDateOnly[Client provides date]:::happy
+    clientDateOnly --> captureDateTimeAll
+    
+    checkDateTime -->|Both| captureDateTimeAll[Capture date + time\n→ AT: Requested Date, Time Slot, Duration]:::happy
+    
+    captureDateTimeAll --> updateStage2[Update stage: 2_date_time\n→ AT: Funnel Stage]:::sync
+    updateStage2 --> checkCalendar{Check Google Calendar:\nDate available?}:::decision
+    
+    checkCalendar -->|No| offerAlternatives[Offer 2-3 nearest dates]:::happy
+    offerAlternatives --> altResponse{Client accepts\nalternative?}:::decision
+    altResponse -->|Yes| captureDateTimeAll
+    altResponse -->|No| offerWaitlist[Offer waitlist]:::happy
+    offerWaitlist --> waitlistResponse{Client wants\nwaitlist?}:::decision
+    waitlistResponse -->|Yes| collectWaitlistInfo[Collect waitlist info\n→ AT: Waitlist fields]:::happy
+    collectWaitlistInfo --> markWaitlisted[Mark: waitlisted\n→ AT: Funnel Stage]:::sync
+    markWaitlisted --> endWaitlist([Waitlist flow ends]):::happy
+    waitlistResponse -->|No| endNoBook([Conversation ends]):::error
+    
+    checkCalendar -->|Yes| askContact[Ask: Name, email, phone]:::happy
+    askContact --> contactWidget([Contact Form Widget]):::widget
+    contactWidget --> clientContact[Client provides contact]:::happy
+    clientContact --> captureContact[Capture contact\n→ AT: Client Name, Email, Phone]:::happy
+    captureContact --> gdprNotice[Send GDPR data notice]:::happy
+    gdprNotice --> updateStage3[Update stage: 3_contact\n→ AT: Funnel Stage]:::sync
+    
+    updateStage3 --> checkCustType{Customer type\nalready known?}:::decision
+    checkCustType -->|Yes| skipCustType[Skip customer type question]:::happy
+    checkCustType -->|No| askCustType[Ask: Private or business?]:::happy
+    askCustType --> custTypeWidget([Customer Type Widget]):::widget
+    custTypeWidget --> clientCustType[Client selects type]:::happy
+    clientCustType --> captureCustType[Capture customer type\n→ AT: Customer Type]:::happy
+    captureCustType --> skipCustType
+    
+    skipCustType --> askGuestCount[Ask: How many guests?]:::happy
+    askGuestCount --> clientGuestCount[Client provides count]:::happy
+    clientGuestCount --> validateGuests{Guest count\n≤ 30?}:::decision
+    validateGuests -->|No| rejectCapacity[Reject: Max 30 guests]:::error
+    rejectCapacity --> askReviseCount[Ask to revise count]:::happy
+    askReviseCount --> clientGuestCount
+    validateGuests -->|Yes| captureGuestCount[Capture guest count\n→ AT: Guest Count]:::happy
+    
+    captureGuestCount --> presentRooms[Share walkthrough video\nPresent rooms with photos\nRecommend based on count]:::happy
+    presentRooms --> clientRoomResponse[Client confirms/selects rooms]:::happy
+    
+    clientRoomResponse --> parseRoomSelection{Parse room selection}:::decision
+    parseRoomSelection -->|Clear selection| captureRooms[Capture rooms\n→ AT: Rooms Requested]:::happy
+    parseRoomSelection -->|Unclear/Yes only| defaultRooms[Default to recommended rooms\n→ AT: Rooms Requested]:::happy
+    
+    captureRooms --> checkKitchenBooked{Kitchen\nbooked?}:::decision
+    defaultRooms --> checkKitchenBooked
+    
+    checkKitchenBooked -->|Yes| kitchenWarning[Explain kitchen deposit €250\nMention cleanup included]:::happy
+    checkKitchenBooked -->|No| kitchenReminder[Remind: No kitchen equipment use]:::happy
+    kitchenWarning --> checkUpstairs
+    kitchenReminder --> checkUpstairs
+    
+    checkUpstairs{Upstairs\nbooked?}:::decision -->|Yes| askWallUse[Ask: Need to use walls?]:::happy
+    checkUpstairs -->|No| updateStage4
+    askWallUse --> clientWallResponse[Client responds]:::happy
+    clientWallResponse --> wallFlag{Wall use\nneeded?}:::decision
+    wallFlag -->|Yes| flagGallery[Flag for Gallery approval]:::sync
+    wallFlag -->|No| updateStage4
+    flagGallery --> updateStage4
+    
+    updateStage4[Update stage: 4_rooms\n→ AT: Funnel Stage]:::sync --> triggerAddons[Send: Here are the available add-ons\nfor your event - select what you'd like]:::happy
+    triggerAddons --> addonsWidget([Add-Ons Widget]):::widget
+    addonsWidget --> clientAddons[Client submits add-ons]:::happy
+    clientAddons --> captureAddons[Capture add-ons\n→ AT: Add-Ons]:::happy
+    
+    captureAddons --> checkStaff{Staff\nselected?}:::decision
+    checkStaff -->|Yes| defaultStaffHours[Default: 1 staff, full duration]:::happy
+    checkStaff -->|No| confirmSelfManaged[Confirm: Self-managed event]:::happy
+    defaultStaffHours --> updateStage5
+    confirmSelfManaged --> updateStage5
+    
+    updateStage5[Update stage: 5_addons\n→ AT: Funnel Stage]:::sync --> musicNote[Mention WiFi speaker + volume rules]:::happy
+    musicNote --> calculateQuote[Calculate quote:\n1. Room rates × duration × days\n2. Apply bundle discount\n3. Add closure premiums if Full-Day\n4. Add add-on costs]:::happy
+    
+    calculateQuote --> captureQuote[Store quote totals\n→ AT: Total Incl VAT, Total Ex VAT, VAT Amount]:::happy
+    captureQuote --> presentQuote[Present itemized quote\nWith T&C link at bottom\nWith deposit payment link]:::happy
+    presentQuote --> updateStage6[Update stage: 6_quoted\n→ AT: Funnel Stage]:::sync
+    
+    updateStage6 --> tandcWidget([T&C Widget auto-fires]):::widget
+    tandcWidget --> clientTandCResponse{Client\nresponse?}:::decision
+    
+    clientTandCResponse -->|Requests changes| reviseQuote[Revise quote]:::happy
+    reviseQuote --> presentQuote
+    
+    clientTandCResponse -->|Accepts T&C| confirmTandC[Confirm: All set - use pay button]:::happy
+    confirmTandC --> updateStage7[Update stage: 7_deposit_pending\n→ AT: Funnel Stage]:::sync
+    updateStage7 --> awaitPayment[Await Shopify webhook]:::happy
+    
+    awaitPayment --> paymentWebhook{Payment\nreceived?}:::decision
+    paymentWebhook -->|No - 24hr| sendFollowUp[Send follow-up nudge]:::happy
+    sendFollowUp --> awaitFollowUpResponse{Response\nwithin 48hr?}:::decision
+    awaitFollowUpResponse -->|No| markAbandoned[Mark: abandoned\n→ AT: Funnel Stage\nNotify attributed host]:::sync
+    markAbandoned --> endAbandoned([Abandoned]):::error
+    awaitFollowUpResponse -->|Yes| awaitPayment
+    
+    paymentWebhook -->|Yes| capturePayment[Capture payment\n→ AT: Deposit Collected = Yes\n→ AT: Stripe Payment Reference]:::happy
+    capturePayment --> updateStage8[Update stage: 8_confirmed\n→ AT: Funnel Stage, Booking Status]:::sync
+    
+    updateStage8 --> checkLargeBooking{Total > €500 OR\nKitchen deposit?}:::decision
+    checkLargeBooking -->|Yes| doubleConfirm[Send double confirmation]:::happy
+    checkLargeBooking -->|No| sendConfirmation
+    doubleConfirm --> sendConfirmation
+    
+    sendConfirmation[Send confirmation email:\nSummary, T&C, Receipt, Balance due,\nFento deadline, Wine code, IBAN, WiFi]:::happy --> postCalendar[Post to Google Calendar]:::sync
+    
+    postCalendar --> askAttribution[Ask: How did you hear about Sauvage?]:::happy
+    askAttribution --> attributionWidget([Attribution Widget]):::widget
+    attributionWidget --> clientAttribution[Client selects source]:::happy
+    clientAttribution --> captureAttribution[Capture attribution\n→ AT: Referral Source, Attributed Host, Referred By]:::happy
+    captureAttribution --> silentEnd[No response to attribution - silence]:::happy
+    
+    silentEnd --> triggerNotifications[Trigger internal notifications]:::sync
+    
+    subgraph Airtable_Sync
+        direction TB
+        updateStage1
+        updateStage2
+        updateStage3
+        updateStage4
+        updateStage5
+        updateStage6
+        updateStage7
+        updateStage8
+        markAbandoned
+        markWaitlisted
+        flagGallery
+        postCalendar
+        triggerNotifications
     end
-
-    paymentConfirmed --> notifyAdmin
-    notifyAdmin --> notifySelection
-    notifySelection -->|Yes| alertSelection[Alert Selection Sauvage]:::sync
+    
+    triggerNotifications --> notifySelection{Cave booked OR\nwine requested?}:::decision
+    notifySelection -->|Yes| notifySelectionSauvage[Notify Selection Sauvage BV]:::sync
     notifySelection -->|No| notifyFento
-    alertSelection --> notifyFento
-    notifyFento -->|Yes| alertFento[Alert Fento BV]:::sync
-    notifyFento -->|No| notifyCake
-    alertFento --> notifyCake
-    notifyCake -->|Yes| alertCake[Alert Cake Sub-tenant]:::sync
-    notifyCake -->|No| notifyGallery
-    alertCake --> notifyGallery
-    notifyGallery -->|Yes| alertGallery[Alert Sauvage Gallery]:::sync
+    notifySelectionSauvage --> notifyFento
+    
+    notifyFento{Kitchen booked OR\nsnacks ordered?}:::decision -->|Yes| notifyFentoBV[Notify Fento BV + check cake calendar]:::sync
+    notifyFento -->|No| notifyGallery
+    notifyFentoBV --> notifyGallery
+    
+    notifyGallery{Upstairs booked OR\nwall use?}:::decision -->|Yes| notifySauvageGallery[Notify Sauvage Gallery]:::sync
     notifyGallery -->|No| notifyIkinari
-    alertGallery --> notifyIkinari
-    notifyIkinari -->|Yes| alertIkinari[Alert Ikinari Coffee]:::sync
-    notifyIkinari -->|No| postCalendar
-    alertIkinari --> postCalendar
+    notifySauvageGallery --> notifyIkinari
+    
+    notifyIkinari{Entrance booked\nWed-Sun before 15:00?}:::decision -->|Yes| notifyIkinariCoffee[Notify Ikinari Coffee]:::sync
+    notifyIkinari -->|No| notifyAdmin
+    notifyIkinariCoffee --> notifyAdmin
+    
+    notifyAdmin[Notify Sauvage Admin]:::sync --> scheduleReminder[Schedule 2hr pre-event reminder]:::sync
+    scheduleReminder --> scheduleFollowUp[Schedule post-event follow-up]:::sync
+    scheduleFollowUp --> bookingComplete([Booking Complete]):::happy
+    
+    %% Session timeout handling
+    awaitPayment -->|30min inactive| softNudge[Send: Still there?]:::happy
+    softNudge -->|30min more| saveAndClose[Save stage to Airtable\nClose session]:::sync
+    saveAndClose --> awaitPayment
+    
+    %% Error handling
+    clientFirstMsg -->|Unrecognizable x3| escalateHuman[Escalate to human:\nGreg +31 634 742 988]:::error
+    
+    %% Restart handling
+    clientFirstMsg -->|"start over"| resetSession[Reset session\nMark previous: abandoned\n→ AT: Funnel Stage]:::sync
+    resetSession --> askEventType
 
-    %% Airtable Sync Subgraph
-    subgraph Airtable_Sync[Airtable Sync]
-        syncEventType[Event Type]:::sync
-        syncDates[Requested Date, Time Slot, Duration]:::sync
-        syncContact[Client Name, Email, Phone]:::sync
-        syncCustomer[Customer Type]:::sync
-        syncGuests[Guest Count]:::sync
-        syncRooms[Rooms Requested]:::sync
-        syncAddons[Add-Ons]:::sync
-        syncQuote[Total Incl VAT, Total Ex VAT, VAT Amount]:::sync
-        syncPayment[Deposit Collected, Stripe Payment Reference]:::sync
-        syncAttribution[Referral Source, Attributed Host, Referred By]:::sync
-        syncStatus[Booking Status, Funnel Stage]:::sync
-        syncCommunity[Community Pricing]:::sync
-    end
-
-    %% Abandoned Flow
-    abandonedFollowup[Send Follow-up:\nStill thinking about booking?]:::happy
-    abandonedFollowup --> abandonedWait{Response within 48hr?}:::decision
-    abandonedWait -->|Yes| resumeFromDropoff[Resume from last stage]:::happy
-    resumeFromDropoff --> checkDates
-    abandonedWait -->|No| markAbandoned[Mark Abandoned\n→ AT: Funnel Stage = abandoned\nNotify attributed host if known]:::error
-
-    %% Session Timeout
-    sessionTimeout[30min Inactivity:\nSoft nudge - Still there?]:::happy
-    sessionTimeout --> nudgeResponse{Response?}:::decision
-    nudgeResponse -->|Yes| resumeConversation[Resume Normal Flow]:::happy
-    nudgeResponse -->|No - 30min more| saveAndClose[Save Stage to Airtable\nClose Session]:::sync
-    saveAndClose --> abandonedFollowup
-
-    %% Error Handling
-    unrecognizedInput[Unrecognized Input]:::error
-    unrecognizedInput --> errorCount{Error count?}:::decision
-    errorCount -->|1st| askRephrase[Ask: Could you rephrase?]:::happy
-    errorCount -->|2nd| tryDifferent[Ask: What are you looking to do?]:::happy
-    errorCount -->|3rd| humanHandoff[Handoff to Greg\n+31 634 742 988]:::error
-
-    askRephrase --> clientRetry[Client Retries]
-    tryDifferent --> clientRetry
-    clientRetry --> parseEventType
-
-    %% Restart Flow
-    clientRestart[Client types: start over / restart / reset]
-    clientRestart --> saveAbandoned[Save current session as abandoned\n→ AT: Funnel Stage = abandoned]:::sync
-    saveAbandoned --> resetFlow[Reset to Opening\nAsk: What kind of event?]:::happy
-    resetFlow --> clientEventType
-
-    %% Post-Booking Automations
-    bookingComplete --> reminder2hr[2hr Before Event:\nSend Reminder Email + WhatsApp]:::sync
-    reminder2hr --> postEventFollowup[30min After End:\nFeedback Request + Review Link + Discount Code]:::sync
-```
+    class start,autoGreeting,clientFirstMsg,captureEventType,askEventType,clientEventResponse,enableCommunity,askDateTime,clientDateResponse,askTime,clientTimeResponse,captureDateTimeAll,askDate,clientDateOnly,offerAlternatives,offerWaitlist,collectWaitlistInfo,askContact,clientContact,captureContact,gdprNotice,skipCustType,askCustType,clientCustType,captureCustType,askGuestCount,clientGuestCount,captureGuestCount,presentRooms,clientRoomResponse,captureRooms,defaultRooms,kitchenWarning,kitchenReminder,askWallUse,clientWallResponse,triggerAddons,clientAddons,captureAddons,defaultStaffHours,confirmSelfManaged,musicNote,calculateQuote,captureQuote,presentQuote,reviseQuote,confirmTandC,awaitPayment,capturePayment,doubleConfirm,sendConfirmation,askAttribution,clientAttribution,captureAttribution,silentEnd,softNudge,bookingComplete,endWaitlist happy
+    class parseEventType,checkCommunityCode,checkDateTime,checkCalendar,altResponse,waitlistResponse,checkCustType,validateGuests,parseRoomSelection,checkKitchenBooked,checkUpstairs,wallFlag,checkStaff,clientTandCResponse,paymentWebhook,awaitFollowUpResponse,checkLargeBooking,notifySelection,notifyFento,notifyGallery,notifyIkinari decision
+    class dateTimeWidget,contactWidget,custTypeWidget,addonsWidget,tandcWidget,attributionWidget widget
+    class rejectCapacity,askReviseCount,endNoBook,markAbandoned,endAbandoned,escalateHuman error
+    class updateStage1,updateStage2,updateStage3,updateStage4,updateStage5,updateStage6,updateStage7,updateStage8
     </div>
   </div>
 
@@ -306,7 +270,7 @@ flowchart TD
     <div class="l-item"><div class="l-dot" style="background:#1a1a1a;"></div>Terminal node</div>
   </div>
 
-  <div class="updated">Auto-generated 17 Apr 2026 15:34 · source: chatbot-prompt-v2.md</div>
+  <div class="updated">Auto-generated 18 Apr 2026 08:43 · source: chatbot-prompt-v2.md</div>
 
   <script>
     mermaid.initialize({ startOnLoad: true, theme: 'neutral', flowchart: { curve: 'basis', padding: 20 } });
