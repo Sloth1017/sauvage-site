@@ -1569,6 +1569,28 @@ def test_confirm(session_id):
     except Exception as e:
         print(f"[test-confirm] Confirmation email failed: {e}")
 
+    # Telegram notification — Greg, Dorian, Bart
+    try:
+        from telegram_notify import notify_booking_confirmed as _tg
+        from shopify_webhook import _GCAL_WRITE
+        rooms = state.get("rooms", [])
+        _tg(
+            client_name         = state.get("client_name", ""),
+            event_type          = state.get("event_type", ""),
+            event_date          = str(state.get("dates", "")),
+            start_time          = state.get("start_time", ""),
+            end_time            = state.get("end_time", ""),
+            guest_count         = state.get("guest_count", ""),
+            rooms               = rooms if isinstance(rooms, list) else [rooms],
+            deposit_amount      = "50.00",
+            order_number        = record_id or "—",
+            airtable_id         = record_id or "",
+            cal_link            = cal_link if _GCAL_WRITE else "",
+            quote_total_inc_vat = state.get("quote_total") or None,
+        )
+    except Exception as e:
+        print(f"[test-confirm] Telegram notification failed (non-fatal): {e}")
+
     return jsonify({
         "status":     "confirmed",
         "session_id": session_id,
