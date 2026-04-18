@@ -123,11 +123,20 @@ def send_booking_confirmation(
         BASE_URL, f"{event_type} at Sauvage", date_str, start_time, end_time,
         "Sauvage Space · Potgieterstraat 47H, Amsterdam"
     )
-    # Embed icons as base64 so they never break in email clients
+    # Embed icons as base64 so they never break in email clients.
+    # Try parent dir first (local dev: file lives in backend/, media is ../media/).
+    # Fall back to same dir (server: file deployed flat alongside media/).
     def _b64_icon(path):
         try:
-            with open(os.path.join(os.path.dirname(__file__), "..", path), "rb") as _f:
-                return "data:image/png;base64," + base64.b64encode(_f.read()).decode()
+            candidates = [
+                os.path.join(os.path.dirname(__file__), "..", path),
+                os.path.join(os.path.dirname(__file__), path),
+            ]
+            for p in candidates:
+                if os.path.exists(p):
+                    with open(p, "rb") as _f:
+                        return "data:image/png;base64," + base64.b64encode(_f.read()).decode()
+            return ""
         except Exception:
             return ""
     gcal_icon = _b64_icon("media/icon-google-calendar.png")
