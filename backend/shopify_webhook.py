@@ -29,6 +29,14 @@ SELECTION_SAUVAGE_WEBHOOK_SECRET = os.getenv("SELECTION_SAUVAGE_WEBHOOK_SECRET",
 # Set MAKE_WEBHOOK_URL in your .env to enable booking summary emails via Make.com
 MAKE_WEBHOOK_URL = os.getenv("MAKE_WEBHOOK_URL", "")
 
+# ── Telegram notifications ────────────────────────────────────────────────────
+try:
+    from telegram_notify import notify_booking_confirmed as _tg_notify
+    _TG_ENABLED = True
+except Exception as _tg_err:
+    _TG_ENABLED = False
+    print(f"[Telegram] Not available: {_tg_err}")
+
 def _notify_make(payload: dict) -> None:
     """POST booking summary to Make.com webhook — non-blocking, errors are logged not raised."""
     if not MAKE_WEBHOOK_URL:
@@ -319,6 +327,25 @@ def handle_webhook():
             except Exception as e:
                 print(f"[Webhook] Calendar write error: {e}")
                 # Non-fatal — booking is still confirmed in Airtable
+
+        # 5. Telegram notification — Greg, Dorian, Bart
+        if _TG_ENABLED:
+            try:
+                _tg_notify(
+                    client_name    = details["client_name"],
+                    event_type     = details["event_type"],
+                    event_date     = details.get("event_date", ""),
+                    start_time     = details["start_dt"],
+                    end_time       = details["end_dt"],
+                    guest_count    = details["guest_count"],
+                    rooms          = details["rooms"],
+                    deposit_amount = amount_total,
+                    order_number   = order_number,
+                    airtable_id    = record_id,
+                    cal_link       = cal_link if _GCAL_WRITE else "",
+                )
+            except Exception as e:
+                print(f"[Webhook] Telegram notification failed (non-fatal): {e}")
 
     # ── Order cancelled ───────────────────────────────────────────────────────
     elif topic == "orders/cancelled":
