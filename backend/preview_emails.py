@@ -55,11 +55,30 @@ import event_emails as ee
 import confirmation_email as ce
 _repo  = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 _media = os.path.join(_repo, "media")
-_logo  = os.path.join(_media, "sauvage-logo.png")
-ee.LOGO_URL = f"file://{_logo}"
-ce.LOGO_URL = f"file://{_logo}"
+
+def _b64(path):
+    import base64, mimetypes
+    mime = mimetypes.guess_type(path)[0] or "image/png"
+    with open(path, "rb") as f:
+        return f"data:{mime};base64,{base64.b64encode(f.read()).decode()}"
+
+_logo_b64  = _b64(os.path.join(_media, "sauvage-logo.png"))
+_gcal_b64  = _b64(os.path.join(_media, "icon-google-calendar.png"))
+_ical_b64  = _b64(os.path.join(_media, "icon-apple-calendar.png"))
+
+ee.LOGO_URL = _logo_b64
+ce.LOGO_URL = _logo_b64
 ee.BASE_URL = f"file://{_repo}"
 ce.BASE_URL = f"file://{_repo}"
+
+# Patch calendar icon URLs directly so _calendar_widget uses embedded images
+_orig_cal = ee._calendar_widget
+def _patched_cal(title, date_str, start_time, end_time, description=""):
+    result = _orig_cal(title, date_str, start_time, end_time, description)
+    result = result.replace(f"file://{_repo}/media/icon-google-calendar.png", _gcal_b64)
+    result = result.replace(f"file://{_repo}/media/icon-apple-calendar.png", _ical_b64)
+    return result
+ee._calendar_widget = _patched_cal
 
 # Force SMTP creds so the functions don't bail early
 ce.SMTP_USER     = "preview"
@@ -71,7 +90,13 @@ ee.SMTP_PASSWORD = "preview"
 def _capture(fn, *args, **kwargs):
     _captured.clear()
     fn(*args, **kwargs)
-    return next(iter(_captured.values()), None)
+    html = next(iter(_captured.values()), None)
+    if html:
+        # Replace any remaining file:// icon URLs with embedded base64
+        html = html.replace(f"file://{_repo}/media/icon-google-calendar.png", _gcal_b64)
+        html = html.replace(f"file://{_repo}/media/icon-apple-calendar.png",  _ical_b64)
+        html = html.replace(f"file://{_repo}/media/sauvage-logo.png",         _logo_b64)
+    return html
 
 emails = {
     "1_confirmation.html": lambda: _capture(
