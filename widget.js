@@ -1601,7 +1601,7 @@
 
     // Instant local handoff — triggered by button or by user expressing intent
     if (text === "\uD83D\uDE4B Talk to someone" || wantsHuman(text)) {
-      addMessage(text, "user");
+      addMessage(text.replace(/\s*\[(type|at|ref|contact):[^\]]*\]/g, "").trim(), "user");
       addMessage("Of course! Greg from the Sauvage team can help you directly.\n\n\ud83d\udcde +31 634 742 988\n\ud83d\udcac WhatsApp: https://wa.me/31634742988\n\nJust mention what you're looking for and he'll get back to you quickly \ud83d\udc4b", "bot");
       return;
     }
@@ -1614,7 +1614,9 @@
     input.style.height = "auto";
     btn.disabled = true;
 
-    addMessage(text, "user");
+    // Strip backend sync tags before displaying — they're never meant to be shown
+    var displayText = text.replace(/\s*\[(type|at|ref|contact):[^\]]*\]/g, "").trim();
+    addMessage(displayText, "user");
     showTyping();
 
     // Dismiss any open interactive widgets before the API round-trip
