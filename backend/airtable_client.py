@@ -488,13 +488,13 @@ def submit_feedback(booking_record_id: str, client_name: str, event_type: str,
     Returns the new Feedback record ID.
     """
     table = _get_table("Feedback")
+    date_str = _now_iso()[:10]
     fields = {
-        "Client Name":  client_name,
-        "Event Type":   event_type,
+        "Name":         f"{client_name} — {date_str}",
         "Submitted At": _now_iso(),
     }
     if booking_record_id:
-        fields["Booking"] = [booking_record_id]
+        fields["Bookings"] = [booking_record_id]
     if rating:
         try:
             fields["Rating"] = int(rating)
@@ -503,7 +503,7 @@ def submit_feedback(booking_record_id: str, client_name: str, event_type: str,
     if highlight:
         fields["Highlight"] = highlight
     if improve:
-        fields["Improve"] = improve
+        fields["Improvement"] = improve
     if comment:
         fields["Comment"] = comment
     record = table.create(fields)
