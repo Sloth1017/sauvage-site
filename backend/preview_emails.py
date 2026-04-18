@@ -58,7 +58,8 @@ _media = os.path.join(_repo, "media")
 _logo  = os.path.join(_media, "sauvage-logo.png")
 ee.LOGO_URL = f"file://{_logo}"
 ce.LOGO_URL = f"file://{_logo}"
-ee.BASE_URL = f"file://{_repo}"   # so BASE_URL/media/icon-*.png resolves correctly
+ee.BASE_URL = f"file://{_repo}"
+ce.BASE_URL = f"file://{_repo}"
 
 # Force SMTP creds so the functions don't bail early
 ce.SMTP_USER     = "preview"

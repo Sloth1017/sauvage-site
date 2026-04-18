@@ -58,9 +58,12 @@ def _fmt_rooms(rooms) -> str:
     return str(rooms or "TBC")
 
 def _fmt_date(dates) -> str:
-    if isinstance(dates, list):
-        return dates[0] if dates else "TBC"
-    return str(dates or "TBC")
+    from datetime import datetime as _dt
+    raw = dates[0] if isinstance(dates, list) else str(dates or "TBC")
+    try:
+        return _dt.strptime(raw.strip(), "%Y-%m-%d").strftime("%A %-d %B %Y")
+    except ValueError:
+        return raw
 
 
 def send_booking_confirmation(
