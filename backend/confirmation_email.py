@@ -132,6 +132,7 @@ def send_booking_confirmation(
             return ""
     gcal_icon = _b64_icon("media/icon-google-calendar.png")
     ical_icon = _b64_icon("media/icon-apple-calendar.png")
+    logo_b64  = _b64_icon("media/sauvage-logo.png")
     cal_widget = (
         f'<p style="margin:8px 0 0;font-size:0;line-height:0;">'
         f'<a href="{gcal_url}" style="display:inline-block;vertical-align:middle;margin-right:8px;text-decoration:none;">'
@@ -191,7 +192,7 @@ def send_booking_confirmation(
 
     subject = f"Your Sauvage Space booking is confirmed"
 
-    logo_url = f"{BASE_URL}/media/sauvage-logo.png"
+    logo_url = logo_b64 or f"{BASE_URL}/media/sauvage-logo.png"
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
