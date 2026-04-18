@@ -262,16 +262,20 @@ def send_booking_confirmation(
 
           {inv_html}
 
-          <!-- Website link -->
+          <!-- Website link + T&C -->
           <tr>
             <td style="padding:0 40px 32px;">
               <hr style="border:none;border-top:1px solid #e8e4de;margin:0 0 24px;">
-              <p style="margin:0;font-size:14px;line-height:1.7;color:#666;">
+              <p style="margin:0 0 14px;font-size:14px;line-height:1.7;color:#666;">
                 Everything you need to know about the space is at
                 <a href="https://sauvage.amsterdam" style="color:#1a1a1a;font-weight:600;text-decoration:underline;">sauvage.amsterdam</a>.
                 Questions before your event? Reach Greg directly:
                 <a href="https://wa.me/31634742988" style="color:#1a1a1a;font-weight:600;text-decoration:underline;">WhatsApp</a>
                 or <a href="tel:+31634742988" style="color:#1a1a1a;text-decoration:underline;">+31 634 742 988</a>.
+              </p>
+              <p style="margin:0;font-size:12px;line-height:1.6;color:#999;">
+                By completing this booking you agreed to our
+                <a href="https://sauvage.amsterdam/terms" style="color:#666;text-decoration:underline;">Terms &amp; Conditions</a>.
               </p>
             </td>
           </tr>
@@ -329,6 +333,8 @@ Let us know when you're planning to arrive for setup:
 
 Everything you need: https://sauvage.amsterdam
 Questions? WhatsApp Greg: https://wa.me/31634742988 / +31 634 742 988
+
+Terms & Conditions: https://sauvage.amsterdam/terms
 
 Sauvage · Potgieterstraat 47H · Amsterdam
 """
