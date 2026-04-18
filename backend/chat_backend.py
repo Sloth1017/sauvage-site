@@ -703,10 +703,19 @@ def _determine_widget(state: dict, bot_text: str, sent_widgets: list) -> Optiona
             "what's your name", "your name?", "best email",
             "reach you on", "how can we reach",
             "name and contact", "contact details",
+            "your name", "get your name", "grab your name",
+            "full name", "first name", "contact info", "get in touch",
+            "your email", "email address", "whatsapp number",
+            "before we", "before moving", "quick thing",
+            "one thing", "just need your", "need a few details",
         ]
         if any(tr in t for tr in contact_triggers):
             return _once("contact")
-        if "name" in t and any(w in t for w in ["email", "phone", "reach", "whatsapp"]):
+        if "name" in t and any(w in t for w in ["email", "phone", "reach", "whatsapp", "contact"]):
+            return _once("contact")
+        # Proactive: dates + guest count known but no contact yet → fire widget once
+        if (state.get("dates") and state.get("guest_count")
+                and not state.get("client_name") and "contact" not in sent_widgets):
             return _once("contact")
 
     # Customer type — only if still unknown
