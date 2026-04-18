@@ -105,20 +105,31 @@ def _api(method: str, path: str, body: Optional[dict] = None) -> dict:
 
 _ROOM_ALIASES: dict[str, str] = {
     # canonical keys used internally
-    "gallery":           "gallery",
-    "entrance":          "entrance",
-    "kitchen":           "kitchen",
-    "cave":              "cave",
+    "gallery":                    "gallery",
+    "entrance":                   "entrance",
+    "kitchen":                    "kitchen_full",   # legacy → full stove
+    "kitchen_full":               "kitchen_full",
+    "kitchen (full stove)":       "kitchen_full",
+    "kitchen full stove":         "kitchen_full",
+    "kitchen full":               "kitchen_full",
+    "kitchen_basic":              "kitchen_basic",
+    "kitchen (basic)":            "kitchen_basic",
+    "kitchen (basic / no appliances)": "kitchen_basic",
+    "kitchen basic":              "kitchen_basic",
+    "kitchen (no stove)":         "kitchen_basic",
+    "kitchen no stove":           "kitchen_basic",
+    "cave":                       "cave",
+    "wine cave":                  "cave",
     # display names from session state / Airtable
-    "upstairs (gallery)": "gallery",
-    "gallery (upstairs)": "gallery",
-    "upstairs":           "gallery",
-    "upstairs gallery":   "gallery",
-    "gallery upstairs":   "gallery",
-    "upstairs — gallery": "gallery",   # em-dash variant
-    "upstairs - gallery": "gallery",   # hyphen variant
-    "gallery — upstairs": "gallery",
-    "gallery - upstairs": "gallery",
+    "upstairs (gallery)":         "gallery",
+    "gallery (upstairs)":         "gallery",
+    "upstairs":                   "gallery",
+    "upstairs gallery":           "gallery",
+    "gallery upstairs":           "gallery",
+    "upstairs — gallery":         "gallery",   # em-dash variant
+    "upstairs - gallery":         "gallery",   # hyphen variant
+    "gallery — upstairs":         "gallery",
+    "gallery - upstairs":         "gallery",
 }
 
 def _norm_room(r: str) -> str:
@@ -136,17 +147,18 @@ def _build_title(rooms: list[str], client_name: str, event_type: str) -> str:
          "EVENT FULL SPACE- Ahmed (Corporate)"
     """
     room_labels = {
-        "gallery":  "GALLERY",
-        "entrance": "ENTRANCE",
-        "kitchen":  "KITCHEN",
-        "cave":     "CAVE",
+        "gallery":       "GALLERY",
+        "entrance":      "ENTRANCE",
+        "kitchen_full":  "KITCHEN",
+        "kitchen_basic": "KITCHEN-BASIC",
+        "cave":          "CAVE",
     }
     keys = [_norm_room(r) for r in rooms]
     keys = [k for k in keys if k]  # drop unrecognised
 
     room_parts = [room_labels[k] for k in keys if k in room_labels]
 
-    if set(keys) >= {"gallery", "entrance", "kitchen", "cave"}:
+    if set(keys) >= {"gallery", "entrance", "kitchen_full", "cave"}:
         prefix = "FULL SPACE"
     elif len(room_parts) > 1:
         prefix = "+".join(room_parts)
@@ -346,9 +358,9 @@ def find_events_by_name(name: str, days_ahead: int = 180) -> list[dict]:
 def _room_color(rooms: list[str]) -> str:
     """Google Calendar color IDs by room combo (accepts any room name variant)."""
     keys = {_norm_room(r) for r in rooms}
-    if keys >= {"gallery", "entrance", "kitchen", "cave"}:
+    if keys >= {"gallery", "entrance", "kitchen_full", "cave"}:
         return "11"   # Tomato — full space
-    if "kitchen" in keys:
+    if "kitchen_full" in keys or "kitchen_basic" in keys:
         return "6"    # Tangerine
     if "cave" in keys:
         return "3"    # Grape

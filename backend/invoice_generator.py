@@ -52,36 +52,54 @@ C_WHITE = colors.white
 
 # ── Pricing tables (all incl 21% VAT) ─────────────────────────────────────────
 _ROOM_ALIASES = {
-    "gallery":            "gallery",
-    "upstairs":           "gallery",
-    "upstairs (gallery)": "gallery",
-    "gallery (upstairs)": "gallery",
-    "upstairs — gallery": "gallery",
-    "upstairs - gallery": "gallery",
-    "gallery — upstairs": "gallery",
-    "entrance":           "entrance",
-    "kitchen":            "kitchen",
-    "cave":               "cave",
+    "gallery":                "gallery",
+    "upstairs":               "gallery",
+    "upstairs (gallery)":     "gallery",
+    "gallery (upstairs)":     "gallery",
+    "upstairs — gallery":     "gallery",
+    "upstairs - gallery":     "gallery",
+    "gallery — upstairs":     "gallery",
+    "entrance":               "entrance",
+    # Kitchen tiers
+    "kitchen":                "kitchen_full",   # legacy → full stove
+    "kitchen_full":           "kitchen_full",
+    "kitchen (full stove)":   "kitchen_full",
+    "kitchen full stove":     "kitchen_full",
+    "kitchen full":           "kitchen_full",
+    "kitchen_basic":          "kitchen_basic",
+    "kitchen (basic)":        "kitchen_basic",
+    "kitchen basic":          "kitchen_basic",
+    "kitchen (no stove)":     "kitchen_basic",
+    "kitchen no stove":       "kitchen_basic",
+    # Cave
+    "cave":                   "cave",
+    "wine cave":              "cave",
 }
 
 _ROOM_LABELS = {
-    "gallery":  "Upstairs (Gallery)",
-    "entrance": "Entrance",
-    "kitchen":  "Kitchen",
-    "cave":     "Cave",
+    "gallery":       "Upstairs (Gallery)",
+    "entrance":      "Entrance",
+    "kitchen_full":  "Kitchen (Full Stove)",
+    "kitchen_basic": "Kitchen (Basic / No Appliances)",
+    "cave":          "Cave",
 }
 
 _ROOM_RATES = {
     # key: (hourly, half_day, full_day)   — all incl VAT
-    "gallery":  (25,  70,  140),
-    "entrance": (56,  130, 250),
-    "kitchen":  (120, 300, 500),
-    "cave":     (55,  100, 175),
+    "gallery":       (25,  70,  140),
+    "entrance":      (56,  130, 250),
+    "kitchen_full":  (83,  333, 500),   # full stove use
+    "kitchen_basic": (33,  133, 200),   # no dishwasher / no stove
+    "cave":          (35,  100, 175),   # host-accompanied only
 }
 
 _BUNDLE_DISCOUNTS = {1: 0.0, 2: 0.20, 3: 0.40, 4: 0.50}
 
-_CLOSURE_FEES = {"entrance": 200, "kitchen": 100}  # full-day only, incl VAT
+_CLOSURE_FEES = {
+    "entrance":      200,   # full-day only, incl VAT
+    "kitchen_full":  100,   # full-day only, incl VAT
+    "kitchen_basic": 100,   # full-day only, incl VAT
+}
 
 # Add-on prices incl VAT; "pp" = per person, "hr" = per hour, "flat" = fixed
 _ADDON_RATES = {
@@ -439,78 +457,83 @@ def _render_pdf(
         return y
 
     # ── PAGE ───────────────────────────────────────────────────────────────────
-    y = H - 50
+    y = H - 52
 
-    # Logo (top-right)
-    logo_sz = 54
+    # ── HEADER BAND: logo (right) + title (left) ───────────────────────────────
+    logo_sz = 60
     try:
         from reportlab.lib.utils import ImageReader
         logo_img = ImageReader(_LOGO_PATH)
-        c.drawImage(logo_img, R - logo_sz, y - logo_sz + 14,
+        c.drawImage(logo_img, R - logo_sz, y - logo_sz + 16,
                     width=logo_sz, height=logo_sz, mask="auto")
     except Exception:
         pass  # logo not critical
 
-    # Title
-    c.setFillColor(C_BLACK); c.setFont("Times-Bold", 32)
+    c.setFillColor(C_BLACK); c.setFont("Times-Bold", 36)
     c.drawString(L, y, doc_title)
 
-    # Status badge (below title)
-    bw, bh = (200, 22) if is_quote else (150, 22)
-    bx = L
-    by = y - 30
+    # Status badge — sits 10pt below the title baseline
+    bw, bh = (210, 20) if is_quote else (160, 20)
+    by = y - 38
     c.setStrokeColor(C_GOLD if badge_gold else C_LGRAY)
-    c.setLineWidth(1.2 if badge_gold else 0.8)
-    c.rect(bx, by - 4, bw, bh, stroke=1, fill=0)
+    c.setLineWidth(1.4 if badge_gold else 0.8)
+    c.rect(L, by, bw, bh, stroke=1, fill=0)
     c.setFillColor(C_GOLD if badge_gold else C_GRAY)
-    c.setFont("Helvetica-Bold", 7.5)
-    c.drawCentredString(bx + bw / 2, by + 5, badge_text)
+    c.setFont("Helvetica-Bold", 7)
+    c.drawCentredString(L + bw / 2, by + 6, badge_text)
 
-    y -= 52
+    y -= 72   # clear title + badge + gap before company block
 
-    # Company block (left) + meta block (right) — drawn row by row together
-    mx_l = R - 145; mx_r = R
+    # ── COMPANY / META two-column block ───────────────────────────────────────
+    mx_l = R - 150; mx_r = R
+    ROW = 16   # line height for company block rows
     if invoice_number:
         txt(COMPANY_NAME, L, y, bold=True)
         txt("Invoice", mx_l, y, size=9, color=C_GRAY)
         txt(invoice_number, mx_r, y, size=9, bold=True, right=True)
-        y -= 14
+        y -= ROW
         txt(COMPANY_ADDR, L, y, size=9, color=C_GRAY)
         txt("Issued", mx_l, y, size=9, color=C_GRAY)
         txt(issued_date.strftime("%-d %B %Y"), mx_r, y, size=9, bold=True, right=True)
-        y -= 14
+        y -= ROW
         txt(f"{COMPANY_KVK} · {COMPANY_BTW}", L, y, size=9, color=C_GRAY)
         txt("Due date", mx_l, y, size=9, color=C_GRAY)
         txt(due_date.strftime("%-d %B %Y"), mx_r, y, size=9, bold=True, right=True)
     else:
-        txt(COMPANY_NAME, L, y, bold=True)        # Row 1: company name (bold)
+        txt(COMPANY_NAME, L, y, bold=True)
         txt("Prepared", mx_l, y, size=9, color=C_GRAY)
         txt(issued_date.strftime("%-d %B %Y"), mx_r, y, size=9, bold=True, right=True)
-        y -= 14                                    # Row 2: address
+        y -= ROW
         txt(COMPANY_ADDR, L, y, size=9, color=C_GRAY)
         txt("Valid for", mx_l, y, size=9, color=C_GRAY)
         txt("7 days", mx_r, y, size=9, bold=True, right=True)
-        y -= 14                                    # Row 3: KvK / BTW
+        y -= ROW
         txt(f"{COMPANY_KVK} · {COMPANY_BTW}", L, y, size=9, color=C_GRAY)
-    y -= 14
+    y -= ROW
     txt(f"IBAN: {COMPANY_IBAN}", L, y, size=9, color=C_GRAY)
+    y -= 10
+    rule(y, clr=C_LGRAY, t=0.4)
     y -= 28
 
-    # Bill-to box
-    bx_h = 52
+    # ── BILL TO box ────────────────────────────────────────────────────────────
+    bill_rows  = 2 if email else 1          # name + optional email
+    bx_h       = 28 + bill_rows * 18 + 16  # top pad + rows + bottom pad
+    box_top    = y + 8
+    box_bottom = box_top - bx_h
     c.setFillColor(C_BG); c.setStrokeColor(colors.HexColor("#e8e4de")); c.setLineWidth(0.5)
-    c.rect(L, y - bx_h + 14, CW, bx_h, stroke=1, fill=1)
-    c.setFillColor(colors.HexColor("#c8c4bc")); c.rect(L, y - bx_h + 14, 3, bx_h, stroke=0, fill=1)
-    lbl("BILL TO", L + 10, y + 4)
-    y -= 14
-    txt(client, L + 10, y, size=11, bold=True)
-    if email:
-        y -= 14; txt(email, L + 10, y, size=9, color=C_GRAY)
-    y -= 28
+    c.rect(L, box_bottom, CW, bx_h, stroke=1, fill=1)
+    c.setFillColor(colors.HexColor("#c8c4bc")); c.rect(L, box_bottom, 3, bx_h, stroke=0, fill=1)
 
-    # Description
-    lbl("DESCRIPTION", L, y)
-    y -= 4; rule(y); y -= 16
+    lbl("BILL TO", L + 12, y + 4)
+    y -= 18
+    txt(client, L + 12, y, size=11, bold=True)
+    if email:
+        y -= 17
+        txt(email, L + 12, y, size=9, color=C_GRAY)
+    y -= 32
+
+    # ── DESCRIPTION ────────────────────────────────────────────────────────────
+    lbl("DESCRIPTION", L, y); y -= 6; rule(y); y -= 14
     desc_text = (
         f"{evt} at Sauvage Space"
         + (f" · {date_s}" if date_s else "")
@@ -518,18 +541,18 @@ def _render_pdf(
         + f"  Invoiced by {COMPANY_NAME} on behalf of Sauvage DAO."
     )
     c.setFillColor(C_BLACK); sf(10)
-    y = wrap_text(desc_text, L, y, CW, size=10, line_h=15)
-    y -= 14
+    y = wrap_text(desc_text, L, y, CW, size=10, line_h=16)
+    y -= 20
 
     # ── LINE ITEMS table ───────────────────────────────────────────────────────
-    lbl("LINE ITEMS", L, y); y -= 4; rule(y); y -= 4
+    lbl("LINE ITEMS", L, y); y -= 6; rule(y); y -= 6
 
     # Column widths (sum = CW)
     raw_widths = [185, 38, 70, 34, 63, 56, 70]
     scale = CW / sum(raw_widths)
     cw = [w * scale for w in raw_widths]
     hdrs = ["DESCRIPTION", "QTY", "UNIT INCL", "VAT", "LINE EX VAT", "VAT AMT", "LINE INCL"]
-    HDR_H = 20
+    HDR_H = 22
 
     def draw_row_bg(row_y, row_h, bg):
         c.setFillColor(bg); c.setStrokeColor(colors.HexColor("#e8e4de")); c.setLineWidth(0.3)
@@ -537,48 +560,50 @@ def _render_pdf(
 
     def draw_cells(cols, row_y, row_h, bold=False, size=8.5, italic=False):
         xs = L
+        text_y = row_y - (row_h / 2) - 3   # vertically centred
         for i, (val, w) in enumerate(zip(cols, cw)):
             c.setFillColor(C_BLACK); sf(size, bold)
             if italic:
                 c.setFont("Helvetica-Oblique", size)
             if i == 0:
-                c.drawString(xs + 4, row_y - row_h + 7, str(val))
+                c.drawString(xs + 5, text_y, str(val))
             else:
-                c.drawRightString(xs + w - 3, row_y - row_h + 7, str(val))
+                c.drawRightString(xs + w - 4, text_y, str(val))
             xs += w
 
     # Header row
-    draw_row_bg(y, HDR_H, C_BG)
+    draw_row_bg(y, HDR_H, colors.HexColor("#e8e4de"))
     draw_cells(hdrs, y, HDR_H, bold=True, size=7.5)
     y -= HDR_H
 
-    for item in line_items:
+    for idx, item in enumerate(line_items):
         is_disc = item.get("is_discount")
         desc = item["description"]
         # Measure wrapped description height
-        sf(8.5)
+        sf(9)
         words = desc.split(); buf3 = []; dlines = []
         for w in words:
             test = " ".join(buf3 + [w])
-            if c.stringWidth(test, "Helvetica", 8.5) > cw[0] - 10 and buf3:
+            if c.stringWidth(test, "Helvetica", 9) > cw[0] - 12 and buf3:
                 dlines.append(" ".join(buf3)); buf3 = [w]
             else:
                 buf3.append(w)
         if buf3: dlines.append(" ".join(buf3))
-        row_h = max(18, len(dlines) * 12 + 8)
+        row_h = max(24, len(dlines) * 13 + 10)
 
-        bg = C_BG if y % 36 < 18 else C_WHITE  # alternate shading
+        bg = C_WHITE if idx % 2 == 0 else C_BG
         draw_row_bg(y, row_h, bg)
 
-        # Description (multi-line)
-        c.setFillColor(C_GRAY if is_disc else C_BLACK); sf(8.5)
-        dy = y - 7
+        # Description (multi-line), vertically centred
+        c.setFillColor(C_GRAY if is_disc else C_BLACK); sf(9)
+        total_text_h = len(dlines) * 13
+        dy = y - (row_h - total_text_h) / 2 - 10
         for dl in dlines:
-            c.drawString(L + 4, dy, dl); dy -= 12
+            c.drawString(L + 5, dy, dl); dy -= 13
 
-        # Numeric columns
+        # Numeric columns (vertically centred)
+        num_y = y - row_h / 2 - 3
         if is_disc:
-            # Discount: show only line incl (negative)
             vals = ["", "", "", "", "", _money(item["total_incl"])]
         else:
             qty_s   = f"{int(item['qty'])}" if item["qty"] == int(item["qty"]) else f"{item['qty']:.1f}"
@@ -595,28 +620,28 @@ def _render_pdf(
         xs = L + cw[0]
         for i, (val, w) in enumerate(zip(vals, cw[1:])):
             c.setFillColor(C_GRAY if is_disc else C_BLACK)
-            sf(8.5, bold=(i == 5 and not is_disc))
-            c.drawRightString(xs + w - 3, y - row_h + 7, val)
+            sf(9, bold=(i == 5 and not is_disc))
+            c.drawRightString(xs + w - 4, num_y, val)
             xs += w
         y -= row_h
 
-    y -= 8
+    y -= 14
 
     # ── TOTALS ─────────────────────────────────────────────────────────────────
-    tx = R - 165; vx = R
+    tx = R - 175; vx = R
 
     def tot_line(lbl_t, val_t, bold=False, italic=False, top_rule=False, color=C_BLACK):
         nonlocal y
         if top_rule:
             c.setStrokeColor(C_LGRAY); c.setLineWidth(0.5)
-            c.line(tx - 10, y + 12, R, y + 12)
+            c.line(tx - 10, y + 14, R, y + 14)
         c.setFillColor(C_GRAY if not bold else color)
         if italic: c.setFont("Helvetica-Oblique", 9)
         else: sf(9, bold)
         c.drawString(tx, y, lbl_t)
         c.setFillColor(color); sf(9, bold)
         c.drawRightString(vx, y, val_t)
-        y -= 14
+        y -= 17
 
     tot_line("Space rental ex VAT", _money(totals["total_ex"]))
     tot_line("VAT (21%)", _money(totals["total_vat"]))
@@ -626,16 +651,17 @@ def _render_pdf(
         tot_line("Deposit paid", f"- {_money(deposit_paid)}")
         balance = totals["total_due"] - deposit_paid
         tot_line("Total incl VAT", _money(totals["total_inc"]), top_rule=True)
-        tot_line("Balance due", _money(balance), bold=True)
+        tot_line("Balance due", _money(balance), bold=True, color=C_BLACK)
     else:
         tot_line("Total incl VAT", _money(totals["total_inc"]), top_rule=True)
-        tot_line("Total due", _money(totals["total_due"]), bold=True)
+        tot_line("Total due", _money(totals["total_due"]), bold=True, color=C_BLACK)
 
-    y -= 16
+    y -= 24
 
     if invoice_number:
         # ── PAYMENT DETAILS ────────────────────────────────────────────────────
-        lbl("PAYMENT DETAILS", L, y); y -= 4; rule(y); y -= 18
+        lbl("PAYMENT DETAILS", L, y); y -= 6; rule(y); y -= 18
+        col2 = L + 130
         for plbl, pval in [
             ("IBAN",         COMPANY_IBAN),
             ("BIC",          COMPANY_BIC),
@@ -644,9 +670,9 @@ def _render_pdf(
             ("DUE DATE",     due_date.strftime("%-d %B %Y")),
         ]:
             txt(plbl, L, y, size=8, color=C_GRAY)
-            txt(pval, L + 122, y, size=9, bold=True)
-            y -= 16
-        y -= 8
+            txt(pval, col2, y, size=9, bold=True)
+            y -= 17
+        y -= 12
 
     # ── Notes box ─────────────────────────────────────────────────────────────
     notes = []
@@ -662,28 +688,27 @@ def _render_pdf(
         )
         notes.append("VAT treatment: space rental subject to 21% BTW. Refundable deposits exempt.")
 
-    # Measure
     sf(9)
     note_lines = []
     for note in notes:
         ws = note.split(); lb = []
         for w in ws:
             t = " ".join(lb + [w])
-            if c.stringWidth(t, "Helvetica", 9) > CW - 30 and lb:
+            if c.stringWidth(t, "Helvetica", 9) > CW - 36 and lb:
                 note_lines.append(" ".join(lb)); lb = [w]
             else:
                 lb.append(w)
         if lb: note_lines.append(" ".join(lb))
         note_lines.append("")
-    bh2 = len(note_lines) * 13 + 18
+    bh2 = len(note_lines) * 14 + 24
     c.setFillColor(C_NOTE); c.setStrokeColor(colors.HexColor("#e8e4de")); c.setLineWidth(0.5)
-    c.rect(L, y - bh2 + 10, CW, bh2, stroke=1, fill=1)
-    ny = y - 2
-    txt("Notes:", L + 10, ny, size=9, bold=True); ny -= 13
+    c.rect(L, y - bh2 + 12, CW, bh2, stroke=1, fill=1)
+    ny = y
+    txt("Notes:", L + 12, ny, size=9, bold=True); ny -= 15
     sf(9); c.setFillColor(C_BLACK)
     for nl in note_lines:
-        if nl: c.drawString(L + 10, ny, nl)
-        ny -= 13
+        if nl: c.drawString(L + 12, ny, nl)
+        ny -= 14
 
     # ── Footer ─────────────────────────────────────────────────────────────────
     rule(58)

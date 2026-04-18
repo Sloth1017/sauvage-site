@@ -460,15 +460,24 @@ def _sync_airtable(session_id: str, state: dict, meta: dict) -> None:
 
     # Room name normalisation — map LLM shorthand → exact Airtable select options
     _ROOM_MAP = {
-        "upstairs":           "Upstairs (Gallery)",
-        "gallery":            "Upstairs (Gallery)",
-        "upstairs (gallery)": "Upstairs (Gallery)",
-        "entrance":           "Entrance",
-        "front":              "Entrance",
-        "bar":                "Entrance",
-        "kitchen":            "Kitchen",
-        "cave":               "Cave",
-        "wine cave":          "Cave",
+        "upstairs":                   "Upstairs (Gallery)",
+        "gallery":                    "Upstairs (Gallery)",
+        "upstairs (gallery)":         "Upstairs (Gallery)",
+        "entrance":                   "Entrance",
+        "front":                      "Entrance",
+        "bar":                        "Entrance",
+        "kitchen":                    "Kitchen (Full Stove)",
+        "kitchen_full":               "Kitchen (Full Stove)",
+        "kitchen (full stove)":       "Kitchen (Full Stove)",
+        "kitchen full stove":         "Kitchen (Full Stove)",
+        "kitchen full":               "Kitchen (Full Stove)",
+        "kitchen_basic":              "Kitchen (Basic / No Appliances)",
+        "kitchen (basic)":            "Kitchen (Basic / No Appliances)",
+        "kitchen basic":              "Kitchen (Basic / No Appliances)",
+        "kitchen (no stove)":         "Kitchen (Basic / No Appliances)",
+        "kitchen no stove":           "Kitchen (Basic / No Appliances)",
+        "cave":                       "Cave",
+        "wine cave":                  "Cave",
     }
 
     def _normalise_rooms(raw) -> list:
@@ -661,30 +670,6 @@ def _inject_checkout_url(session_id: str, state: dict, meta: dict, bot_response:
 
     return bot_response
 
-# ── Wine tracking URL block ───────────────────────────────────────────────────
-
-_BASE_URL = os.getenv("BASE_URL", "https://sauvage.amsterdam")
-
-def _wine_context_block(state: dict, meta: dict, session_id: str) -> str:
-    """Build a context block with a pre-personalised wine tracking URL."""
-    from urllib.parse import urlencode
-    params = urlencode({
-        "booking": meta.get("record_id") or session_id,
-        "name":    state.get("client_name", ""),
-        "email":   state.get("email", ""),
-        "event":   state.get("event_type", ""),
-        "ref":     "chatbot",
-    })
-    wine_url = f"{_BASE_URL}/wines?{params}"
-    return (
-        f"\n\n## WINE PRE-ORDER LINK\n"
-        f"URL: {wine_url}\n"
-        f"Use this URL exactly once — at the very end of the quote message, after the deposit link.\n"
-        f"Format: *Want to pre-order natural wines for your event? [Order wines here]({wine_url}) — use code IN-HOUSE at checkout.*\n"
-        f"Only include this line in the quote message. Do not mention it at any other point.\n"
-    )
-
-
 # ── Widget hint ───────────────────────────────────────────────────────────────
 
 def _determine_widget(state: dict, bot_text: str, sent_widgets: list) -> Optional[str]:
@@ -697,6 +682,28 @@ def _determine_widget(state: dict, bot_text: str, sent_widgets: list) -> Optiona
     Each one-shot widget (addons, contact, customer_type, attribution, tandc) fires at most once.
     """
     t = bot_text.lower()
+
+    def _once(key: str) -> Optional[str]:
+        """Return key only if it hasn't been sent yet this session."""
+        return key if key not in sent_widgets else None
+
+    # ── Wine tasting mode — only datetime and contact widgets are allowed ──────
+    if state.get("event_type", "").lower() == "wine tasting":
+        # datetime — if no date yet and bot is asking about dates
+        if not state.get("dates") and "datetime" not in sent_widgets:
+            _wt_date_phrases = [
+                "date", "when", "timing", "what day", "which day",
+            ]
+            if any(ph in t for ph in _wt_date_phrases) or len(t) > 20:
+                return "datetime"
+        # contact — if missing and bot is asking
+        if not (state.get("client_name") and state.get("email") and state.get("phone")):
+            if any(tr in t for tr in ["name", "contact", "email", "details", "grab"]):
+                return _once("contact")
+            if state.get("dates") and not state.get("client_name") and "contact" not in sent_widgets:
+                return _once("contact")
+        # Everything else (rooms, addons, customer_type, tandc, attribution, deposit) — suppressed
+        return None
 
     def _once(key: str) -> Optional[str]:
         """Return key only if it hasn't been sent yet this session."""
@@ -957,6 +964,16 @@ def chat():
     if meta.get("payment_confirmed"):
         state["payment_confirmed"] = True
 
+    # Fast pre-pass — detect (private) wine tasting from current message OR recent history
+    # so the flag persists even if the LLM extractor missed it on a prior turn
+    _wine_tasting_phrases = ["wine tasting", "winetasting", "wine-tasting",
+                             "private wine tasting", "private tasting"]
+    _full_context = message.lower() + " " + " ".join(
+        m["content"] for m in history[-10:]
+    ).lower()
+    if any(p in _full_context for p in _wine_tasting_phrases):
+        state["event_type"] = "wine tasting"
+
     # Fast regex pre-pass — catch customer_type directly from the raw message
     # so the bot never re-asks even if the LLM extractor missed it
     if not state.get("customer_type"):
@@ -991,19 +1008,30 @@ def chat():
                 " ".join(m["content"] for m in history[-10:])
             )))
 
-            # Also detect rooms mentioned recently
-            recent_text = " ".join(m["content"] for m in history[-10:]).lower()
-            requested_rooms = []
-            if any(x in recent_text for x in ["entrance", "front", "bar"]):
-                requested_rooms.append("entrance")
-            if any(x in recent_text for x in ["gallery", "upstairs"]):
-                requested_rooms.append("gallery")
-            if "kitchen" in recent_text:
-                requested_rooms.append("kitchen")
-            if "cave" in recent_text:
-                requested_rooms.append("cave")
-            if not requested_rooms:
-                requested_rooms = ["entrance", "gallery", "kitchen", "cave"]
+            # Wine tastings only conflict with the Cave — all other rooms can
+            # run bookings in parallel with a tasting on the same date/time.
+            is_wine_tasting = state.get("event_type", "").lower() == "wine tasting"
+
+            if is_wine_tasting:
+                # Wine tastings use Cave or Gallery — only those two matter for conflicts
+                requested_rooms = ["cave", "gallery"]
+            else:
+                # Detect rooms mentioned recently for standard bookings
+                recent_text = " ".join(m["content"] for m in history[-10:]).lower()
+                requested_rooms = []
+                if any(x in recent_text for x in ["entrance", "front", "bar"]):
+                    requested_rooms.append("entrance")
+                if any(x in recent_text for x in ["gallery", "upstairs"]):
+                    requested_rooms.append("gallery")
+                if "kitchen" in recent_text:
+                    if any(x in recent_text for x in ["basic", "no stove", "no appliance"]):
+                        requested_rooms.append("kitchen_basic")
+                    else:
+                        requested_rooms.append("kitchen_full")
+                if "cave" in recent_text:
+                    requested_rooms.append("cave")
+                if not requested_rooms:
+                    requested_rooms = ["entrance", "gallery", "kitchen_full", "cave"]
 
             # Also extract times mentioned
             time_pattern = re.compile(r'\b(\d{1,2}:\d{2})\b')
@@ -1023,32 +1051,90 @@ def chat():
                 avail = availability_summary(
                     mentioned_dates, requested_rooms, start_time, end_time
                 )
-                calendar_block = (
-                    f"\n\n## LIVE CALENDAR CHECK (per room + time slot)\n"
-                    f"{avail}\n"
-                    f"RULES:\n"
-                    f"- Each room is independently bookable\n"
-                    f"- Two clients CAN book the same date if they use different rooms\n"
-                    f"- Two clients CAN book the same room on the same date if their times DON'T overlap\n"
-                    f"- Only flag a conflict when the SAME room has an OVERLAPPING time slot\n"
-                    f"- If a conflict exists, offer the alternative slots shown above\n"
-                )
+                if is_wine_tasting:
+                    calendar_block = (
+                        f"\n\n## LIVE CALENDAR CHECK — WINE TASTING (Cave + Gallery only)\n"
+                        f"{avail}\n"
+                        f"RULES:\n"
+                        f"- Wine tastings are held in the Cave OR Gallery — only check those two rooms\n"
+                        f"- Entrance or Kitchen being booked is NOT a conflict — ignore them completely\n"
+                        f"- Only flag a conflict if Cave AND Gallery are both overlapping at the same time\n"
+                        f"- If either Cave or Gallery is free, the date is available — offer the free one\n"
+                    )
+                else:
+                    calendar_block = (
+                        f"\n\n## LIVE CALENDAR CHECK (per room + time slot)\n"
+                        f"{avail}\n"
+                        f"RULES:\n"
+                        f"- Each room is independently bookable\n"
+                        f"- Two clients CAN book the same date if they use different rooms\n"
+                        f"- Two clients CAN book the same room on the same date if their times DON'T overlap\n"
+                        f"- Only flag a conflict when the SAME room has an OVERLAPPING time slot\n"
+                        f"- If a conflict exists, offer the alternative slots shown above\n"
+                    )
             else:
                 snapshot = calendar_snapshot(60)
-                calendar_block = (
-                    f"\n\n## LIVE CALENDAR SNAPSHOT (next 60 days, per room)\n"
-                    f"{snapshot}\n"
-                    f"RULES:\n"
-                    f"- Each room is independently bookable\n"
-                    f"- Multiple clients can be at Sauvage simultaneously in different rooms\n"
-                    f"- A conflict only exists when the SAME room has OVERLAPPING times\n"
-                    f"- Never block a whole date just because one room is taken\n"
-                )
+                if is_wine_tasting:
+                    calendar_block = (
+                        f"\n\n## LIVE CALENDAR SNAPSHOT — WINE TASTING (Cave + Gallery only)\n"
+                        f"{snapshot}\n"
+                        f"RULES:\n"
+                        f"- Wine tastings are held in the Cave OR Gallery — only those rooms matter\n"
+                        f"- Entrance or Kitchen bookings are irrelevant — never flag them as conflicts\n"
+                        f"- Only flag a date as unavailable if BOTH Cave and Gallery are fully booked\n"
+                        f"- If either room is free, the date is available\n"
+                    )
+                else:
+                    calendar_block = (
+                        f"\n\n## LIVE CALENDAR SNAPSHOT (next 60 days, per room)\n"
+                        f"{snapshot}\n"
+                        f"RULES:\n"
+                        f"- Each room is independently bookable\n"
+                        f"- Multiple clients can be at Sauvage simultaneously in different rooms\n"
+                        f"- A conflict only exists when the SAME room has OVERLAPPING times\n"
+                        f"- Never block a whole date just because one room is taken\n"
+                    )
         except Exception as e:
             print(f"[Calendar] Error generating block: {e}")
 
-    wine_block  = _wine_context_block(state, meta, session_id)
-    full_system = _state_block(state) + calendar_block + wine_block + _load_system_prompt()
+    # Wine tasting mode — prepend a short override that Haiku cannot miss
+    wine_tasting_block = ""
+    if state.get("event_type", "").lower() == "wine tasting":
+        _wt_guests = state.get("guest_count", "")
+        _wt_dates  = state.get("dates", "")
+        _wt_name   = state.get("client_name", "")
+        _wt_shopify_link = ""
+        if _wt_guests:
+            try:
+                _n = int(str(_wt_guests).strip().split()[0])
+                if 5 <= _n <= 12:
+                    _wt_shopify_link = f"https://www.selectionsauvage.nl/cart/51326578131290:{_n}"
+            except Exception:
+                pass
+        wine_tasting_block = (
+            "\n\n## ⚠️ WINE TASTING MODE — STRICT OVERRIDE\n"
+            "You are booking a Selection Sauvage wine tasting. This is NOT a standard room booking.\n"
+            "ALLOWED steps (in order):\n"
+            "  1. If no date → ask for date only\n"
+            "  2. If no contact (name/email/phone) → ask for contact only\n"
+            "  3. If no guest count → ask 'How many people will be joining? Min 5, max 12.'\n"
+            "  4. If guest count <5 → say minimum is 5, ask if more people can join\n"
+            "  5. If guest count >12 → say max is 12, offer to explore private hire instead\n"
+            f"  6. If all collected → present Shopify link: {_wt_shopify_link or 'https://www.selectionsauvage.nl/cart/51326578131290:[guest_count]'}\n"
+            "FORBIDDEN — do not do any of these under any circumstances:\n"
+            "  - Do NOT discuss rooms or suggest any room\n"
+            "  - Do NOT show or mention add-ons\n"
+            "  - Do NOT ask for or mention a deposit\n"
+            "  - Do NOT generate a price quote with room rates\n"
+            "  - Do NOT ask about customer type (private/business)\n"
+            "  - Do NOT ask about attribution\n"
+            "  - Do NOT show T&C step\n"
+            "  - Do NOT mention €55/hr or any room rate\n"
+            "The experience is called Private Wine Tasting — €45 per person, 2-hour fixed duration, min 5 people, held in Cave or Gallery.\n"
+            "Payment is via Shopify link only — that IS the booking confirmation.\n\n"
+        )
+
+    full_system = _state_block(state) + wine_tasting_block + calendar_block + _load_system_prompt()
 
     assistant_text = None
     for _attempt in range(3):
@@ -1106,11 +1192,15 @@ def chat():
     # extract them immediately so Airtable gets them even if session drops off.
     if not state.get("rooms"):
         _ROOM_MENTIONS = [
-            ("upstairs", "Upstairs (Gallery)"),
-            ("gallery",  "Upstairs (Gallery)"),
-            ("entrance", "Entrance"),
-            ("kitchen",  "Kitchen"),
-            ("cave",     "Cave"),
+            ("upstairs",         "Upstairs (Gallery)"),
+            ("gallery",          "Upstairs (Gallery)"),
+            ("entrance",         "Entrance"),
+            ("kitchen (full",    "Kitchen (Full Stove)"),
+            ("kitchen full",     "Kitchen (Full Stove)"),
+            ("kitchen (basic",   "Kitchen (Basic / No Appliances)"),
+            ("kitchen basic",    "Kitchen (Basic / No Appliances)"),
+            ("kitchen",          "Kitchen (Full Stove)"),   # fallback → full
+            ("cave",             "Cave"),
         ]
         _bot_lower = assistant_text.lower()
         _detected_rooms = []
