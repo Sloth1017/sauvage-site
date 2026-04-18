@@ -210,5 +210,44 @@ def feedback():
 </body></html>""", mimetype="text/html")
 
 
+# ── Wi-Fi password copy helper ────────────────────────────────────────────────
+@app.route("/copy")
+def copy_text():
+    text = request.args.get("text", "")
+    if not text:
+        return "Nothing to copy.", 400
+    return Response(f"""<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Copied</title></head>
+<body style="margin:0;display:flex;align-items:center;justify-content:center;
+             min-height:100vh;background:#f7f4ef;font-family:Georgia,serif;text-align:center;">
+  <div>
+    <p id="msg" style="font-size:13px;letter-spacing:0.2em;text-transform:uppercase;
+                        color:#8b6f47;margin:0 0 12px;">Copying...</p>
+    <p style="font-size:22px;font-weight:300;color:#1a1a18;margin:0 0 8px;" id="pw">{text}</p>
+    <p id="sub" style="font-size:12px;color:#aaa;margin:0;font-family:'Helvetica Neue',sans-serif;"></p>
+  </div>
+  <script>
+    var t = {repr(text)};
+    var msg = document.getElementById('msg');
+    var sub = document.getElementById('sub');
+    if (navigator.clipboard && navigator.clipboard.writeText) {{
+      navigator.clipboard.writeText(t).then(function() {{
+        msg.textContent = 'Copied.';
+        msg.style.color = '#1a1a18';
+        sub.textContent = 'Password is in your clipboard — paste it into Wi-Fi settings.';
+      }}, function() {{
+        msg.textContent = 'Copy manually:';
+        sub.textContent = 'Select the text above and copy it.';
+      }});
+    }} else {{
+      msg.textContent = 'Copy manually:';
+      sub.textContent = 'Select the text above and copy it.';
+    }}
+  </script>
+</body></html>""", mimetype="text/html")
+
+
 if __name__ == "__main__":
     app.run(port=int(os.environ.get("PORT", 5001)))
