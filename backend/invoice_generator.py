@@ -344,7 +344,7 @@ def compute_revenue_breakdown(state: dict) -> dict:
       }
     """
     HOST_SHARE = 0.70
-    items = _build_line_items(state)
+    items = compute_line_items(state)
 
     rental_items = [i for i in items
                     if i["description"].startswith("Space rental")
