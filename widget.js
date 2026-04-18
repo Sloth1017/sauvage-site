@@ -898,6 +898,9 @@
       var email = document.getElementById("sv-c-email") ? document.getElementById("sv-c-email").value.trim() : "";
       var phone = document.getElementById("sv-c-phone") ? document.getElementById("sv-c-phone").value.trim() : "";
       if (!valName(name) || !valEmail(email) || !valPhone(phone)) return;
+      if (window.gtag) {
+        gtag('event', 'contact_submitted', { 'event_category': 'booking', 'event_label': 'funnel_contact' });
+      }
       _pickerConfirm = null;
       wrap.remove();
       sendMessage(name + ", " + email + ", " + phone + " [contact:" + name + "|" + email + "|" + phone + "]");
@@ -1603,6 +1606,12 @@
     if (sendMessage._inflight) return;
     sendMessage._inflight = true;
 
+    // Track first message sent (once per session)
+    if (!sendMessage._tracked && window.gtag) {
+      gtag('event', 'chatbot_first_message', { 'event_category': 'booking', 'event_label': 'funnel_start' });
+      sendMessage._tracked = true;
+    }
+
     input.value = "";
     input.style.height = "auto";
     btn.disabled = true;
@@ -1649,6 +1658,9 @@
 
         if (isQuoteMessage(botMsg)) {
           setTimeout(function() { addPdfExportButton(botDiv.innerHTML); }, 200);
+          if (window.gtag) {
+            gtag('event', 'quote_viewed', { 'event_category': 'booking', 'event_label': 'funnel_quote' });
+          }
         }
         // Store checkout URL for the pay button widget (T&C widget or standalone)
         if (data.checkout_url) {
@@ -1730,6 +1742,9 @@
     const bubble = document.getElementById("sv-bubble");
     panel.classList.toggle("sv-open", open);
     bubble.textContent = open ? "✕" : "💬";
+    if (open && window.gtag) {
+      gtag('event', 'chatbot_opened', { 'event_category': 'booking', 'event_label': 'chatbot_engagement' });
+    }
 
     if (open && !sessionId) {
       await initSession();
