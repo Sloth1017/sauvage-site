@@ -474,23 +474,8 @@ def send_booking_confirmation(
                           <p style="margin:0 0 3px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
                                      font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:#aaa;">
                             Password</p>
-                          <p style="margin:0;font-size:0;line-height:0;">
-                            <span style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
-                                         font-size:14px;font-weight:500;color:#1a1a18;
-                                         vertical-align:middle;">natural1</span>
-                            <a href="{BASE_URL}/copy?text=natural1"
-                               style="display:inline-block;vertical-align:middle;margin-left:8px;
-                                      text-decoration:none;opacity:0.4;">
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-                                   xmlns="http://www.w3.org/2000/svg"
-                                   style="display:inline-block;vertical-align:middle;">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"
-                                      stroke="#1a1a18" stroke-width="2" fill="none"/>
-                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
-                                      stroke="#1a1a18" stroke-width="2" fill="none"/>
-                              </svg>
-                            </a>
-                          </p>
+                          <p style="margin:0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                                     font-size:14px;font-weight:500;color:#1a1a18;line-height:1;">natural1</p>
                         </td>
                       </tr>
                     </table>
