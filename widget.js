@@ -31,6 +31,7 @@
   let _paymentPollTimer = null;     // interval ID while polling for deposit confirmation
   let _pendingCheckoutUrl = null;   // checkout URL returned by backend, used by pay button
   const _shownWidgets = new Set();  // tracks widget types shown this session — each fires once
+  let _isWineTasting = false;       // locked 2-hour mode for private wine tasting bookings
 
   // ── Styles ────────────────────────────────────────────────────────────────
   const css = `
@@ -537,6 +538,10 @@
   }
 
   function addMessage(text, role) {
+    // Detect wine tasting mode from any message in the conversation
+    if (!_isWineTasting && text.toLowerCase().indexOf("wine tasting") !== -1) {
+      _isWineTasting = true;
+    }
     const msgs = document.getElementById("sv-messages");
     const div = document.createElement("div");
     div.className = `sv-msg sv-msg-${role}`;
@@ -1308,7 +1313,7 @@
     var viewYear  = today.getFullYear();
     var viewMonth = today.getMonth();
     var sharedStart = 16 * 60;
-    var sharedEnd   = 20 * 60;
+    var sharedEnd   = _isWineTasting ? sharedStart + 120 : 20 * 60;  // wine tasting = start + 2h
 
     function fmt(m) {
       var h = Math.floor(m/60)%24, mn = m%60;
@@ -1371,24 +1376,42 @@
       var timesHtml = '';
       if (!customPerDay || !multiDates) {
         // Shared time controls
-        timesHtml =
-          '<div class="sv-time-row">' +
-            '<span class="sv-time-lbl">Start</span>' +
-            '<div class="sv-stepper">' +
-              '<button class="sv-step-btn" id="sv-sm">&#x2212;</button>' +
-              '<div class="sv-step-val" id="sv-sv">' + fmt(sharedStart) + '</div>' +
-              '<button class="sv-step-btn" id="sv-sp">+</button>' +
+        if (_isWineTasting) {
+          // Wine tasting: start time adjustable, end = start + 2h (locked)
+          timesHtml =
+            '<div class="sv-time-row">' +
+              '<span class="sv-time-lbl">Start</span>' +
+              '<div class="sv-stepper">' +
+                '<button class="sv-step-btn" id="sv-sm">&#x2212;</button>' +
+                '<div class="sv-step-val" id="sv-sv">' + fmt(sharedStart) + '</div>' +
+                '<button class="sv-step-btn" id="sv-sp">+</button>' +
+              '</div>' +
             '</div>' +
-          '</div>' +
-          '<div class="sv-time-row">' +
-            '<span class="sv-time-lbl">End</span>' +
-            '<div class="sv-stepper">' +
-              '<button class="sv-step-btn" id="sv-em">&#x2212;</button>' +
-              '<div class="sv-step-val" id="sv-ev">' + fmt(sharedEnd) + '</div>' +
-              '<button class="sv-step-btn" id="sv-ep">+</button>' +
+            '<div class="sv-time-row">' +
+              '<span class="sv-time-lbl">End</span>' +
+              '<div class="sv-step-val" style="background:#f5f5f5;color:#888;border:1px solid #e0e0e0;padding:4px 10px;border-radius:6px;font-size:13px;min-width:54px;text-align:center;" id="sv-ev">' + fmt(sharedEnd) + '</div>' +
+              '<span class="sv-duration" id="sv-dur" style="margin-left:6px;">2h · fixed</span>' +
+            '</div>';
+        } else {
+          timesHtml =
+            '<div class="sv-time-row">' +
+              '<span class="sv-time-lbl">Start</span>' +
+              '<div class="sv-stepper">' +
+                '<button class="sv-step-btn" id="sv-sm">&#x2212;</button>' +
+                '<div class="sv-step-val" id="sv-sv">' + fmt(sharedStart) + '</div>' +
+                '<button class="sv-step-btn" id="sv-sp">+</button>' +
+              '</div>' +
             '</div>' +
-            '<span class="sv-duration" id="sv-dur">' + durStr(sharedStart, sharedEnd) + '</span>' +
-          '</div>';
+            '<div class="sv-time-row">' +
+              '<span class="sv-time-lbl">End</span>' +
+              '<div class="sv-stepper">' +
+                '<button class="sv-step-btn" id="sv-em">&#x2212;</button>' +
+                '<div class="sv-step-val" id="sv-ev">' + fmt(sharedEnd) + '</div>' +
+                '<button class="sv-step-btn" id="sv-ep">+</button>' +
+              '</div>' +
+              '<span class="sv-duration" id="sv-dur">' + durStr(sharedStart, sharedEnd) + '</span>' +
+            '</div>';
+        }
       } else {
         // Per-day controls — one row per selected date
         var sortedTs = selected.slice().sort(function(a,b){return a-b;});
@@ -1487,8 +1510,16 @@
       var spBtn = wrap.querySelector("#sv-sp");
       var emBtn = wrap.querySelector("#sv-em");
       var epBtn = wrap.querySelector("#sv-ep");
-      if (smBtn) smBtn.onclick = function(){ sharedStart=(sharedStart-30+1440)%1440; render(); };
-      if (spBtn) spBtn.onclick = function(){ sharedStart=(sharedStart+30)%1440;       render(); };
+      if (smBtn) smBtn.onclick = function(){
+        sharedStart=(sharedStart-30+1440)%1440;
+        if (_isWineTasting) sharedEnd = (sharedStart + 120) % 1440;
+        render();
+      };
+      if (spBtn) spBtn.onclick = function(){
+        sharedStart=(sharedStart+30)%1440;
+        if (_isWineTasting) sharedEnd = (sharedStart + 120) % 1440;
+        render();
+      };
       if (emBtn) emBtn.onclick = function(){ sharedEnd=(sharedEnd-30+1440)%1440;      render(); };
       if (epBtn) epBtn.onclick = function(){ sharedEnd=(sharedEnd+30)%1440;            render(); };
 
