@@ -1,5 +1,5 @@
 # Sauvage Space — Canonical Pricing
-**Version:** 2026-04-18
+**Version:** 2026-04-18 v2
 **Source:** Noriad-112/sauvage-space-pricing · `pricing/canonical.json`
 **Invoicing entity:** Roots & Remedies Stichting · KvK 76681629 · BTW NL860744875B01
 **IBAN:** NL42 TRIO 0788 8783 60 · **VAT:** 21% (all prices below incl. VAT)
@@ -11,11 +11,11 @@
 - **Type:** Half-day slot
 - **Window:** 16:00–23:00
 - **Setup access:** from 15:30
-- **Full-day:** Not defined — half-day is the only confirmed slot type
+- **Full-day slots:** Available on **Mondays and Tuesdays only** — but pricing is not yet defined for any day. Bot must not quote a full-day rate. Flag and route to host for a custom quote.
 
 ---
 
-## Room Rates (per slot, incl. VAT)
+## Room Rates (per half-day slot, incl. VAT)
 
 | Room | Rate |
 |------|------|
@@ -56,16 +56,17 @@
 
 ---
 
-## Deposits
+## Deposits — 3-Tier System
 
-| Option | Trigger | Deposit |
-|--------|---------|---------|
-| Option A — no kitchen | Bookings not including the Kitchen | €50.00 |
-| Option B — with kitchen | Any booking including the Kitchen | €150.00 |
+| Tier | Trigger | Deposit |
+|------|---------|---------|
+| Tier 1 | Single slot, no kitchen | **€50.00** |
+| Tier 2 | Single slot with kitchen — OR — multi-day < 7 slots, no kitchen | **€150.00** |
+| Tier 3 | Multi-day ≥ 7 slots, no kitchen — OR — any multi-day with kitchen | **€250.00** |
 
+- Host may escalate any booking to a higher tier at their discretion
 - Paid at booking to confirm reservation
 - Refundable after event if space left in good order
-- Multi-day deposit: **OPEN** — not yet defined (likely €150+ for multi-day)
 
 ---
 
@@ -81,8 +82,7 @@
 | Decor / styling package (by consultation) | from €50.00 |
 | Projector / display screen | €25.00 |
 
-> Add-on pricing is set at DAO level. Individual hosts may not charge above these rates.
-> Revenue split on add-ons is **OPEN** (under DAO governance review).
+> Add-on revenue goes 100% to the host or direct to suppliers — not subject to DAO split.
 
 ---
 
@@ -107,9 +107,7 @@
 
 | Item | Status |
 |------|--------|
-| Multi-day deposit amount | OPEN — likely €150+, not yet confirmed |
-| Add-on revenue split (DAO vs host) | OPEN — under governance review |
-| Full-day slot pricing | Not defined — half-day is the only confirmed slot |
+| Full-day slot pricing | Not defined for any day — route to host |
 | Cave pricing | Managed separately, not in canonical |
 
 ---
