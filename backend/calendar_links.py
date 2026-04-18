@@ -18,12 +18,21 @@ _DAY_NAMES  = {"monday","tuesday","wednesday","thursday","friday","saturday","su
 def _to_cal_dt(date_str: str, time_str: str) -> str:
     """
     Parse human date + time into iCal / Google Calendar datetime string.
+    Handles "2026-05-10" + "18:00"          →  "20260510T180000"
     Handles "Saturday 19 April 2026" + "18:00"  →  "20260419T180000"
     Returns "" on parse failure.
     """
-    tokens = [t.rstrip(",") for t in date_str.strip().split()
+    date_str = date_str.strip()
+    # ISO format: YYYY-MM-DD
+    try:
+        dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+        return dt.strftime("%Y%m%dT%H%M%S")
+    except ValueError:
+        pass
+    # Human format: "Saturday 19 April 2026" → strip day name first
+    tokens = [t.rstrip(",") for t in date_str.split()
               if t.lower().rstrip(",") not in _DAY_NAMES]
-    date_clean = " ".join(tokens)           # "19 April 2026"
+    date_clean = " ".join(tokens)
     try:
         dt = datetime.strptime(f"{date_clean} {time_str}", "%d %B %Y %H:%M")
         return dt.strftime("%Y%m%dT%H%M%S")
