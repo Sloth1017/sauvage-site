@@ -332,17 +332,18 @@ def handle_webhook():
         if _TG_ENABLED:
             try:
                 _tg_notify(
-                    client_name    = details["client_name"],
-                    event_type     = details["event_type"],
-                    event_date     = details.get("event_date", ""),
-                    start_time     = details["start_dt"],
-                    end_time       = details["end_dt"],
-                    guest_count    = details["guest_count"],
-                    rooms          = details["rooms"],
-                    deposit_amount = amount_total,
-                    order_number   = order_number,
-                    airtable_id    = record_id,
-                    cal_link       = cal_link if _GCAL_WRITE else "",
+                    client_name          = details["client_name"],
+                    event_type           = details["event_type"],
+                    event_date           = details.get("event_date", ""),
+                    start_time           = details["start_dt"],
+                    end_time             = details["end_dt"],
+                    guest_count          = details["guest_count"],
+                    rooms                = details["rooms"],
+                    deposit_amount       = amount_total,
+                    order_number         = order_number,
+                    airtable_id          = record_id,
+                    cal_link             = cal_link if _GCAL_WRITE else "",
+                    quote_total_inc_vat  = email_state.get("quote_total") or None,
                 )
             except Exception as e:
                 print(f"[Webhook] Telegram notification failed (non-fatal): {e}")

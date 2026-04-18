@@ -276,5 +276,19 @@ def copy_text():
 </body></html>""", mimetype="text/html")
 
 
+# ── Telegram callback webhook ─────────────────────────────────────────────────
+@app.route("/telegram/webhook", methods=["POST"])
+def telegram_webhook():
+    """Receives callback_query updates from Telegram (inline button presses)."""
+    try:
+        from telegram_notify import handle_callback
+        update = request.get_json(force=True, silent=True) or {}
+        handle_callback(update)
+    except Exception as e:
+        print(f"[Telegram] Webhook handler error: {e}")
+    # Always return 200 — Telegram retries on any other status
+    return "", 200
+
+
 if __name__ == "__main__":
     app.run(port=int(os.environ.get("PORT", 5001)))
