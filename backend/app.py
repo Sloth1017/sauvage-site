@@ -182,6 +182,21 @@ def feedback():
     }
     with open(_FEEDBACK_LOG, "a") as f:
         f.write(json.dumps(data) + "\n")
+
+    try:
+        from airtable_client import submit_feedback
+        submit_feedback(
+            booking_record_id = data["booking"],
+            client_name       = data["name"],
+            event_type        = data["event"],
+            rating            = data["rating"],
+            highlight         = data["highlight"],
+            improve           = data["improve"],
+            comment           = data["comment"],
+        )
+    except Exception as e:
+        print(f"[Feedback] Airtable write failed (non-fatal): {e}")
+
     return Response("""<!DOCTYPE html>
 <html><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">

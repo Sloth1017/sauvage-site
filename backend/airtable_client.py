@@ -480,6 +480,36 @@ def snapshot_session(record_id: str, session_data: dict) -> dict:
     return update_inquiry(record_id, {"Session Snapshot": snapshot})
 
 
+def submit_feedback(booking_record_id: str, client_name: str, event_type: str,
+                     rating: int, highlight: str, improve: str, comment: str) -> str:
+    """
+    Write a feedback submission to the Feedback table.
+    booking_record_id: Airtable record ID from the Inquiries table (links the two rows).
+    Returns the new Feedback record ID.
+    """
+    table = _get_table("Feedback")
+    fields = {
+        "Client Name":  client_name,
+        "Event Type":   event_type,
+        "Submitted At": _now_iso(),
+    }
+    if booking_record_id:
+        fields["Booking"] = [booking_record_id]
+    if rating:
+        try:
+            fields["Rating"] = int(rating)
+        except (ValueError, TypeError):
+            pass
+    if highlight:
+        fields["Highlight"] = highlight
+    if improve:
+        fields["Improve"] = improve
+    if comment:
+        fields["Comment"] = comment
+    record = table.create(fields)
+    return record["id"]
+
+
 def restore_session_snapshot(record_id: str) -> Optional[dict]:
     """
     Retrieve and deserialise the session snapshot from a previous conversation.
