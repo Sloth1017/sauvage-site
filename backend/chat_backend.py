@@ -973,6 +973,9 @@ def chat():
     ).lower()
     if any(p in _full_context for p in _wine_tasting_phrases):
         state["event_type"] = "wine tasting"
+        # Cave is always the default room for wine tastings
+        if not state.get("rooms"):
+            state["rooms"] = ["Cave"]
 
     # Fast regex pre-pass — catch customer_type directly from the raw message
     # so the bot never re-asks even if the LLM extractor missed it
@@ -1130,7 +1133,8 @@ def chat():
             "  - Do NOT ask about attribution\n"
             "  - Do NOT show T&C step\n"
             "  - Do NOT mention €55/hr or any room rate\n"
-            "The experience is called Private Wine Tasting — €45 per person, 2-hour fixed duration, min 5 people, held in Cave or Gallery.\n"
+            "The experience is called Private Wine Tasting — €45 per person, 2-hour fixed duration, min 5 people. Default room is the Cave.\n"
+            "The room is already set to Cave — do NOT ask about rooms.\n"
             "Payment is via Shopify link only — that IS the booking confirmation.\n\n"
         )
 
