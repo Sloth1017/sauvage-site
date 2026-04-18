@@ -30,6 +30,12 @@ SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 FROM_EMAIL    = os.getenv("FROM_EMAIL",    "bookings@sauvage.amsterdam")
 BASE_URL      = os.getenv("BASE_URL",      "https://sauvage.amsterdam")
 
+# ── Embedded logos (base64 PNG — no external URL dependency) ─────────────────
+# White version: for dark ink header background
+_LOGO_WHITE = "data:image/png;base64,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"
+# Dark version: for light cream backgrounds (footer etc.)
+_LOGO_DARK  = "data:image/png;base64,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"
+
 # ── Brand tokens (matches sauvage.amsterdam CSS variables) ────────────────────
 C_INK    = "#1a1a18"
 C_CREAM  = "#f7f4ef"
@@ -39,7 +45,6 @@ C_MUTED  = "#6b6560"
 C_BORDER = "rgba(26,26,24,0.10)"
 C_WHITE  = "#ffffff"
 
-LOGO_URL  = f"{BASE_URL}/media/sauvage-logo.png"
 TERMS_URL = f"{BASE_URL}/terms"
 
 # ── Host directory ────────────────────────────────────────────────────────────
@@ -115,8 +120,8 @@ def _shell(body_rows: str, preheader: str = "") -> str:
             <tr>
               <!-- Logo mark -->
               <td width="56" style="vertical-align:middle;">
-                <img src="{LOGO_URL}" alt="Sauvage" width="56" height="56"
-                     style="display:block;border:0;filter:invert(1);opacity:0.95;" />
+                <img src="{_LOGO_WHITE}" alt="Sauvage" width="56" height="56"
+                     style="display:block;border:0;" />
               </td>
               <!-- Wordmark -->
               <td style="vertical-align:middle;padding-left:16px;">
