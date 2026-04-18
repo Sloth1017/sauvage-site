@@ -474,19 +474,13 @@ def send_booking_confirmation(
                   <td style="padding:18px 24px;">
                     <table width="100%" cellpadding="0" cellspacing="0" border="0">
                       <tr>
-                        <td width="50%" style="vertical-align:top;">
-                          <p style="margin:0 0 3px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
-                                     font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:#aaa;">
-                            Wi-Fi Network</p>
-                          <p style="margin:0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
-                                     font-size:14px;font-weight:500;color:#1a1a18;">@Sauvage</p>
+                        <td width="50%" style="vertical-align:middle;">
+                          <p style="margin:0 0 3px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:#aaa;">Wi-Fi Network</p>
+                          <p style="margin:0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:500;color:#1a1a18;line-height:1;">@Sauvage</p>
                         </td>
-                        <td width="50%" style="vertical-align:top;">
-                          <p style="margin:0 0 3px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
-                                     font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:#aaa;">
-                            Password</p>
-                          <p style="margin:0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
-                                     font-size:14px;font-weight:500;color:#1a1a18;line-height:1;">natural1</p>
+                        <td width="50%" style="vertical-align:middle;">
+                          <p style="margin:0 0 3px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:#aaa;">Password</p>
+                          <p style="margin:0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:500;color:#1a1a18;line-height:1;">natural1</p>
                         </td>
                       </tr>
                     </table>
