@@ -92,7 +92,7 @@ def send_booking_confirmation(
     guest_count  = state.get("guest_count", "")
     quote_total  = state.get("quote_total", "")
 
-    time_str = f"{start_time}–{end_time}" if start_time and end_time else start_time or "TBC"
+    time_str = f"{start_time} to {end_time}" if start_time and end_time else start_time or "TBC"
     deposit  = "€300" if "kitchen" in rooms_str.lower() else "€50"
 
     arrival_token = generate_arrival_token(record_id)
@@ -113,9 +113,10 @@ def send_booking_confirmation(
               </p>
               <a href="{invoice_url}"
                  style="display:inline-block;background:#f5f3ef;color:#1a1a1a;text-decoration:none;
-                        border:1px solid #ccc;padding:12px 24px;border-radius:3px;font-size:13px;
-                        font-weight:500;letter-spacing:0.5px;">
-                View invoice {invoice_number} →
+                        border:1px solid #ddd;padding:12px 24px;border-radius:2px;font-size:12px;
+                        font-weight:500;letter-spacing:1px;text-transform:uppercase;
+                        border-left:3px solid #b8860b;">
+                View invoice {invoice_number}
               </a>
             </td>
           </tr>"""
@@ -124,27 +125,44 @@ def send_booking_confirmation(
         if invoice_url else ""
     )
 
-    subject = f"Your Sauvage booking is confirmed ✓"
+    subject = f"Your Sauvage Space booking is confirmed"
+
+    logo_url = f"{BASE_URL}/media/sauvage-logo.png"
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Booking Confirmed — Sauvage</title>
+  <title>Booking Confirmed - Sauvage Space</title>
 </head>
 <body style="margin:0;padding:0;background:#f5f3ef;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#1a1a1a;">
   <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f5f3ef;padding:40px 0;">
     <tr>
       <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:4px;overflow:hidden;">
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:4px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
 
-          <!-- Header -->
+          <!-- Header with logo -->
           <tr>
-            <td style="background:#1a1a1a;padding:32px 40px;">
-              <p style="margin:0;font-size:13px;letter-spacing:3px;text-transform:uppercase;color:#888;font-weight:500;">Sauvage Amsterdam</p>
-              <h1 style="margin:8px 0 0;font-size:26px;font-weight:400;color:#ffffff;letter-spacing:-0.3px;">Booking Confirmed</h1>
+            <td style="background:#1a1a1a;padding:28px 40px 24px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="vertical-align:middle;">
+                    <img src="{logo_url}" alt="Sauvage Space" width="72" height="72"
+                         style="display:block;width:72px;height:72px;border:0;filter:invert(1);" />
+                  </td>
+                  <td style="vertical-align:middle;padding-left:20px;">
+                    <p style="margin:0 0 4px;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#666;font-weight:500;">Potgieterstraat 47H, Amsterdam</p>
+                    <h1 style="margin:0;font-size:24px;font-weight:400;color:#ffffff;letter-spacing:-0.2px;">Booking Confirmed</h1>
+                  </td>
+                </tr>
+              </table>
             </td>
+          </tr>
+
+          <!-- Gold accent line -->
+          <tr>
+            <td style="background:#b8860b;height:3px;font-size:0;line-height:0;">&nbsp;</td>
           </tr>
 
           <!-- Greeting -->
@@ -235,9 +253,9 @@ def send_booking_confirmation(
               </p>
               <a href="{arrival_url}"
                  style="display:inline-block;background:#1a1a1a;color:#ffffff;text-decoration:none;
-                        padding:14px 28px;border-radius:3px;font-size:14px;font-weight:500;
-                        letter-spacing:0.5px;">
-                Confirm your arrival time →
+                        padding:14px 28px;border-radius:2px;font-size:13px;font-weight:500;
+                        letter-spacing:1px;text-transform:uppercase;border-left:3px solid #b8860b;">
+                Confirm your arrival time
               </a>
             </td>
           </tr>
@@ -260,11 +278,25 @@ def send_booking_confirmation(
 
           <!-- Footer -->
           <tr>
-            <td style="background:#1a1a1a;padding:24px 40px;">
-              <p style="margin:0;font-size:12px;color:#666;line-height:1.6;">
-                Sauvage · Potgieterstraat 47H · Amsterdam ·
-                <a href="https://sauvage.amsterdam" style="color:#888;text-decoration:none;">sauvage.amsterdam</a>
-              </p>
+            <td style="background:#b8860b;height:2px;font-size:0;line-height:0;">&nbsp;</td>
+          </tr>
+          <tr>
+            <td style="background:#111111;padding:24px 40px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="vertical-align:middle;">
+                    <img src="{logo_url}" alt="Sauvage Space" width="36" height="36"
+                         style="display:inline-block;width:36px;height:36px;border:0;filter:invert(1);opacity:0.7;vertical-align:middle;" />
+                    <span style="font-size:12px;color:#555;margin-left:12px;vertical-align:middle;letter-spacing:1px;text-transform:uppercase;">Sauvage Space</span>
+                  </td>
+                  <td align="right" style="vertical-align:middle;">
+                    <p style="margin:0;font-size:11px;color:#555;line-height:1.6;">
+                      Potgieterstraat 47H, Amsterdam<br>
+                      <a href="https://sauvage.amsterdam" style="color:#888;text-decoration:none;">sauvage.amsterdam</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 

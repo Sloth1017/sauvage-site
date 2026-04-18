@@ -37,8 +37,9 @@ COMPANY_BEHALF = "Issued on behalf of Sauvage DAO"
 VAT_RATE   = 0.21
 DUE_DAYS   = 7
 
-_DB_PATH   = os.path.join(os.path.dirname(__file__), "sessions.db")
-_INV_DIR   = os.path.join(os.path.dirname(__file__), "invoices")
+_DB_PATH    = os.path.join(os.path.dirname(__file__), "sessions.db")
+_INV_DIR    = os.path.join(os.path.dirname(__file__), "invoices")
+_LOGO_PATH  = os.path.join(os.path.dirname(__file__), "assets", "sauvage-logo.png")
 
 # ── Colour palette ─────────────────────────────────────────────────────────────
 C_BLACK = colors.HexColor("#1a1a1a")
@@ -64,7 +65,7 @@ _ROOM_ALIASES = {
 }
 
 _ROOM_LABELS = {
-    "gallery":  "Upstairs — Gallery",
+    "gallery":  "Upstairs (Gallery)",
     "entrance": "Entrance",
     "kitchen":  "Kitchen",
     "cave":     "Cave",
@@ -163,6 +164,17 @@ def compute_line_items(state: dict) -> list[dict]:
 
     duration   = str(state.get("duration") or "Hourly").lower()
     hours      = float(state.get("hours") or 0)
+    # Prefer actual start/end times over the LLM-extracted hours field
+    if state.get("start_time") and state.get("end_time"):
+        try:
+            _st = datetime.strptime(str(state["start_time"]).strip(), "%H:%M")
+            _et = datetime.strptime(str(state["end_time"]).strip(),   "%H:%M")
+            _computed = (_et - _st).seconds / 3600
+            if _computed > 0:
+                # Round to nearest 0.5
+                hours = round(_computed * 2) / 2
+        except ValueError:
+            pass  # keep the state["hours"] value
     dates_val  = state.get("dates")
     guest      = int(state.get("guest_count") or 0)
     addons_raw = state.get("addons") or []
@@ -216,19 +228,19 @@ def compute_line_items(state: dict) -> list[dict]:
             unit   = hourly_rate
             qty    = hours * num_days
             u_str  = f"hr{'s' if qty != 1 else ''}"
-            desc   = f"Space rental — {label}"
+            desc   = f"Space rental: {label}"
             if num_days > 1:
-                desc += f" ({hours} hrs/day × {num_days} days)"
+                desc += f" ({hours} hrs/day x {num_days} days)"
         elif is_full_day:
             unit  = full_rate
             qty   = num_days
             u_str = "day"
-            desc  = f"Space rental — {label} (full day)"
+            desc  = f"Space rental: {label} (full day)"
         else:  # half-day default
             unit  = half_rate
             qty   = num_days
             u_str = "day"
-            desc  = f"Space rental — {label} (half day)"
+            desc  = f"Space rental: {label} (half day)"
 
         room_pre_discount += unit * qty
         _line(desc, qty, u_str, unit)
@@ -304,10 +316,10 @@ def _fmt_date_range(dates) -> str:
             d0 = datetime.strptime(str(dates[0]).strip(),  "%Y-%m-%d")
             d1 = datetime.strptime(str(dates[-1]).strip(), "%Y-%m-%d")
             if d0.month == d1.month:
-                return f"{d0.day}–{d1.day} {d0.strftime('%B %Y')}"
-            return f"{d0.strftime('%-d %b')}–{d1.strftime('%-d %b %Y')}"
+                return f"{d0.day} to {d1.day} {d0.strftime('%B %Y')}"
+            return f"{d0.strftime('%-d %b')} to {d1.strftime('%-d %b %Y')}"
         except ValueError:
-            return f"{dates[0]}–{dates[-1]}"
+            return f"{dates[0]} to {dates[-1]}"
     if isinstance(dates, list):
         val = dates[0]
     else:
@@ -376,7 +388,7 @@ def _render_pdf(
 
     is_quote   = not invoice_number
     doc_title  = "QUOTE" if is_quote else "INVOICE"
-    badge_text = "ESTIMATE — NOT A TAX INVOICE" if is_quote else "AWAITING PAYMENT"
+    badge_text = "ESTIMATE - NOT A TAX INVOICE" if is_quote else "AWAITING PAYMENT"
     badge_gold = is_quote                          # gold border only for invoice
 
     client  = state.get("client_name", "Client")
@@ -429,27 +441,37 @@ def _render_pdf(
     # ── PAGE ───────────────────────────────────────────────────────────────────
     y = H - 50
 
+    # Logo (top-right)
+    logo_sz = 54
+    try:
+        from reportlab.lib.utils import ImageReader
+        logo_img = ImageReader(_LOGO_PATH)
+        c.drawImage(logo_img, R - logo_sz, y - logo_sz + 14,
+                    width=logo_sz, height=logo_sz, mask="auto")
+    except Exception:
+        pass  # logo not critical
+
     # Title
     c.setFillColor(C_BLACK); c.setFont("Times-Bold", 32)
     c.drawString(L, y, doc_title)
 
-    # Status badge
+    # Status badge (below title)
     bw, bh = (200, 22) if is_quote else (150, 22)
-    bx = R - bw
+    bx = L
+    by = y - 30
     c.setStrokeColor(C_GOLD if badge_gold else C_LGRAY)
     c.setLineWidth(1.2 if badge_gold else 0.8)
-    c.rect(bx, y - 4, bw, bh, stroke=1, fill=0)
+    c.rect(bx, by - 4, bw, bh, stroke=1, fill=0)
     c.setFillColor(C_GOLD if badge_gold else C_GRAY)
     c.setFont("Helvetica-Bold", 7.5)
-    c.drawCentredString(bx + bw / 2, y + 5, badge_text)
+    c.drawCentredString(bx + bw / 2, by + 5, badge_text)
 
-    y -= 28
+    y -= 52
 
-    # Company block (left)
-    txt(COMPANY_NAME, L, y, bold=True)
-    # Meta block (right)
+    # Company block (left) + meta block (right) — drawn row by row together
     mx_l = R - 145; mx_r = R
     if invoice_number:
+        txt(COMPANY_NAME, L, y, bold=True)
         txt("Invoice", mx_l, y, size=9, color=C_GRAY)
         txt(invoice_number, mx_r, y, size=9, bold=True, right=True)
         y -= 14
@@ -461,13 +483,15 @@ def _render_pdf(
         txt("Due date", mx_l, y, size=9, color=C_GRAY)
         txt(due_date.strftime("%-d %B %Y"), mx_r, y, size=9, bold=True, right=True)
     else:
-        txt(COMPANY_ADDR, L, y, size=9, color=C_GRAY)
+        txt(COMPANY_NAME, L, y, bold=True)        # Row 1: company name (bold)
         txt("Prepared", mx_l, y, size=9, color=C_GRAY)
         txt(issued_date.strftime("%-d %B %Y"), mx_r, y, size=9, bold=True, right=True)
-        y -= 14
-        txt(f"{COMPANY_KVK} · {COMPANY_BTW}", L, y, size=9, color=C_GRAY)
+        y -= 14                                    # Row 2: address
+        txt(COMPANY_ADDR, L, y, size=9, color=C_GRAY)
         txt("Valid for", mx_l, y, size=9, color=C_GRAY)
         txt("7 days", mx_r, y, size=9, bold=True, right=True)
+        y -= 14                                    # Row 3: KvK / BTW
+        txt(f"{COMPANY_KVK} · {COMPANY_BTW}", L, y, size=9, color=C_GRAY)
     y -= 14
     txt(f"IBAN: {COMPANY_IBAN}", L, y, size=9, color=C_GRAY)
     y -= 28
@@ -628,7 +652,7 @@ def _render_pdf(
     notes = []
     if is_quote:
         notes.append(
-            "This is an estimate only — not a tax invoice. "
+            "This is an estimate only - not a tax invoice. "
             "Prices include 21% BTW. A formal invoice will be issued upon payment."
         )
     else:
