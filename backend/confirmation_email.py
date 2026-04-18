@@ -527,6 +527,7 @@ Sauvage · Potgieterstraat 47H · Amsterdam
         msg["Subject"] = subject
         msg["From"]    = f"Sauvage Amsterdam <{FROM_EMAIL}>"
         msg["To"]      = client_email
+        msg["Bcc"]     = "hello@rootsandremedies.earth"
 
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
             server.starttls()
