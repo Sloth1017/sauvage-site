@@ -460,6 +460,8 @@ def send_booking_confirmation(
       </td>
     </tr>
   </table>
+  <img src="{BASE_URL}/track/open?rid={record_id}&type=confirmation"
+       width="1" height="1" border="0" style="display:block;width:1px;height:1px;" alt="">
 </body>
 </html>"""
 

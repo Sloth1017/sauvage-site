@@ -210,6 +210,46 @@ def feedback():
 </body></html>""", mimetype="text/html")
 
 
+# ── Email open tracking ───────────────────────────────────────────────────────
+_OPEN_LOG    = os.path.join(os.path.dirname(__file__), "email_opens.jsonl")
+_PIXEL_GIF   = (
+    b"GIF89a\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00"
+    b"!\xf9\x04\x00\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01"
+    b"\x00\x00\x02\x02D\x01\x00;"
+)
+_OPEN_FIELD = {
+    "confirmation": "Confirmation Opened",
+    "day-before":   "Day Before Opened",
+    "day-of":       "Day Of Opened",
+    "day-after":    "Day After Opened",
+}
+
+@app.route("/track/open")
+def track_open():
+    rid   = request.args.get("rid", "")
+    etype = request.args.get("type", "")
+    ts    = datetime.datetime.utcnow().isoformat()
+
+    # Log to file
+    with open(_OPEN_LOG, "a") as f:
+        f.write(json.dumps({"ts": ts, "type": etype, "record_id": rid}) + "\n")
+
+    # Write to Airtable (only first open)
+    field = _OPEN_FIELD.get(etype)
+    if rid and field:
+        try:
+            from airtable_client import update_inquiry, get_inquiry
+            existing = get_inquiry(rid)
+            if not existing.get("fields", {}).get(field):
+                update_inquiry(rid, {field: ts})
+                print(f"[OpenTrack] {etype} opened — {rid}")
+        except Exception as e:
+            print(f"[OpenTrack] Airtable error: {e}")
+
+    return Response(_PIXEL_GIF, mimetype="image/gif",
+                    headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
+
+
 # ── Wi-Fi password copy helper ────────────────────────────────────────────────
 @app.route("/copy")
 def copy_text():

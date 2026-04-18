@@ -80,7 +80,7 @@ def _fmt_date(dates) -> str:
 
 # ── Shared shell ──────────────────────────────────────────────────────────────
 
-def _shell(body_rows: str, preheader: str = "") -> str:
+def _shell(body_rows: str, preheader: str = "", pixel_url: str = "") -> str:
     """
     Wraps rows in the Sauvage email shell.
     Header: dark ink background, logo left, wordmark right.
@@ -179,6 +179,7 @@ def _shell(body_rows: str, preheader: str = "") -> str:
 
   </td></tr>
 </table>
+{f'<img src="{pixel_url}" width="1" height="1" border="0" style="display:block;width:1px;height:1px;" alt="">' if pixel_url else ""}
 </body>
 </html>"""
 
@@ -546,7 +547,8 @@ def send_day_before(state: dict) -> bool:
             </td>
           </tr>"""
 
-    html = _shell(rows, preheader=f"Your {event_type} is tomorrow. Here's everything you need.")
+    pixel = f"{BASE_URL}/track/open?rid={booking_id}&type=day-before" if booking_id else ""
+    html = _shell(rows, preheader=f"Your {event_type} is tomorrow. Here's everything you need.", pixel_url=pixel)
 
     plain = f"""Hi {first},
 
@@ -677,7 +679,8 @@ def send_day_of(state: dict) -> bool:
             </td>
           </tr>"""
 
-    html = _shell(rows, preheader=f"Today's the day. Your {event_type} starts at {start_time}.")
+    pixel = f"{BASE_URL}/track/open?rid={booking_id}&type=day-of" if booking_id else ""
+    html = _shell(rows, preheader=f"Today's the day. Your {event_type} starts at {start_time}.", pixel_url=pixel)
 
     plain = f"""Hi {first},
 
@@ -915,7 +918,8 @@ def send_day_after(state: dict) -> bool:
             </td>
           </tr>"""
 
-    html = _shell(rows, preheader=f"Two minutes. How did your {event_type} go? We read every reply.")
+    pixel = f"{BASE_URL}/track/open?rid={booking_id}&type=day-after" if booking_id else ""
+    html = _shell(rows, preheader=f"Two minutes. How did your {event_type} go? We read every reply.", pixel_url=pixel)
 
     plain = f"""Hi {first},
 
