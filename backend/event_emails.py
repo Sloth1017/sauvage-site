@@ -4,14 +4,17 @@ event_emails.py
 Three lifecycle emails sent around every confirmed booking:
 
   1. day_before  — sent the morning before the event (~09:00)
-                   Reminder, T&C recap, house rules, host WhatsApp
   2. day_of      — sent the morning of the event (~08:00)
-                   "Today's the day", final logistics, host WhatsApp
   3. day_after   — sent the morning after the event (~10:00)
-                   Thank-you + feedback request (best-practice format)
 
-All three are branded with the Sauvage gold/black palette and logo.
-The attributed host's WhatsApp link is injected into emails 1 and 2.
+Branding matches sauvage.amsterdam exactly:
+  --ink:    #1a1a18   headers, CTAs, dark text
+  --cream:  #f7f4ef   email background
+  --gold:   #F5F1E6   card / panel backgrounds
+  --warm:   #8b6f47   accent stripe, labels, bullet dots
+  --muted:  #6b6560   secondary text
+  Font:     Georgia serif (Plein fallback for web; Georgia is the closest
+            widely-supported serif for email clients)
 """
 
 import os
@@ -19,7 +22,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-# ── SMTP config (shared with confirmation_email.py) ──────────────────────────
+# ── SMTP config ───────────────────────────────────────────────────────────────
 SMTP_SERVER   = os.getenv("SMTP_SERVER",   "smtp.gmail.com")
 SMTP_PORT     = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER     = os.getenv("SMTP_USER",     "")
@@ -27,22 +30,30 @@ SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 FROM_EMAIL    = os.getenv("FROM_EMAIL",    "bookings@sauvage.amsterdam")
 BASE_URL      = os.getenv("BASE_URL",      "https://sauvage.amsterdam")
 
-# ── Host directory ────────────────────────────────────────────────────────────
-_HOSTS = {
-    "Greg":    {"name": "Greg",   "whatsapp": "31634742988",  "display": "+31 6 3474 2988"},
-    "Dorian":  {"name": "Dorian", "whatsapp": "31643734908",  "display": "+31 6 4373 4908"},
-    "Bart":    {"name": "Bart",   "whatsapp": "31641359923",  "display": "+31 6 4135 9923"},
-}
-_DEFAULT_HOST = _HOSTS["Greg"]
+# ── Brand tokens (matches sauvage.amsterdam CSS variables) ────────────────────
+C_INK    = "#1a1a18"
+C_CREAM  = "#f7f4ef"
+C_GOLD   = "#F5F1E6"   # card backgrounds — the site's "--gold"
+C_WARM   = "#8b6f47"   # accent colour — the site's "--warm"
+C_MUTED  = "#6b6560"
+C_BORDER = "rgba(26,26,24,0.10)"
+C_WHITE  = "#ffffff"
 
 LOGO_URL  = f"{BASE_URL}/media/sauvage-logo.png"
 TERMS_URL = f"{BASE_URL}/terms"
 
+# ── Host directory ────────────────────────────────────────────────────────────
+_HOSTS = {
+    "Greg":   {"name": "Greg",   "whatsapp": "31634742988",  "display": "+31 6 3474 2988"},
+    "Dorian": {"name": "Dorian", "whatsapp": "31643734908",  "display": "+31 6 4373 4908"},
+    "Bart":   {"name": "Bart",   "whatsapp": "31641359923",  "display": "+31 6 4135 9923"},
+}
+_DEFAULT_HOST = _HOSTS["Greg"]
 
-# ── Shared helpers ────────────────────────────────────────────────────────────
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _host_info(attributed_host: str) -> dict:
-    """Return host dict for a given attributed host name, or Greg as fallback."""
     if not attributed_host:
         return _DEFAULT_HOST
     for key in _HOSTS:
@@ -63,80 +74,227 @@ def _fmt_date(dates) -> str:
     return str(dates or "")
 
 
-def _base_html(content: str, preheader: str = "") -> str:
-    """Wrap content in the standard Sauvage email shell."""
+# ── Shared shell ──────────────────────────────────────────────────────────────
+
+def _shell(body_rows: str, preheader: str = "") -> str:
+    """
+    Wraps rows in the Sauvage email shell.
+    Header: dark ink background, logo left, wordmark right.
+    Footer: cream background, muted links.
+    """
+    pre = (
+        f'<div style="display:none;max-height:0;overflow:hidden;'
+        f'font-size:1px;color:{C_CREAM};">{preheader}&nbsp;</div>'
+        if preheader else ""
+    )
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Sauvage Space</title>
 </head>
-<body style="margin:0;padding:0;background:#f5f3ef;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#1a1a1a;">
-  {"<span style='display:none;max-height:0;overflow:hidden;'>" + preheader + "</span>" if preheader else ""}
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f5f3ef;padding:40px 0;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" border="0"
-               style="max-width:600px;width:100%;background:#ffffff;border-radius:4px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+<body style="margin:0;padding:0;background:{C_CREAM};
+             font-family:Georgia,'Times New Roman',serif;
+             color:{C_INK};-webkit-text-size-adjust:100%;">
+{pre}
+<!-- Outer wrapper -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="background:{C_CREAM};padding:40px 0 60px;">
+  <tr><td align="center">
 
-          <!-- Header -->
-          <tr>
-            <td style="background:#1a1a1a;padding:28px 40px 24px;">
-              <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td style="vertical-align:middle;">
-                    <img src="{LOGO_URL}" alt="Sauvage Space" width="60" height="60"
-                         style="display:block;width:60px;height:60px;border:0;filter:invert(1);" />
-                  </td>
-                  <td style="vertical-align:middle;padding-left:18px;">
-                    <p style="margin:0 0 3px;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#666;font-weight:500;">Potgieterstraat 47H, Amsterdam</p>
-                    <p style="margin:0;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#b8860b;font-weight:600;">Sauvage Space</p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
+    <!-- Email card -->
+    <table width="600" cellpadding="0" cellspacing="0" border="0"
+           style="max-width:600px;width:100%;background:{C_WHITE};
+                  border-radius:2px;overflow:hidden;">
 
-          <!-- Gold stripe -->
-          <tr><td style="background:#b8860b;height:3px;font-size:0;line-height:0;">&nbsp;</td></tr>
+      <!-- ── HEADER ── -->
+      <tr>
+        <td style="background:{C_INK};padding:32px 44px 28px;">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <!-- Logo mark -->
+              <td width="56" style="vertical-align:middle;">
+                <img src="{LOGO_URL}" alt="Sauvage" width="56" height="56"
+                     style="display:block;border:0;filter:invert(1);opacity:0.95;" />
+              </td>
+              <!-- Wordmark -->
+              <td style="vertical-align:middle;padding-left:16px;">
+                <p style="margin:0;font-family:Georgia,serif;font-size:22px;
+                           font-weight:300;font-style:italic;
+                           letter-spacing:0.08em;color:{C_WHITE};line-height:1;">
+                  Sauvage
+                </p>
+                <p style="margin:3px 0 0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                           font-size:9px;letter-spacing:0.22em;text-transform:uppercase;
+                           color:{C_WARM};font-weight:400;">
+                  Amsterdam
+                </p>
+              </td>
+              <!-- Address -->
+              <td align="right" style="vertical-align:middle;">
+                <p style="margin:0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                           font-size:9px;letter-spacing:0.14em;text-transform:uppercase;
+                           color:rgba(255,255,255,0.35);line-height:1.6;">
+                  Potgieterstraat 47H<br>Amsterdam
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
 
-          <!-- Body -->
-          {content}
+      <!-- Warm accent stripe -->
+      <tr>
+        <td style="background:{C_WARM};height:2px;font-size:0;line-height:0;">&nbsp;</td>
+      </tr>
 
-          <!-- Gold stripe -->
-          <tr><td style="background:#b8860b;height:2px;font-size:0;line-height:0;">&nbsp;</td></tr>
+      <!-- ── BODY ROWS ── -->
+      {body_rows}
 
-          <!-- Footer -->
-          <tr>
-            <td style="background:#111111;padding:22px 40px;">
-              <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td style="vertical-align:middle;">
-                    <img src="{LOGO_URL}" alt="" width="30" height="30"
-                         style="display:inline-block;width:30px;height:30px;border:0;filter:invert(1);opacity:0.6;vertical-align:middle;" />
-                    <span style="font-size:11px;color:#555;margin-left:10px;vertical-align:middle;letter-spacing:1px;text-transform:uppercase;">Sauvage Space</span>
-                  </td>
-                  <td align="right" style="vertical-align:middle;">
-                    <p style="margin:0;font-size:11px;color:#555;line-height:1.5;">
-                      <a href="https://sauvage.amsterdam" style="color:#888;text-decoration:none;">sauvage.amsterdam</a>
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
+      <!-- Warm accent stripe -->
+      <tr>
+        <td style="background:{C_WARM};height:1px;font-size:0;line-height:0;">&nbsp;</td>
+      </tr>
 
-        </table>
-      </td>
-    </tr>
-  </table>
+      <!-- ── FOOTER ── -->
+      <tr>
+        <td style="background:{C_CREAM};padding:24px 44px 28px;
+                   border-top:1px solid rgba(26,26,24,0.08);">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                         font-size:11px;color:{C_MUTED};line-height:1.7;">
+                <a href="https://sauvage.amsterdam"
+                   style="color:{C_MUTED};text-decoration:none;
+                          letter-spacing:0.06em;">sauvage.amsterdam</a>
+                &nbsp;&middot;&nbsp;
+                <a href="{TERMS_URL}"
+                   style="color:{C_MUTED};text-decoration:none;">Terms &amp; Conditions</a>
+              </td>
+              <td align="right"
+                  style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                         font-size:10px;color:rgba(107,101,96,0.5);letter-spacing:0.08em;
+                         text-transform:uppercase;">
+                Sauvage DAO
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+    </table>
+    <!-- /email card -->
+
+  </td></tr>
+</table>
 </body>
 </html>"""
 
 
+def _label(text: str) -> str:
+    """Uppercase tracking label — matches site's section label style."""
+    return (
+        f'<p style="margin:0 0 10px;'
+        f'font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;'
+        f'font-size:9px;letter-spacing:0.2em;text-transform:uppercase;'
+        f'color:{C_WARM};font-weight:500;">{text}</p>'
+    )
+
+
+def _h1(text: str) -> str:
+    return (
+        f'<h1 style="margin:0;font-family:Georgia,\'Times New Roman\',serif;'
+        f'font-size:28px;font-weight:300;font-style:italic;'
+        f'letter-spacing:-0.01em;color:{C_INK};line-height:1.25;">{text}</h1>'
+    )
+
+
+def _booking_card(date_str, time_str, rooms_str, guest_count, arrival_time="") -> str:
+    arrival_row = ""
+    if arrival_time:
+        arrival_row = f"""
+                    <tr>
+                      <td colspan="2" style="padding:10px 0 0;vertical-align:top;">
+                        <p style="margin:0 0 3px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                                   font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:{C_MUTED};">
+                          Setup arrival</p>
+                        <p style="margin:0;font-family:Georgia,serif;font-size:15px;
+                                   font-weight:400;color:{C_INK};">{arrival_time}</p>
+                      </td>
+                    </tr>"""
+    return f"""
+          <tr>
+            <td style="padding:0 44px 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background:{C_GOLD};border-radius:2px;
+                            border:1px solid rgba(26,26,24,0.08);">
+                <tr>
+                  <td style="padding:24px 28px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td width="50%" style="padding:0 0 14px;vertical-align:top;">
+                          <p style="margin:0 0 3px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                                     font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:{C_MUTED};">Date</p>
+                          <p style="margin:0;font-family:Georgia,serif;font-size:15px;
+                                     font-weight:400;color:{C_INK};">{date_str}</p>
+                        </td>
+                        <td width="50%" style="padding:0 0 14px;vertical-align:top;">
+                          <p style="margin:0 0 3px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                                     font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:{C_MUTED};">Time</p>
+                          <p style="margin:0;font-family:Georgia,serif;font-size:15px;
+                                     font-weight:400;color:{C_INK};">{time_str}</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td width="50%" style="vertical-align:top;">
+                          <p style="margin:0 0 3px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                                     font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:{C_MUTED};">Space</p>
+                          <p style="margin:0;font-family:Georgia,serif;font-size:15px;
+                                     font-weight:400;color:{C_INK};">{rooms_str}</p>
+                        </td>
+                        <td width="50%" style="vertical-align:top;">
+                          <p style="margin:0 0 3px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                                     font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:{C_MUTED};">Guests</p>
+                          <p style="margin:0;font-family:Georgia,serif;font-size:15px;
+                                     font-weight:400;color:{C_INK};">{guest_count}</p>
+                        </td>
+                      </tr>
+                      {arrival_row}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>"""
+
+
+def _cta_button(label: str, href: str) -> str:
+    return (
+        f'<a href="{href}" '
+        f'style="display:inline-block;background:{C_INK};color:{C_WHITE};'
+        f'text-decoration:none;padding:14px 30px;border-radius:1px;'
+        f'font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;'
+        f'font-size:10px;font-weight:600;letter-spacing:0.18em;'
+        f'text-transform:uppercase;">{label}</a>'
+    )
+
+
+def _bullet(text: str) -> str:
+    return f"""
+                <tr>
+                  <td width="20" style="vertical-align:top;padding-top:5px;">
+                    <span style="display:inline-block;width:4px;height:4px;
+                                 background:{C_WARM};border-radius:50%;
+                                 margin-top:7px;"></span>
+                  </td>
+                  <td style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                             font-size:14px;line-height:1.75;color:{C_MUTED};
+                             padding-bottom:8px;">{text}</td>
+                </tr>"""
+
+
 def _send(to_email: str, subject: str, html: str, plain: str) -> bool:
-    """Send an email via SMTP. Returns True on success."""
     if not SMTP_USER or not SMTP_PASSWORD:
         print(f"[EventEmail] SMTP not configured — skipping: {subject}")
         return False
@@ -154,470 +312,404 @@ def _send(to_email: str, subject: str, html: str, plain: str) -> bool:
         print(f"[EventEmail] Sent '{subject}' to {to_email}")
         return True
     except Exception as e:
-        print(f"[EventEmail] Failed to send '{subject}' to {to_email}: {e}")
+        print(f"[EventEmail] Failed '{subject}' to {to_email}: {e}")
         return False
 
 
-# ── ① DAY BEFORE ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# ① DAY BEFORE
+# ─────────────────────────────────────────────────────────────────────────────
 
 def send_day_before(state: dict) -> bool:
-    """
-    Reminder email sent the morning before the event.
-    Covers: event details, house rules, T&C reminder, host WhatsApp.
-    """
-    client_name    = state.get("client_name", "there")
-    client_email   = state.get("email", "")
-    event_type     = state.get("event_type", "event")
-    date_str       = _fmt_date(state.get("dates"))
-    start_time     = state.get("start_time", "")
-    end_time       = state.get("end_time", "")
-    rooms_str      = _fmt_rooms(state.get("rooms"))
-    guest_count    = state.get("guest_count", "")
-    attributed     = state.get("attributed_host", "")
-    arrival_time   = state.get("arrival_time", "")
+    client_name  = state.get("client_name", "there")
+    client_email = state.get("email", "")
+    event_type   = state.get("event_type", "event")
+    date_str     = _fmt_date(state.get("dates"))
+    start_time   = state.get("start_time", "")
+    end_time     = state.get("end_time", "")
+    rooms_str    = _fmt_rooms(state.get("rooms"))
+    guest_count  = state.get("guest_count", "")
+    attributed   = state.get("attributed_host", "")
+    arrival_time = state.get("arrival_time", "")
 
     if not client_email:
         return False
 
-    host      = _host_info(attributed)
-    time_str  = f"{start_time} to {end_time}" if start_time and end_time else start_time or "see booking"
-    wa_link   = f"https://wa.me/{host['whatsapp']}"
-    first     = client_name.split()[0]
+    host     = _host_info(attributed)
+    time_str = f"{start_time} to {end_time}" if start_time and end_time else start_time or "see booking"
+    wa_link  = f"https://wa.me/{host['whatsapp']}"
+    first    = client_name.split()[0]
+    subject  = f"Your {event_type} at Sauvage — tomorrow"
 
-    subject = f"Your {event_type} at Sauvage is tomorrow"
-
-    arrival_block = ""
-    if arrival_time:
-        arrival_block = f"""<tr>
-          <td style="padding:0 40px 28px;">
-            <table width="100%" cellpadding="0" cellspacing="0" border="0"
-                   style="background:#f5f3ef;border-radius:3px;padding:16px 20px;">
-              <tr>
-                <td>
-                  <p style="margin:0 0 4px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;">Arrival for setup</p>
-                  <p style="margin:0;font-size:15px;font-weight:600;color:#1a1a1a;">{arrival_time}</p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>"""
-
-    content = f"""
-          <!-- Heading -->
+    rows = f"""
+          <!-- Intro -->
           <tr>
-            <td style="padding:36px 40px 8px;">
-              <p style="margin:0 0 12px;font-size:16px;line-height:1.6;color:#1a1a1a;">Hi {first},</p>
-              <p style="margin:0;font-size:16px;line-height:1.6;color:#333;">
-                Just a heads-up that your <strong>{event_type}</strong> at Sauvage is <strong>tomorrow</strong>. We're looking forward to hosting you.
+            <td style="padding:44px 44px 8px;">
+              {_label("Reminder")}
+              {_h1(f"Tomorrow at Sauvage")}
+              <p style="margin:20px 0 0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                         font-size:15px;line-height:1.75;color:{C_MUTED};">
+                Hi {first} — your <strong style="color:{C_INK};">{event_type}</strong>
+                is tomorrow. Here's everything you need for a smooth evening.
               </p>
             </td>
           </tr>
 
-          <!-- Booking snapshot -->
-          <tr>
-            <td style="padding:24px 40px 28px;">
-              <table width="100%" cellpadding="0" cellspacing="0" border="0"
-                     style="background:#f5f3ef;border-radius:4px;padding:24px;">
-                <tr><td style="padding:0 4px;">
-                  <p style="margin:0 0 16px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#999;font-weight:600;">Your booking</p>
-                  <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                    <tr>
-                      <td width="50%" style="padding:0 0 12px;vertical-align:top;">
-                        <p style="margin:0 0 2px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;">Date</p>
-                        <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">{date_str}</p>
-                      </td>
-                      <td width="50%" style="padding:0 0 12px;vertical-align:top;">
-                        <p style="margin:0 0 2px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;">Time</p>
-                        <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">{time_str}</p>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td width="50%" style="vertical-align:top;">
-                        <p style="margin:0 0 2px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;">Space</p>
-                        <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">{rooms_str}</p>
-                      </td>
-                      <td width="50%" style="vertical-align:top;">
-                        <p style="margin:0 0 2px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;">Guests</p>
-                        <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">{guest_count}</p>
-                      </td>
-                    </tr>
-                  </table>
-                </td></tr>
-              </table>
-            </td>
-          </tr>
-
-          {arrival_block}
+          <!-- Booking card -->
+          {_booking_card(date_str, time_str, rooms_str, guest_count, arrival_time)}
 
           <!-- House rules -->
           <tr>
-            <td style="padding:0 40px 28px;">
-              <h2 style="margin:0 0 14px;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:#999;font-weight:600;">A few things to keep in mind</h2>
+            <td style="padding:0 44px 36px;">
+              {_label("Before you arrive")}
               <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td width="22" style="vertical-align:top;padding-top:1px;">
-                    <span style="display:inline-block;width:6px;height:6px;background:#b8860b;border-radius:50%;margin-top:6px;"></span>
-                  </td>
-                  <td style="font-size:14px;line-height:1.7;color:#333;padding-bottom:8px;">
-                    Sauvage is a shared community space. Other residents — Ikinari Coffee, the Gallery, Fento kitchen, and Selection Sauvage wines — may be present. Please stay within your booked areas.
-                  </td>
-                </tr>
-                <tr>
-                  <td width="22" style="vertical-align:top;padding-top:1px;">
-                    <span style="display:inline-block;width:6px;height:6px;background:#b8860b;border-radius:50%;margin-top:6px;"></span>
-                  </td>
-                  <td style="font-size:14px;line-height:1.7;color:#333;padding-bottom:8px;">
-                    Please leave every space exactly as you found it. The closing checklist takes about 15 minutes and keeps things running smoothly for everyone.
-                  </td>
-                </tr>
-                <tr>
-                  <td width="22" style="vertical-align:top;padding-top:1px;">
-                    <span style="display:inline-block;width:6px;height:6px;background:#b8860b;border-radius:50%;margin-top:6px;"></span>
-                  </td>
-                  <td style="font-size:14px;line-height:1.7;color:#333;padding-bottom:8px;">
-                    Music must be turned off and guests out by your agreed end time.
-                  </td>
-                </tr>
-                <tr>
-                  <td width="22" style="vertical-align:top;padding-top:1px;">
-                    <span style="display:inline-block;width:6px;height:6px;background:#b8860b;border-radius:50%;margin-top:6px;"></span>
-                  </td>
-                  <td style="font-size:14px;line-height:1.7;color:#333;">
-                    Your booking is subject to our full <a href="{TERMS_URL}" style="color:#1a1a1a;font-weight:600;text-decoration:underline;">Terms &amp; Conditions</a>.
-                  </td>
-                </tr>
+                {_bullet("Sauvage is a shared community space. Ikinari Coffee, the Gallery, Fento kitchen, and Selection Sauvage wines may all be operating. Please stay within your booked areas.")}
+                {_bullet(f"Leave every space exactly as you found it. The closing checklist takes around 15 minutes — please run through it before you leave.")}
+                {_bullet(f"Music off and all guests out by <strong style='color:{C_INK};'>{end_time or 'your agreed end time'}</strong>.")}
+                {_bullet(f'Your booking is governed by our <a href="{TERMS_URL}" style="color:{C_INK};font-weight:600;">Terms &amp; Conditions</a>. Please make sure your guests are aware.')}
               </table>
             </td>
           </tr>
 
-          <!-- Host contact -->
+          <!-- Divider -->
           <tr>
-            <td style="padding:0 40px 36px;">
-              <hr style="border:none;border-top:1px solid #e8e4de;margin:0 0 24px;">
-              <h2 style="margin:0 0 10px;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:#999;font-weight:600;">Your host tomorrow</h2>
-              <p style="margin:0 0 16px;font-size:14px;line-height:1.7;color:#333;">
-                {host['name']} will be your point of contact. For any questions or last-minute needs, reach them directly on WhatsApp:
+            <td style="padding:0 44px;">
+              <hr style="border:none;border-top:1px solid rgba(26,26,24,0.08);margin:0 0 32px;">
+            </td>
+          </tr>
+
+          <!-- Host -->
+          <tr>
+            <td style="padding:0 44px 44px;">
+              {_label("Your host tomorrow")}
+              <p style="margin:0 0 20px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                         font-size:14px;line-height:1.75;color:{C_MUTED};">
+                <strong style="color:{C_INK};">{host['name']}</strong> will be on hand for anything
+                you need. Reach them directly on WhatsApp — for last-minute questions,
+                access, or anything else on the day.
               </p>
-              <a href="{wa_link}"
-                 style="display:inline-block;background:#1a1a1a;color:#ffffff;text-decoration:none;
-                        padding:13px 26px;border-radius:2px;font-size:12px;font-weight:600;
-                        letter-spacing:1px;text-transform:uppercase;border-left:3px solid #b8860b;">
-                WhatsApp {host['name']} &rarr;
-              </a>
-              <p style="margin:12px 0 0;font-size:12px;color:#aaa;">{host['display']}</p>
+              {_cta_button(f"WhatsApp {host['name']}", wa_link)}
+              <p style="margin:12px 0 0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                         font-size:11px;color:{C_MUTED};letter-spacing:0.04em;">{host['display']}</p>
             </td>
           </tr>"""
 
-    html = _base_html(content, preheader=f"Your {event_type} at Sauvage is tomorrow — here's everything you need.")
+    html = _shell(rows, preheader=f"Your {event_type} is tomorrow — here's everything you need.")
 
     plain = f"""Hi {first},
 
-Just a heads-up that your {event_type} at Sauvage is tomorrow. We're looking forward to hosting you.
+Your {event_type} at Sauvage is tomorrow. Here's everything you need.
 
-YOUR BOOKING
+BOOKING DETAILS
 Date:   {date_str}
 Time:   {time_str}
 Space:  {rooms_str}
 Guests: {guest_count}
-{"Arrival for setup: " + arrival_time if arrival_time else ""}
+{"Setup arrival: " + arrival_time if arrival_time else ""}
 
-A FEW THINGS TO KEEP IN MIND
-- Sauvage is a shared community space. Please stay within your booked areas.
-- Leave every space exactly as you found it. The closing checklist takes about 15 minutes.
-- Music off and guests out by your agreed end time.
-- Your booking is subject to our Terms & Conditions: {TERMS_URL}
+BEFORE YOU ARRIVE
+- Sauvage is a shared space. Stay within your booked areas.
+- Leave every space as you found it. Closing checklist takes ~15 mins.
+- Music off and guests out by {end_time or "your agreed end time"}.
+- Full Terms & Conditions: {TERMS_URL}
 
 YOUR HOST TOMORROW
-{host['name']} is your point of contact for anything you need.
-WhatsApp: {wa_link}  ({host['display']})
+{host['name']} is your point of contact.
+WhatsApp: https://wa.me/{host['whatsapp']}  |  {host['display']}
 
 See you tomorrow,
-Sauvage Space
-sauvage.amsterdam
+Sauvage Space · sauvage.amsterdam
 """
     return _send(client_email, subject, html, plain)
 
 
-# ── ② DAY OF ─────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# ② DAY OF
+# ─────────────────────────────────────────────────────────────────────────────
 
 def send_day_of(state: dict) -> bool:
-    """
-    Morning-of email sent the day of the event.
-    Covers: event is today, key logistics, host WhatsApp.
-    """
-    client_name    = state.get("client_name", "there")
-    client_email   = state.get("email", "")
-    event_type     = state.get("event_type", "event")
-    date_str       = _fmt_date(state.get("dates"))
-    start_time     = state.get("start_time", "")
-    end_time       = state.get("end_time", "")
-    rooms_str      = _fmt_rooms(state.get("rooms"))
-    guest_count    = state.get("guest_count", "")
-    attributed     = state.get("attributed_host", "")
-    arrival_time   = state.get("arrival_time", "")
+    client_name  = state.get("client_name", "there")
+    client_email = state.get("email", "")
+    event_type   = state.get("event_type", "event")
+    date_str     = _fmt_date(state.get("dates"))
+    start_time   = state.get("start_time", "")
+    end_time     = state.get("end_time", "")
+    rooms_str    = _fmt_rooms(state.get("rooms"))
+    guest_count  = state.get("guest_count", "")
+    attributed   = state.get("attributed_host", "")
+    arrival_time = state.get("arrival_time", "")
 
     if not client_email:
         return False
 
-    host      = _host_info(attributed)
-    time_str  = f"{start_time} to {end_time}" if start_time and end_time else start_time or "see booking"
-    wa_link   = f"https://wa.me/{host['whatsapp']}"
-    first     = client_name.split()[0]
+    host     = _host_info(attributed)
+    time_str = f"{start_time} to {end_time}" if start_time and end_time else start_time or "see booking"
+    wa_link  = f"https://wa.me/{host['whatsapp']}"
+    first    = client_name.split()[0]
+    subject  = f"Today at Sauvage — your {event_type} starts at {start_time}"
 
-    subject = f"Today's the day - your {event_type} at Sauvage"
-
-    content = f"""
-          <!-- Heading -->
+    rows = f"""
+          <!-- Intro -->
           <tr>
-            <td style="padding:36px 40px 8px;">
-              <p style="margin:0 0 12px;font-size:16px;line-height:1.6;color:#1a1a1a;">Hi {first},</p>
-              <p style="margin:0 0 14px;font-size:16px;line-height:1.6;color:#333;">
-                Today's the day! Your <strong>{event_type}</strong> at Sauvage starts at <strong>{start_time or "your booked time"}</strong>. We hope everything goes beautifully.
-              </p>
-              <p style="margin:0;font-size:15px;line-height:1.6;color:#555;">
-                Here's a quick summary of your booking for reference:
+            <td style="padding:44px 44px 8px;">
+              {_label("Today")}
+              {_h1("It's happening.")}
+              <p style="margin:20px 0 0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                         font-size:15px;line-height:1.75;color:{C_MUTED};">
+                Hi {first} — your <strong style="color:{C_INK};">{event_type}</strong>
+                is today. Doors open at
+                <strong style="color:{C_INK};">{start_time or "your booked time"}</strong>.
+                We hope it goes beautifully.
               </p>
             </td>
           </tr>
 
-          <!-- Booking snapshot -->
-          <tr>
-            <td style="padding:20px 40px 28px;">
-              <table width="100%" cellpadding="0" cellspacing="0" border="0"
-                     style="background:#f5f3ef;border-radius:4px;padding:22px 24px;">
-                <tr><td>
-                  <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                    <tr>
-                      <td width="50%" style="padding:0 0 12px;vertical-align:top;">
-                        <p style="margin:0 0 2px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;">Time</p>
-                        <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:600;">{time_str}</p>
-                      </td>
-                      <td width="50%" style="padding:0 0 12px;vertical-align:top;">
-                        <p style="margin:0 0 2px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;">Space</p>
-                        <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">{rooms_str}</p>
-                      </td>
-                    </tr>
-                    {"<tr><td colspan='2'><p style='margin:0 0 2px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;'>Arrival for setup</p><p style='margin:0;font-size:14px;color:#1a1a1a;font-weight:500;'>" + arrival_time + "</p></td></tr>" if arrival_time else ""}
-                  </table>
-                </td></tr>
-              </table>
-            </td>
-          </tr>
+          <!-- Booking card -->
+          {_booking_card(date_str, time_str, rooms_str, guest_count, arrival_time)}
 
           <!-- Quick reminders -->
           <tr>
-            <td style="padding:0 40px 28px;">
-              <h2 style="margin:0 0 12px;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:#999;font-weight:600;">Quick reminders</h2>
+            <td style="padding:0 44px 36px;">
+              {_label("Quick reminders")}
               <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td width="22" style="vertical-align:top;">
-                    <span style="display:inline-block;width:6px;height:6px;background:#b8860b;border-radius:50%;margin-top:7px;"></span>
-                  </td>
-                  <td style="font-size:14px;line-height:1.7;color:#333;padding-bottom:7px;">
-                    Stay within your booked areas and treat the shared spaces with care.
-                  </td>
-                </tr>
-                <tr>
-                  <td width="22" style="vertical-align:top;">
-                    <span style="display:inline-block;width:6px;height:6px;background:#b8860b;border-radius:50%;margin-top:7px;"></span>
-                  </td>
-                  <td style="font-size:14px;line-height:1.7;color:#333;padding-bottom:7px;">
-                    Run through the closing checklist before you leave — it takes about 15 minutes.
-                  </td>
-                </tr>
-                <tr>
-                  <td width="22" style="vertical-align:top;">
-                    <span style="display:inline-block;width:6px;height:6px;background:#b8860b;border-radius:50%;margin-top:7px;"></span>
-                  </td>
-                  <td style="font-size:14px;line-height:1.7;color:#333;">
-                    End time is <strong>{end_time or "as agreed"}</strong> — music off and all guests out by then.
-                  </td>
-                </tr>
+                {_bullet("Stay within your booked spaces and treat shared areas with care.")}
+                {_bullet("Run through the closing checklist before you leave — it takes about 15 minutes.")}
+                {_bullet(f"End time is <strong style='color:{C_INK};'>{end_time or 'as agreed'}</strong>. Music off, all guests out.")}
               </table>
             </td>
           </tr>
 
-          <!-- Host contact -->
+          <!-- Divider -->
           <tr>
-            <td style="padding:0 40px 36px;">
-              <hr style="border:none;border-top:1px solid #e8e4de;margin:0 0 22px;">
-              <p style="margin:0 0 6px;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:#999;font-weight:600;">Need anything today?</p>
-              <p style="margin:0 0 16px;font-size:14px;line-height:1.7;color:#333;">
-                {host['name']} is your host today. Message them directly on WhatsApp for anything — access, questions, or last-minute requests:
-              </p>
-              <a href="{wa_link}"
-                 style="display:inline-block;background:#1a1a1a;color:#ffffff;text-decoration:none;
-                        padding:13px 26px;border-radius:2px;font-size:12px;font-weight:600;
-                        letter-spacing:1px;text-transform:uppercase;border-left:3px solid #b8860b;">
-                WhatsApp {host['name']} &rarr;
-              </a>
-              <p style="margin:12px 0 0;font-size:12px;color:#aaa;">{host['display']}</p>
+            <td style="padding:0 44px;">
+              <hr style="border:none;border-top:1px solid rgba(26,26,24,0.08);margin:0 0 32px;">
             </td>
           </tr>
 
-          <!-- Sign off -->
+          <!-- Host -->
           <tr>
-            <td style="padding:0 40px 36px;">
-              <p style="margin:0;font-size:15px;line-height:1.7;color:#333;">
-                Have a wonderful {event_type}. We're glad you're here.
+            <td style="padding:0 44px 36px;">
+              {_label("Need anything today?")}
+              <p style="margin:0 0 20px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                         font-size:14px;line-height:1.75;color:{C_MUTED};">
+                <strong style="color:{C_INK};">{host['name']}</strong> is your host today.
+                Message them on WhatsApp for access, questions, or anything that comes up.
+              </p>
+              {_cta_button(f"WhatsApp {host['name']}", wa_link)}
+              <p style="margin:12px 0 0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                         font-size:11px;color:{C_MUTED};letter-spacing:0.04em;">{host['display']}</p>
+            </td>
+          </tr>
+
+          <!-- Sign-off -->
+          <tr>
+            <td style="padding:0 44px 44px;">
+              <p style="margin:0;font-family:Georgia,'Times New Roman',serif;
+                         font-size:16px;font-weight:300;font-style:italic;
+                         color:{C_INK};line-height:1.6;">
+                Enjoy every moment of it.
               </p>
             </td>
           </tr>"""
 
-    html = _base_html(content, preheader=f"Today's the day! Your {event_type} starts at {start_time}.")
+    html = _shell(rows, preheader=f"Today's the day — your {event_type} starts at {start_time}.")
 
     plain = f"""Hi {first},
 
-Today's the day! Your {event_type} at Sauvage starts at {start_time or "your booked time"}.
+Your {event_type} at Sauvage is today. Doors open at {start_time or "your booked time"}.
 
-YOUR BOOKING TODAY
+TODAY'S BOOKING
 Time:   {time_str}
 Space:  {rooms_str}
-{"Arrival for setup: " + arrival_time if arrival_time else ""}
+{"Setup arrival: " + arrival_time if arrival_time else ""}
 
 QUICK REMINDERS
-- Stay within your booked areas.
-- Run through the closing checklist before you leave.
-- End time is {end_time or "as agreed"} — music off and guests out by then.
+- Stay within your booked spaces.
+- Close down checklist before you leave (~15 mins).
+- End time: {end_time or "as agreed"} — music off, guests out.
 
-NEED ANYTHING TODAY?
-{host['name']} is your host. Message them on WhatsApp:
-{wa_link}  ({host['display']})
+NEED ANYTHING?
+{host['name']} is your host today.
+WhatsApp: https://wa.me/{host['whatsapp']}  |  {host['display']}
 
-Have a wonderful {event_type}.
+Enjoy every moment of it.
 
-Sauvage Space
-sauvage.amsterdam
+Sauvage Space · sauvage.amsterdam
 """
     return _send(client_email, subject, html, plain)
 
 
-# ── ③ DAY AFTER (feedback) ────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# ③ DAY AFTER — Feedback
+# ─────────────────────────────────────────────────────────────────────────────
 
 def send_day_after(state: dict) -> bool:
     """
-    Feedback email sent the morning after the event.
-    Designed to maximise response rate and actionable insight:
-    - Personal, warm tone
-    - Three focused questions (overall, standout, improve)
-    - Simple reply mechanism — no external form needed
-    - Net Promoter-style opener to quantify satisfaction
+    Feedback email — best-practice format:
+    - Warm, personal tone; reference their specific event
+    - NPS-style overall rating (1–10) for quantitative tracking
+    - One highlight question (positive reinforcement)
+    - One improvement question (actionable insight)
+    - Simple reply mechanism — no external form, low friction
+    - Signed off by the attributed host to feel personal
     """
-    client_name    = state.get("client_name", "there")
-    client_email   = state.get("email", "")
-    event_type     = state.get("event_type", "event")
-    attributed     = state.get("attributed_host", "")
+    client_name  = state.get("client_name", "there")
+    client_email = state.get("email", "")
+    event_type   = state.get("event_type", "event")
+    attributed   = state.get("attributed_host", "")
 
     if not client_email:
         return False
 
-    host      = _host_info(attributed)
-    first     = client_name.split()[0]
-    reply_url = f"mailto:{FROM_EMAIL}?subject=Feedback%20from%20{first}&body=Hi%20Sauvage%20team%2C%0A%0A"
+    host    = _host_info(attributed)
+    first   = client_name.split()[0]
+    subject = f"How was your {event_type}? — Sauvage"
 
-    subject = f"How did your {event_type} go? A quick word from Sauvage"
-
-    content = f"""
-          <!-- Heading -->
+    rows = f"""
+          <!-- Intro -->
           <tr>
-            <td style="padding:36px 40px 8px;">
-              <p style="margin:0 0 12px;font-size:16px;line-height:1.6;color:#1a1a1a;">Hi {first},</p>
-              <p style="margin:0 0 14px;font-size:16px;line-height:1.6;color:#333;">
-                We hope your <strong>{event_type}</strong> was everything you wanted it to be. Thank you for trusting Sauvage with your event — it means a lot to us.
+            <td style="padding:44px 44px 8px;">
+              {_label("We'd love to hear from you")}
+              {_h1("How did it go?")}
+              <p style="margin:20px 0 0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                         font-size:15px;line-height:1.75;color:{C_MUTED};">
+                Hi {first} — thank you for hosting your <strong style="color:{C_INK};">{event_type}</strong>
+                at Sauvage. We hope it was everything you wanted it to be.
               </p>
-              <p style="margin:0;font-size:15px;line-height:1.6;color:#555;">
-                We read every piece of feedback personally. It takes less than two minutes and genuinely shapes how we improve the space. Would you mind sharing a few thoughts?
+              <p style="margin:14px 0 0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                         font-size:14px;line-height:1.75;color:{C_MUTED};">
+                We read every reply personally. Three short questions — two minutes at most.
+                Your answers shape how we improve the space for everyone.
               </p>
             </td>
           </tr>
 
-          <!-- Feedback questions -->
+          <!-- Q1 -->
           <tr>
-            <td style="padding:24px 40px 28px;">
+            <td style="padding:32px 44px 0;">
               <table width="100%" cellpadding="0" cellspacing="0" border="0"
-                     style="background:#f5f3ef;border-radius:4px;overflow:hidden;">
-
-                <!-- Q1 -->
+                     style="background:{C_GOLD};border-radius:2px;
+                            border:1px solid rgba(26,26,24,0.08);">
                 <tr>
-                  <td style="padding:20px 24px 16px;border-bottom:1px solid #e8e4de;">
-                    <p style="margin:0 0 6px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#b8860b;font-weight:600;">Question 1 of 3</p>
-                    <p style="margin:0 0 10px;font-size:15px;font-weight:600;color:#1a1a1a;line-height:1.5;">
-                      On a scale of 1-10, how would you rate your overall experience at Sauvage?
+                  <td style="padding:24px 28px;">
+                    <p style="margin:0 0 4px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                               font-size:9px;letter-spacing:0.2em;text-transform:uppercase;
+                               color:{C_WARM};">01 &mdash; Overall</p>
+                    <p style="margin:0 0 10px;font-family:Georgia,serif;font-size:17px;
+                               font-weight:400;color:{C_INK};line-height:1.4;">
+                      On a scale of 1&ndash;10, how would you rate your overall experience at Sauvage?
                     </p>
-                    <p style="margin:0;font-size:12px;color:#999;">Just hit reply and include your rating — 1 (not great) to 10 (exceptional).</p>
+                    <p style="margin:0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                               font-size:12px;color:{C_MUTED};line-height:1.6;">
+                      1 = not what we hoped, 10 = couldn't have been better.
+                    </p>
                   </td>
                 </tr>
+              </table>
+            </td>
+          </tr>
 
-                <!-- Q2 -->
+          <!-- Q2 -->
+          <tr>
+            <td style="padding:12px 44px 0;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background:{C_GOLD};border-radius:2px;
+                            border:1px solid rgba(26,26,24,0.08);">
                 <tr>
-                  <td style="padding:20px 24px 16px;border-bottom:1px solid #e8e4de;">
-                    <p style="margin:0 0 6px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#b8860b;font-weight:600;">Question 2 of 3</p>
-                    <p style="margin:0 0 10px;font-size:15px;font-weight:600;color:#1a1a1a;line-height:1.5;">
-                      What was the highlight of the event for you — something we got right?
+                  <td style="padding:24px 28px;">
+                    <p style="margin:0 0 4px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                               font-size:9px;letter-spacing:0.2em;text-transform:uppercase;
+                               color:{C_WARM};">02 &mdash; Highlight</p>
+                    <p style="margin:0 0 10px;font-family:Georgia,serif;font-size:17px;
+                               font-weight:400;color:{C_INK};line-height:1.4;">
+                      What was the highlight of the event — something we got right?
                     </p>
-                    <p style="margin:0;font-size:12px;color:#999;">Could be the space, the process, the host, the add-ons — anything.</p>
+                    <p style="margin:0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                               font-size:12px;color:{C_MUTED};line-height:1.6;">
+                      Could be the space, the booking process, your host, the add-ons — anything.
+                    </p>
                   </td>
                 </tr>
+              </table>
+            </td>
+          </tr>
 
-                <!-- Q3 -->
+          <!-- Q3 -->
+          <tr>
+            <td style="padding:12px 44px 0;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background:{C_GOLD};border-radius:2px;
+                            border:1px solid rgba(26,26,24,0.08);">
                 <tr>
-                  <td style="padding:20px 24px 20px;">
-                    <p style="margin:0 0 6px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#b8860b;font-weight:600;">Question 3 of 3</p>
-                    <p style="margin:0 0 10px;font-size:15px;font-weight:600;color:#1a1a1a;line-height:1.5;">
-                      Is there anything we could have done better or made easier for you?
+                  <td style="padding:24px 28px;">
+                    <p style="margin:0 0 4px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                               font-size:9px;letter-spacing:0.2em;text-transform:uppercase;
+                               color:{C_WARM};">03 &mdash; Improve</p>
+                    <p style="margin:0 0 10px;font-family:Georgia,serif;font-size:17px;
+                               font-weight:400;color:{C_INK};line-height:1.4;">
+                      Is there anything we could have done better or made easier?
                     </p>
-                    <p style="margin:0;font-size:12px;color:#999;">No detail is too small — we genuinely want to know.</p>
+                    <p style="margin:0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                               font-size:12px;color:{C_MUTED};line-height:1.6;">
+                      No detail too small — this is exactly what helps us improve.
+                    </p>
                   </td>
                 </tr>
-
               </table>
             </td>
           </tr>
 
           <!-- CTA -->
           <tr>
-            <td style="padding:0 40px 32px;text-align:center;">
-              <a href="{reply_url}"
-                 style="display:inline-block;background:#1a1a1a;color:#ffffff;text-decoration:none;
-                        padding:14px 32px;border-radius:2px;font-size:12px;font-weight:600;
-                        letter-spacing:1px;text-transform:uppercase;border-left:3px solid #b8860b;">
-                Reply with your feedback &rarr;
-              </a>
-              <p style="margin:14px 0 0;font-size:12px;color:#aaa;">
-                Or just hit reply to this email — it goes straight to {host['name']}.
+            <td style="padding:32px 44px 16px;">
+              {_cta_button("Reply with your feedback", f"mailto:{FROM_EMAIL}?subject=Feedback%20%E2%80%94%20{first}")}
+              <p style="margin:14px 0 0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                         font-size:12px;color:{C_MUTED};line-height:1.6;">
+                Or just reply to this email — it goes straight to {host['name']}.
               </p>
             </td>
           </tr>
 
-          <!-- Sign off -->
+          <!-- Divider -->
           <tr>
-            <td style="padding:0 40px 36px;">
-              <hr style="border:none;border-top:1px solid #e8e4de;margin:0 0 22px;">
-              <p style="margin:0 0 10px;font-size:14px;line-height:1.7;color:#333;">
-                Thank you again, {first}. We'd love to have you back at Sauvage.
+            <td style="padding:8px 44px 0;">
+              <hr style="border:none;border-top:1px solid rgba(26,26,24,0.08);margin:0 0 32px;">
+            </td>
+          </tr>
+
+          <!-- Sign-off -->
+          <tr>
+            <td style="padding:0 44px 44px;">
+              <p style="margin:0 0 6px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                         font-size:14px;line-height:1.75;color:{C_MUTED};">
+                Thank you again, {first}. We'd love to have you back.
               </p>
-              <p style="margin:0;font-size:14px;color:#555;">
-                Warm regards,<br>
-                <strong>{host['name']} &amp; the Sauvage team</strong>
+              <p style="margin:0;font-family:Georgia,serif;font-size:15px;
+                         font-style:italic;font-weight:300;color:{C_INK};">
+                {host['name']} &amp; the Sauvage team
               </p>
             </td>
           </tr>"""
 
-    html = _base_html(content, preheader=f"Two minutes to help us improve — how did your {event_type} go?")
+    html = _shell(rows, preheader=f"Two minutes — how did your {event_type} go? We read every reply.")
 
     plain = f"""Hi {first},
 
-We hope your {event_type} was everything you wanted it to be. Thank you for trusting Sauvage with your event.
+Thank you for hosting your {event_type} at Sauvage. We hope it was everything you wanted.
 
-We read every piece of feedback personally. Three quick questions — takes less than two minutes:
+We read every reply personally — three short questions, two minutes at most.
 
-Q1: On a scale of 1-10, how would you rate your overall experience at Sauvage?
+01 — OVERALL
+On a scale of 1-10, how would you rate your overall experience at Sauvage?
+(1 = not what we hoped, 10 = couldn't have been better)
 
-Q2: What was the highlight of the event for you — something we got right?
+02 — HIGHLIGHT
+What was the highlight of the event — something we got right?
 
-Q3: Is there anything we could have done better or made easier for you?
+03 — IMPROVE
+Is there anything we could have done better or made easier?
 
-Just hit reply and share your thoughts — it goes straight to {host['name']}.
+Just hit reply — it goes straight to {host['name']}.
 
 Thank you again. We'd love to have you back.
 
