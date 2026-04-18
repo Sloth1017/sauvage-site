@@ -168,8 +168,9 @@ def send_booking_confirmation(
     arrival_url   = f"{BASE_URL}/arrival?record={record_id}&token={arrival_token}"
 
     # Invoice section (optional) — minimal, tertiary weight
+    # Never shown for wine tastings (Shopify receipt is the invoice)
     inv_html = ""
-    if invoice_url:
+    if invoice_url and not is_wine_tasting:
         inv_html = f"""
           <!-- Invoice — tertiary, text-level only -->
           <tr>
@@ -207,7 +208,7 @@ def send_booking_confirmation(
           </tr>"""
     inv_plain = (
         f"\nINVOICE\n{invoice_number}\nView: {invoice_url}\n"
-        if invoice_url else ""
+        if invoice_url and not is_wine_tasting else ""
     )
 
     subject = (
