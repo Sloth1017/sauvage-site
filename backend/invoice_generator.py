@@ -753,6 +753,10 @@ def _render_pdf(
         if lb: note_lines.append(" ".join(lb))
         note_lines.append("")
     bh2 = len(note_lines) * 14 + 24
+    # Footer occupies y=34–70 — ensure notes box doesn't overlap it
+    FOOTER_SAFE = 80
+    if y - bh2 + 12 < FOOTER_SAFE:
+        y = FOOTER_SAFE + bh2 - 12
     c.setFillColor(C_NOTE); c.setStrokeColor(colors.HexColor("#e8e4de")); c.setLineWidth(0.5)
     c.rect(L, y - bh2 + 12, CW, bh2, stroke=1, fill=1)
     ny = y
