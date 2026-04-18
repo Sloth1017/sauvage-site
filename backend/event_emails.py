@@ -217,31 +217,33 @@ def _wine_section(booking_id: str = "", client_name: str = "",
           <tr>
             <td style="padding:0 44px 36px;">
               <table width="100%" cellpadding="0" cellspacing="0" border="0"
-                     style="background:{C_INK};border-radius:2px;overflow:hidden;">
+                     style="border:1px solid rgba(26,26,24,0.1);border-radius:2px;">
                 <tr>
-                  <td style="padding:24px 28px 20px;">
-                    <p style="margin:0 0 6px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
-                               font-size:9px;letter-spacing:0.2em;text-transform:uppercase;
-                               color:{C_WARM};">Selection Sauvage</p>
-                    <p style="margin:0 0 10px;font-family:Georgia,serif;font-size:17px;
-                               font-weight:300;font-style:italic;color:{C_WHITE};line-height:1.4;">
-                      Want to pre-order wines for your event?
-                    </p>
-                    <p style="margin:0 0 18px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
-                               font-size:13px;line-height:1.7;color:rgba(255,255,255,0.6);">
-                      Browse our natural wine selection and place your order ahead of time.
-                      We'll have everything ready for you on the day.
-                    </p>
-                    <a href="{wine_url}"
-                       style="display:inline-block;background:{C_WHITE};color:{C_INK};
-                              text-decoration:none;padding:12px 24px;border-radius:1px;
-                              font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
-                              font-size:10px;font-weight:600;letter-spacing:0.18em;
-                              text-transform:uppercase;">Place your order</a>
+                  <td style="padding:22px 28px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="vertical-align:middle;">
+                          <p style="margin:0 0 4px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                                     font-size:9px;letter-spacing:0.2em;text-transform:uppercase;
+                                     color:{C_WARM};">Selection Sauvage</p>
+                          <p style="margin:0;font-family:Georgia,serif;font-size:16px;
+                                     font-weight:300;color:{C_INK};line-height:1.4;">
+                            Pre-order natural wines for your event</p>
+                          <p style="margin:5px 0 0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                                     font-size:12px;color:{C_MUTED};line-height:1.6;">
+                            Use code <strong style="color:{C_INK};">IN-HOUSE</strong> at checkout</p>
+                        </td>
+                        <td align="right" style="vertical-align:middle;padding-left:20px;white-space:nowrap;">
+                          <a href="{wine_url}"
+                             style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                                    font-size:10px;font-weight:700;letter-spacing:0.18em;
+                                    text-transform:uppercase;color:{C_INK};text-decoration:none;
+                                    display:inline-block;border-bottom:2px solid {C_WARM};
+                                    padding-bottom:2px;">Order wines &rarr;</a>
+                        </td>
+                      </tr>
+                    </table>
                   </td>
-                </tr>
-                <tr>
-                  <td style="background:{C_WARM};height:2px;font-size:0;line-height:0;">&nbsp;</td>
                 </tr>
               </table>
             </td>
