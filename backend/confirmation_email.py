@@ -128,26 +128,42 @@ def send_booking_confirmation(
     arrival_token = generate_arrival_token(record_id)
     arrival_url   = f"{BASE_URL}/arrival?record={record_id}&token={arrival_token}"
 
-    # Invoice section (optional)
+    # Invoice section (optional) — minimal, tertiary weight
     inv_html = ""
     if invoice_url:
         inv_html = f"""
-          <!-- Invoice -->
+          <!-- Invoice — tertiary, text-level only -->
           <tr>
-            <td style="padding:0 40px 32px;">
-              <hr style="border:none;border-top:1px solid #e8e4de;margin:0 0 24px;">
-              <h2 style="margin:0 0 12px;font-size:14px;letter-spacing:1.5px;text-transform:uppercase;color:#999;font-weight:600;">Your Invoice</h2>
-              <p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#333;">
-                Your invoice {f'<strong>{invoice_number}</strong>' if invoice_number else ''} is attached to this email
-                {"and available at the link below" if invoice_url else ""}.
-              </p>
-              <a href="{invoice_url}"
-                 style="display:inline-block;background:#f5f3ef;color:#1a1a1a;text-decoration:none;
-                        border:1px solid #ddd;padding:12px 24px;border-radius:2px;font-size:12px;
-                        font-weight:500;letter-spacing:1px;text-transform:uppercase;
-                        border-left:3px solid #b8860b;">
-                View invoice {invoice_number}
-              </a>
+            <td style="padding:0 40px 28px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="border-top:1px solid #e8e4de;">
+                <tr>
+                  <td style="padding:20px 0 0;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="vertical-align:middle;">
+                          <p style="margin:0;font-size:10px;letter-spacing:0.18em;
+                                     text-transform:uppercase;color:#aaa;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                            Invoice
+                          </p>
+                          <p style="margin:4px 0 0;font-size:13px;color:#555;
+                                     font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                            {invoice_number}
+                          </p>
+                        </td>
+                        <td align="right" style="vertical-align:middle;">
+                          <a href="{invoice_url}"
+                             style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                                    font-size:11px;letter-spacing:0.14em;text-transform:uppercase;
+                                    color:#b8860b;text-decoration:none;font-weight:600;">
+                            View &rarr;
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>"""
     inv_plain = (
@@ -255,76 +271,101 @@ def send_booking_confirmation(
             </td>
           </tr>
 
-          <!-- Wine pre-order -->
+          <!-- ① ARRIVAL — dominant CTA -->
           <tr>
-            <td style="padding:0 40px 32px;">
+            <td style="padding:0 40px 12px;">
               <table width="100%" cellpadding="0" cellspacing="0" border="0"
                      style="background:#1a1a18;border-radius:2px;overflow:hidden;">
                 <tr>
-                  <td style="padding:24px 28px 20px;">
-                    <p style="margin:0 0 6px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
-                               font-size:9px;letter-spacing:0.2em;text-transform:uppercase;
-                               color:#8b6f47;">Selection Sauvage</p>
-                    <p style="margin:0 0 10px;font-family:Georgia,serif;font-size:17px;
-                               font-weight:300;font-style:italic;color:#ffffff;line-height:1.4;">
-                      Want to pre-order wines for your event?
-                    </p>
-                    <p style="margin:0 0 18px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
-                               font-size:13px;line-height:1.7;color:rgba(255,255,255,0.6);">
-                      Browse our natural wine selection and place your order ahead of time.
-                      We'll have everything ready for you on the day.
-                    </p>
-                    <a href="{wine_url}"
-                       style="display:inline-block;background:#ffffff;color:#1a1a18;
-                              text-decoration:none;padding:12px 24px;border-radius:1px;
-                              font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
-                              font-size:10px;font-weight:600;letter-spacing:0.18em;
-                              text-transform:uppercase;">Place your order</a>
-                  </td>
+                  <td style="background:#b8860b;height:3px;font-size:0;line-height:0;"></td>
                 </tr>
                 <tr>
-                  <td style="background:#8b6f47;height:2px;font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="padding:32px 36px 36px;">
+                    <p style="margin:0 0 8px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                               font-size:9px;letter-spacing:0.22em;text-transform:uppercase;color:#b8860b;">
+                      One thing from you
+                    </p>
+                    <p style="margin:0 0 10px;font-family:Georgia,serif;font-size:22px;
+                               font-weight:300;color:#ffffff;line-height:1.3;">
+                      When are you planning to arrive?
+                    </p>
+                    <p style="margin:0 0 28px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                               font-size:13px;line-height:1.7;color:rgba(255,255,255,0.5);">
+                      Let us know your setup arrival time so we can coordinate with the other residents.
+                      Takes 10 seconds.
+                    </p>
+                    <a href="{arrival_url}"
+                       style="display:block;background:#ffffff;color:#1a1a18;text-decoration:none;
+                              padding:16px 0;border-radius:1px;text-align:center;
+                              font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                              font-size:10px;font-weight:700;letter-spacing:0.22em;
+                              text-transform:uppercase;">
+                      Confirm arrival time
+                    </a>
+                  </td>
                 </tr>
               </table>
             </td>
           </tr>
 
-          <!-- Community space section -->
+          <!-- ② WINES — secondary -->
           <tr>
-            <td style="padding:0 40px 32px;">
-              <h2 style="margin:0 0 12px;font-size:14px;letter-spacing:1.5px;text-transform:uppercase;color:#999;font-weight:600;">A shared space</h2>
-              <p style="margin:0 0 12px;font-size:15px;line-height:1.7;color:#333;">
-                Sauvage is a community space — several independent businesses call it home. On your event day you may share the building with Ikinari Coffee, the Sauvage Gallery, Fento kitchen, and Selection Sauvage wines.
+            <td style="padding:12px 40px 12px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="border:1px solid #e8e4de;border-radius:2px;">
+                <tr>
+                  <td style="padding:24px 28px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="vertical-align:middle;">
+                          <p style="margin:0 0 4px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                                     font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:#b8860b;">
+                            Selection Sauvage
+                          </p>
+                          <p style="margin:0;font-family:Georgia,serif;font-size:16px;
+                                     font-weight:300;color:#1a1a18;line-height:1.4;">
+                            Pre-order natural wines for your event
+                          </p>
+                          <p style="margin:6px 0 0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                                     font-size:12px;color:#888;line-height:1.6;">
+                            Use code <strong style="color:#555;">IN-HOUSE</strong> at checkout
+                          </p>
+                        </td>
+                        <td align="right" style="vertical-align:middle;padding-left:20px;white-space:nowrap;">
+                          <a href="{wine_url}"
+                             style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                                    font-size:10px;font-weight:700;letter-spacing:0.18em;
+                                    text-transform:uppercase;color:#1a1a18;text-decoration:none;
+                                    display:inline-block;border-bottom:2px solid #b8860b;
+                                    padding-bottom:2px;">
+                            Order wines &rarr;
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Community space note -->
+          <tr>
+            <td style="padding:24px 40px 0px;">
+              <p style="margin:0 0 6px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                         font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:#aaa;">
+                A shared space
               </p>
-              <p style="margin:0;font-size:15px;line-height:1.7;color:#333;">
-                Please treat shared areas with care, respect the zones outside your booking, and leave every space exactly as you found it. The closing checklist in your booking confirmation covers everything — it takes about 15 minutes and keeps things running smoothly for everyone.
+              <p style="margin:0 0 10px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                         font-size:13px;line-height:1.75;color:#666;">
+                Sauvage is home to several independent businesses. On your event day you may share the
+                building with Ikinari Coffee, the Gallery, Fento kitchen, and Selection Sauvage wines.
+                Please treat shared areas with care and leave every space exactly as you found it.
               </p>
             </td>
           </tr>
 
-          <!-- Divider -->
-          <tr>
-            <td style="padding:0 40px 32px;">
-              <hr style="border:none;border-top:1px solid #e8e4de;margin:0;">
-            </td>
-          </tr>
-
-          <!-- Arrival time request -->
-          <tr>
-            <td style="padding:0 40px 32px;">
-              <h2 style="margin:0 0 12px;font-size:14px;letter-spacing:1.5px;text-transform:uppercase;color:#999;font-weight:600;">When will you arrive?</h2>
-              <p style="margin:0 0 20px;font-size:15px;line-height:1.7;color:#333;">
-                Let us know what time you're planning to arrive for setup — this helps us coordinate with the other residents in the space.
-              </p>
-              <a href="{arrival_url}"
-                 style="display:inline-block;background:#1a1a1a;color:#ffffff;text-decoration:none;
-                        padding:14px 28px;border-radius:2px;font-size:13px;font-weight:500;
-                        letter-spacing:1px;text-transform:uppercase;border-left:3px solid #b8860b;">
-                Confirm your arrival time
-              </a>
-            </td>
-          </tr>
-
+          <!-- ③ INVOICE — tertiary -->
           {inv_html}
 
           <!-- Website link + T&C -->
