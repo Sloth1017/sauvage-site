@@ -199,9 +199,116 @@ def send_booking_confirmation(
         if invoice_url else ""
     )
 
-    subject = f"Your Sauvage Space booking is confirmed"
+    subject = (
+        "Your Private Wine Tasting is confirmed"
+        if is_wine_tasting
+        else "Your Sauvage Space booking is confirmed"
+    )
 
     logo_url = logo_b64 or f"{BASE_URL}/media/sauvage-logo.png"
+
+    # ── Greeting copy ────────────────────────────────────────────────────────────
+    if is_wine_tasting:
+        greeting_body = (
+            "We can't wait to welcome you and your guests for a private wine tasting at Sauvage. "
+            "Your booking is confirmed — everything is set for an intimate evening of natural wine."
+        )
+    else:
+        greeting_body = (
+            "Welcome to Sauvage. Your deposit is in and your booking is locked — "
+            "we're looking forward to hosting you."
+        )
+
+    # ── Booking summary rows ─────────────────────────────────────────────────────
+    # Wine tastings: no Total / Deposit row (invoice handled by Shopify)
+    if is_wine_tasting:
+        summary_totals_row = ""
+    elif quote_total:
+        summary_totals_row = f"""<tr>
+                        <td width="50%" style="padding:0;vertical-align:top;">
+                          <p style="margin:0 0 2px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;">Total</p>
+                          <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">&#8364;{quote_total} incl. VAT</p>
+                        </td>
+                        <td width="50%" style="padding:0;vertical-align:top;">
+                          <p style="margin:0 0 2px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;">Deposit Paid</p>
+                          <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">{deposit}</p>
+                        </td>
+                      </tr>"""
+    else:
+        summary_totals_row = ""
+
+    # ── Wine tasting description block (replaces wines upsell) ──────────────────
+    wine_tasting_desc_html = """
+          <!-- Wine tasting description -->
+          <tr>
+            <td style="padding:0 40px 12px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="border:1px solid #e8e4de;border-radius:2px;">
+                <tr>
+                  <td style="padding:28px 28px 24px;">
+                    <p style="margin:0 0 6px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                               font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:#b8860b;">
+                      Selection Sauvage · Private Tasting
+                    </p>
+                    <p style="margin:0 0 14px;font-family:Georgia,serif;font-size:17px;
+                               font-weight:300;color:#1a1a18;line-height:1.4;">
+                      Two hours. Natural wine. Your group.
+                    </p>
+                    <p style="margin:0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                               font-size:13px;line-height:1.75;color:#666;">
+                      Your private tasting runs for two hours in the wine cave beneath Sauvage.
+                      A Selection Sauvage host will guide your group through a curated flight of
+                      natural wines — each chosen to tell a story about region, producer, and process.
+                      Expect honest conversation, no ceremony, and wines you won't find anywhere else in Amsterdam.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>""" if is_wine_tasting else ""
+
+    # ── Wines upsell block (standard bookings only) ──────────────────────────────
+    wines_upsell_html = "" if is_wine_tasting else f"""
+          <!-- ② WINES — secondary -->
+          <tr>
+            <td style="padding:12px 40px 12px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="border:1px solid #e8e4de;border-radius:2px;">
+                <tr>
+                  <td style="padding:24px 28px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="vertical-align:middle;">
+                          <p style="margin:0 0 4px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                                     font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:#b8860b;">
+                            Selection Sauvage
+                          </p>
+                          <p style="margin:0;font-family:Georgia,serif;font-size:16px;
+                                     font-weight:300;color:#1a1a18;line-height:1.4;">
+                            Pre-order natural wines for your event
+                          </p>
+                          <p style="margin:6px 0 0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                                     font-size:12px;color:#888;line-height:1.6;">
+                            Use code <strong style="color:#555;">IN-HOUSE</strong> at checkout
+                          </p>
+                        </td>
+                        <td align="right" style="vertical-align:middle;padding-left:20px;white-space:nowrap;">
+                          <a href="{wine_url}"
+                             style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                                    font-size:10px;font-weight:700;letter-spacing:0.18em;
+                                    text-transform:uppercase;color:#1a1a18;text-decoration:none;
+                                    display:inline-block;border-bottom:2px solid #b8860b;
+                                    padding-bottom:2px;">
+                            Order wines &rarr;
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>"""
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -246,7 +353,7 @@ def send_booking_confirmation(
                 Hi {client_name},
               </p>
               <p style="margin:0;font-size:16px;line-height:1.6;color:#333;">
-                Welcome to Sauvage. Your deposit is in and your booking is locked — we're looking forward to hosting you.
+                {greeting_body}
               </p>
             </td>
           </tr>
@@ -282,22 +389,15 @@ def send_booking_confirmation(
                           <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">{guest_count}</p>
                         </td>
                       </tr>
-                      {"" if not quote_total else f'''<tr>
-                        <td width="50%" style="padding:0;vertical-align:top;">
-                          <p style="margin:0 0 2px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;">Total</p>
-                          <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">&#8364;{quote_total} incl. VAT</p>
-                        </td>
-                        <td width="50%" style="padding:0;vertical-align:top;">
-                          <p style="margin:0 0 2px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;">Deposit Paid</p>
-                          <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">{deposit}</p>
-                        </td>
-                      </tr>'''}
+                      {summary_totals_row}
                     </table>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
+
+          {wine_tasting_desc_html}
 
           <!-- ① ARRIVAL — dominant CTA -->
           <tr>
@@ -336,46 +436,7 @@ def send_booking_confirmation(
             </td>
           </tr>
 
-          <!-- ② WINES — secondary -->
-          <tr>
-            <td style="padding:12px 40px 12px;">
-              <table width="100%" cellpadding="0" cellspacing="0" border="0"
-                     style="border:1px solid #e8e4de;border-radius:2px;">
-                <tr>
-                  <td style="padding:24px 28px;">
-                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                      <tr>
-                        <td style="vertical-align:middle;">
-                          <p style="margin:0 0 4px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
-                                     font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:#b8860b;">
-                            Selection Sauvage
-                          </p>
-                          <p style="margin:0;font-family:Georgia,serif;font-size:16px;
-                                     font-weight:300;color:#1a1a18;line-height:1.4;">
-                            Pre-order natural wines for your event
-                          </p>
-                          <p style="margin:6px 0 0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
-                                     font-size:12px;color:#888;line-height:1.6;">
-                            Use code <strong style="color:#555;">IN-HOUSE</strong> at checkout
-                          </p>
-                        </td>
-                        <td align="right" style="vertical-align:middle;padding-left:20px;white-space:nowrap;">
-                          <a href="{wine_url}"
-                             style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
-                                    font-size:10px;font-weight:700;letter-spacing:0.18em;
-                                    text-transform:uppercase;color:#1a1a18;text-decoration:none;
-                                    display:inline-block;border-bottom:2px solid #b8860b;
-                                    padding-bottom:2px;">
-                            Order wines &rarr;
-                          </a>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
+          {wines_upsell_html}
 
           <!-- Community space note -->
           <tr>
@@ -494,18 +555,31 @@ def send_booking_confirmation(
 </html>"""
 
     # Plain-text fallback
+    if is_wine_tasting:
+        plain_summary_lines = ""
+        plain_tasting_note = (
+            "\nABOUT YOUR TASTING\n"
+            "Your private tasting runs for two hours in the wine cave beneath Sauvage. "
+            "A Selection Sauvage host will guide your group through a curated flight of natural wines — "
+            "each chosen to tell a story about region, producer, and process.\n"
+        )
+    else:
+        plain_summary_lines = (
+            f"{'TOTAL: €' + str(quote_total) + ' incl. VAT' if quote_total else ''}\n"
+            f"DEPOSIT PAID: {deposit}\n"
+        )
+        plain_tasting_note = ""
+
     plain = f"""Hi {client_name},
 
-Your Sauvage booking is confirmed.
+{"Your Private Wine Tasting is confirmed." if is_wine_tasting else "Your Sauvage booking is confirmed."}
 
 EVENT: {event_type}
 DATE:  {date_str}
 TIME:  {time_str}
 SPACE: {rooms_str}
 GUESTS: {guest_count}
-{"TOTAL: €" + str(quote_total) + " incl. VAT" if quote_total else ""}
-DEPOSIT PAID: {deposit}
-
+{plain_summary_lines}{plain_tasting_note}
 SHARED SPACE NOTE
 Sauvage is home to several independent businesses — Ikinari Coffee, the Sauvage Gallery, Fento kitchen, and Selection Sauvage wines. Please treat all shared areas with care, stay within your booked zones, and leave the space as you found it.
 
