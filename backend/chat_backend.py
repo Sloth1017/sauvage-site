@@ -661,6 +661,30 @@ def _inject_checkout_url(session_id: str, state: dict, meta: dict, bot_response:
 
     return bot_response
 
+# ── Wine tracking URL block ───────────────────────────────────────────────────
+
+_BASE_URL = os.getenv("BASE_URL", "https://sauvage.amsterdam")
+
+def _wine_context_block(state: dict, meta: dict, session_id: str) -> str:
+    """Build a context block with a pre-personalised wine tracking URL."""
+    from urllib.parse import urlencode
+    params = urlencode({
+        "booking": meta.get("record_id") or session_id,
+        "name":    state.get("client_name", ""),
+        "email":   state.get("email", ""),
+        "event":   state.get("event_type", ""),
+        "ref":     "chatbot",
+    })
+    wine_url = f"{_BASE_URL}/wines?{params}"
+    return (
+        f"\n\n## WINE PRE-ORDER LINK\n"
+        f"URL: {wine_url}\n"
+        f"Use this URL exactly once — at the very end of the quote message, after the deposit link.\n"
+        f"Format: *Want to pre-order natural wines for your event? [Order wines here]({wine_url}) — use code IN-HOUSE at checkout.*\n"
+        f"Only include this line in the quote message. Do not mention it at any other point.\n"
+    )
+
+
 # ── Widget hint ───────────────────────────────────────────────────────────────
 
 def _determine_widget(state: dict, bot_text: str, sent_widgets: list) -> Optional[str]:
@@ -1023,7 +1047,8 @@ def chat():
         except Exception as e:
             print(f"[Calendar] Error generating block: {e}")
 
-    full_system = _state_block(state) + calendar_block + _load_system_prompt()
+    wine_block  = _wine_context_block(state, meta, session_id)
+    full_system = _state_block(state) + calendar_block + wine_block + _load_system_prompt()
 
     assistant_text = None
     for _attempt in range(3):
