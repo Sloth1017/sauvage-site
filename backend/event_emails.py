@@ -547,7 +547,12 @@ def send_day_before(state: dict) -> bool:
             </td>
           </tr>"""
 
-    pixel = f"{BASE_URL}/track/open?rid={booking_id}&type=day-before" if booking_id else ""
+    try:
+        from airtable_client import create_email_tracking
+        _tid = create_email_tracking(booking_id, "day-before") if booking_id else ""
+    except Exception:
+        _tid = ""
+    pixel = f"{BASE_URL}/track/open?tid={_tid}" if _tid else ""
     html = _shell(rows, preheader=f"Your {event_type} is tomorrow. Here's everything you need.", pixel_url=pixel)
 
     plain = f"""Hi {first},
@@ -679,7 +684,12 @@ def send_day_of(state: dict) -> bool:
             </td>
           </tr>"""
 
-    pixel = f"{BASE_URL}/track/open?rid={booking_id}&type=day-of" if booking_id else ""
+    try:
+        from airtable_client import create_email_tracking
+        _tid = create_email_tracking(booking_id, "day-of") if booking_id else ""
+    except Exception:
+        _tid = ""
+    pixel = f"{BASE_URL}/track/open?tid={_tid}" if _tid else ""
     html = _shell(rows, preheader=f"Today's the day. Your {event_type} starts at {start_time}.", pixel_url=pixel)
 
     plain = f"""Hi {first},
@@ -918,7 +928,12 @@ def send_day_after(state: dict) -> bool:
             </td>
           </tr>"""
 
-    pixel = f"{BASE_URL}/track/open?rid={booking_id}&type=day-after" if booking_id else ""
+    try:
+        from airtable_client import create_email_tracking
+        _tid = create_email_tracking(booking_id, "day-after") if booking_id else ""
+    except Exception:
+        _tid = ""
+    pixel = f"{BASE_URL}/track/open?tid={_tid}" if _tid else ""
     html = _shell(rows, preheader=f"Two minutes. How did your {event_type} go? We read every reply.", pixel_url=pixel)
 
     plain = f"""Hi {first},

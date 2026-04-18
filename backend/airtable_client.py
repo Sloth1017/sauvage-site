@@ -31,8 +31,9 @@ except ImportError:
     AIRTABLE_API_KEY = os.getenv("AIRTABLE_API_KEY")
     AIRTABLE_BASE_ID = os.getenv("AIRTABLE_BASE_ID")
 
-INQUIRIES_TABLE  = "Inquiries"
-WAITLIST_TABLE   = "Waitlist"
+INQUIRIES_TABLE       = "Inquiries"
+WAITLIST_TABLE        = "Waitlist"
+EMAIL_TRACKING_TABLE  = "Email Tracking"
 
 # Funnel stages — in order
 FUNNEL_STAGES = [
@@ -478,6 +479,30 @@ def snapshot_session(record_id: str, session_data: dict) -> dict:
     """
     snapshot = json.dumps(session_data, ensure_ascii=False, default=str)
     return update_inquiry(record_id, {"Session Snapshot": snapshot})
+
+
+def create_email_tracking(booking_record_id: str, email_type: str) -> str:
+    """
+    Create a row in Email Tracking when an email is sent.
+    Returns the new tracking record ID (stored so we can update Opened At later).
+    """
+    table = _get_table(EMAIL_TRACKING_TABLE)
+    fields = {
+        "Name":       f"{email_type}",
+        "Email Type": email_type,
+    }
+    if booking_record_id:
+        fields["Inquiries"] = [booking_record_id]
+    record = table.create(fields)
+    return record["id"]
+
+
+def mark_email_opened(tracking_record_id: str) -> None:
+    """Fill in Opened At on an Email Tracking row — only on first open."""
+    table = _get_table(EMAIL_TRACKING_TABLE)
+    existing = table.get(tracking_record_id)
+    if not existing.get("fields", {}).get("Opened At"):
+        table.update(tracking_record_id, {"Opened At": _now_iso()})
 
 
 def submit_feedback(booking_record_id: str, client_name: str, event_type: str,

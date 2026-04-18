@@ -460,7 +460,7 @@ def send_booking_confirmation(
       </td>
     </tr>
   </table>
-  <img src="{BASE_URL}/track/open?rid={record_id}&type=confirmation"
+  <img src="{BASE_URL}/track/open?tid=__TRACKING_ID__"
        width="1" height="1" border="0" style="display:block;width:1px;height:1px;" alt="">
 </body>
 </html>"""
@@ -492,6 +492,15 @@ Terms & Conditions: https://sauvage.amsterdam/terms
 
 Sauvage · Potgieterstraat 47H · Amsterdam
 """
+
+    # Create Email Tracking row and inject the tracking ID into the pixel
+    try:
+        from airtable_client import create_email_tracking
+        tid = create_email_tracking(record_id, "confirmation")
+        html = html.replace("__TRACKING_ID__", tid)
+    except Exception as e:
+        print(f"[Email] Tracking row creation failed (non-fatal): {e}")
+        html = html.replace("__TRACKING_ID__", "")
 
     try:
         # Use mixed (not alternative) when we have attachments
