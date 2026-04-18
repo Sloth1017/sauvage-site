@@ -22,6 +22,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
+from email.mime.image import MIMEImage
 from email import encoders
 from calendar_links import google_calendar_url, ics_download_url
 
@@ -123,25 +124,35 @@ def send_booking_confirmation(
         BASE_URL, f"{event_type} at Sauvage", date_str, start_time, end_time,
         "Sauvage Space · Potgieterstraat 47H, Amsterdam"
     )
-    # Embed icons as base64 so they never break in email clients.
-    # Try parent dir first (local dev: file lives in backend/, media is ../media/).
-    # Fall back to same dir (server: file deployed flat alongside media/).
-    def _b64_icon(path):
-        try:
-            candidates = [
-                os.path.join(os.path.dirname(__file__), "..", path),
-                os.path.join(os.path.dirname(__file__), path),
-            ]
-            for p in candidates:
-                if os.path.exists(p):
+    # ── Inline image helper (CID attachments) ───────────────────────────────────
+    # Base64 data URIs are stripped by Gmail/Apple Mail/Outlook.
+    # CID attachments are the correct standard for inline email images.
+    _cid_parts = []  # collected MIMEImage parts to attach to multipart/related
+
+    def _cid_src(rel_path, cid):
+        """Return a cid: src and queue the image as a MIME part, or fall back to URL."""
+        candidates = [
+            os.path.join(os.path.dirname(__file__), "..", rel_path),
+            os.path.join(os.path.dirname(__file__), rel_path),
+        ]
+        for p in candidates:
+            if os.path.exists(p):
+                try:
                     with open(p, "rb") as _f:
-                        return "data:image/png;base64," + base64.b64encode(_f.read()).decode()
-            return ""
-        except Exception:
-            return ""
-    gcal_icon = _b64_icon("media/icon-google-calendar.png")
-    ical_icon = _b64_icon("media/icon-apple-calendar.png")
-    logo_b64  = _b64_icon("media/sauvage-logo.png")
+                        data = _f.read()
+                    part = MIMEImage(data, _subtype="png")
+                    part.add_header("Content-ID", f"<{cid}>")
+                    part.add_header("Content-Disposition", "inline",
+                                    filename=os.path.basename(p))
+                    _cid_parts.append(part)
+                    return f"cid:{cid}"
+                except Exception:
+                    pass
+        return f"{BASE_URL}/{rel_path}"  # fallback to hosted URL
+
+    logo_src  = _cid_src("media/sauvage-logo.png",           "logo@sauvage.amsterdam")
+    gcal_icon = _cid_src("media/icon-google-calendar.png",   "gcal@sauvage.amsterdam")
+    ical_icon = _cid_src("media/icon-apple-calendar.png",    "ical@sauvage.amsterdam")
     cal_widget = (
         f'<p style="margin:8px 0 0;font-size:0;line-height:0;">'
         f'<a href="{gcal_url}" style="display:inline-block;vertical-align:middle;margin-right:8px;text-decoration:none;">'
@@ -205,7 +216,7 @@ def send_booking_confirmation(
         else "Your Sauvage Space booking is confirmed"
     )
 
-    logo_url = logo_b64 or f"{BASE_URL}/media/sauvage-logo.png"
+    logo_url = logo_src
 
     # ── Greeting copy ────────────────────────────────────────────────────────────
     if is_wine_tasting:
@@ -590,14 +601,28 @@ Sauvage · Potgieterstraat 47H · Amsterdam
         html = html.replace("__TRACKING_ID__", "")
 
     try:
-        # Use mixed (not alternative) when we have attachments
+        # ── MIME structure ──────────────────────────────────────────────────────
+        # multipart/mixed  (outer; holds body + optional PDF attachment)
+        #   multipart/related  (body + inline CID images)
+        #     multipart/alternative  (plain text + HTML)
+        #       text/plain
+        #       text/html
+        #     image/png  (logo, gcal icon, ical icon — CID parts)
+        #   application/pdf  (optional invoice attachment)
+
+        alt = MIMEMultipart("alternative")
+        alt.attach(MIMEText(plain, "plain"))
+        alt.attach(MIMEText(html,  "html"))
+
+        related = MIMEMultipart("related")
+        related.attach(alt)
+        for cid_part in _cid_parts:
+            related.attach(cid_part)
+
+        msg = MIMEMultipart("mixed")
+        msg.attach(related)
+
         if invoice_pdf:
-            msg = MIMEMultipart("mixed")
-            alt = MIMEMultipart("alternative")
-            alt.attach(MIMEText(plain, "plain"))
-            alt.attach(MIMEText(html,  "html"))
-            msg.attach(alt)
-            # Attach PDF
             pdf_part = MIMEBase("application", "pdf")
             pdf_part.set_payload(invoice_pdf)
             encoders.encode_base64(pdf_part)
@@ -606,10 +631,6 @@ Sauvage · Potgieterstraat 47H · Amsterdam
                 "Content-Disposition", "attachment", filename=fname
             )
             msg.attach(pdf_part)
-        else:
-            msg = MIMEMultipart("alternative")
-            msg.attach(MIMEText(plain, "plain"))
-            msg.attach(MIMEText(html,  "html"))
 
         msg["Subject"] = subject
         msg["From"]    = f"Sauvage Amsterdam <{FROM_EMAIL}>"
