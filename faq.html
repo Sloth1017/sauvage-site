@@ -364,6 +364,102 @@
     .addon-name { color: var(--ink); }
     .addon-price { color: var(--muted); white-space: nowrap; font-size: 0.82rem; }
 
+    /* ── Slot tabs ───────────────────────────────────── */
+    .slot-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.4rem;
+    }
+    .slot-tab {
+      padding: 0.55rem 1.2rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: var(--sans);
+    }
+    .slot-tab.active {
+      background: var(--ink);
+      color: var(--white);
+      border-color: var(--ink);
+    }
+    .slot-tab:hover:not(.active) { border-color: var(--ink); color: var(--ink); }
+
+    /* ── Slot panels ─────────────────────────────────── */
+    .slot-panel { }
+    .slot-panel.hidden { display: none; }
+    .fullday-notice {
+      background: rgba(26,26,24,0.04);
+      border-left: 2px solid rgba(26,26,24,0.2);
+      padding: 0.8rem 1rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 1.2rem;
+      line-height: 1.7;
+    }
+
+    /* ── Hours slider ────────────────────────────────── */
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+      padding: 0.8rem 1rem;
+      background: rgba(26,26,24,0.03);
+      border-radius: 2px;
+    }
+    .slider-label {
+      font-size: 0.85rem;
+      color: var(--ink);
+      white-space: nowrap;
+    }
+    .hrs-range {
+      flex: 1;
+      min-width: 140px;
+      max-width: 260px;
+      accent-color: var(--ink);
+      cursor: pointer;
+    }
+    .slider-hint {
+      font-size: 0.75rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    /* ── Filter chips ────────────────────────────────── */
+    .filter-chips {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem;
+      margin-bottom: 1rem;
+    }
+    .chip-label {
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-right: 0.2rem;
+    }
+    .chip {
+      padding: 0.3rem 0.75rem;
+      font-size: 0.75rem;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      border-radius: 20px;
+      font-family: var(--sans);
+      transition: all 0.18s;
+    }
+    .chip.active { background: var(--ink); color: var(--white); border-color: var(--ink); }
+    .chip:hover:not(.active) { border-color: var(--ink); color: var(--ink); }
+
     /* ── Mobile ──────────────────────────────────────── */
     @media (max-width: 768px) {
       nav { padding: 1rem 2rem; }
@@ -445,116 +541,80 @@
     <div class="faq-item">
       <h3 class="faq-question">What does it cost to hire the space?</h3>
       <div class="faq-answer pricing-section">
-        <p class="pricing-intro">All events run as a <strong>half-day slot: 16:00–23:00</strong> (setup access from ~15:30). All prices include 21% VAT. Book more rooms, pay less per room — multi-room discounts apply automatically. <strong>Prices below are room rental only</strong> and do not include add-ons, event cleanup, or any optional extras.</p>
+        <p class="pricing-intro">All prices include 21% VAT. Book more rooms, pay less — multi-room bundle discounts apply automatically. <strong>Room rental only</strong> — does not include add-ons, event cleanup, or optional extras.</p>
 
-        <div class="table-scroll">
-          <table class="pricing-table">
-            <thead>
-              <tr>
-                <th>Space</th>
-                <th>Rooms</th>
-                <th>Discount</th>
-                <th>Room rate</th>
-                <th>Cave host fee (€35/hr)*</th>
-                <th>Total</th>
-                <th>Deposit</th>
-              </tr>
-            </thead>
-            <tbody>
-              <!-- Single rooms -->
-              <tr><td colspan="7" class="section-divider">Single room</td></tr>
-              <tr>
-                <td class="combo-label">Entrance Room</td>
-                <td>E</td><td>—</td><td>€190</td><td>—</td>
-                <td class="price-total">€190</td><td>€50</td>
-              </tr>
-              <tr>
-                <td class="combo-label">Upstairs Gallery</td>
-                <td>G</td><td>—</td><td>€135</td><td>—</td>
-                <td class="price-total">€135</td><td>€50</td>
-              </tr>
-              <tr>
-                <td class="combo-label">Kitchen</td>
-                <td>K</td><td>—</td><td>€350</td><td>—</td>
-                <td class="price-total">€350</td><td>€150</td>
-              </tr>
-              <tr class="cave-row">
-                <td class="combo-label">Cave</td>
-                <td>C</td><td>—</td><td>€100</td><td>€245</td>
-                <td class="price-total">€345</td><td>€50</td>
-              </tr>
-
-              <!-- Two rooms -->
-              <tr><td colspan="7" class="section-divider">Two rooms &nbsp;<span class="discount-badge">−20%</span></td></tr>
-              <tr>
-                <td class="combo-label">Entrance + Gallery</td>
-                <td>E+G</td><td>−20%</td><td>€260</td><td>—</td>
-                <td class="price-total">€260</td><td>€50</td>
-              </tr>
-              <tr>
-                <td class="combo-label">Entrance + Kitchen</td>
-                <td>E+K</td><td>−20%</td><td>€432</td><td>—</td>
-                <td class="price-total">€432</td><td>€150</td>
-              </tr>
-              <tr class="cave-row">
-                <td class="combo-label">Entrance + Cave</td>
-                <td>E+C</td><td>−20%</td><td>€232</td><td>€245</td>
-                <td class="price-total">€477</td><td>€50</td>
-              </tr>
-              <tr>
-                <td class="combo-label">Gallery + Kitchen</td>
-                <td>G+K</td><td>−20%</td><td>€388</td><td>—</td>
-                <td class="price-total">€388</td><td>€150</td>
-              </tr>
-              <tr class="cave-row">
-                <td class="combo-label">Gallery + Cave</td>
-                <td>G+C</td><td>−20%</td><td>€188</td><td>€245</td>
-                <td class="price-total">€433</td><td>€50</td>
-              </tr>
-              <tr class="cave-row">
-                <td class="combo-label">Kitchen + Cave</td>
-                <td>K+C</td><td>−20%</td><td>€360</td><td>€245</td>
-                <td class="price-total">€605</td><td>€150</td>
-              </tr>
-
-              <!-- Three rooms -->
-              <tr><td colspan="7" class="section-divider">Three rooms &nbsp;<span class="discount-badge">−40%</span></td></tr>
-              <tr>
-                <td class="combo-label">Entrance + Gallery + Kitchen</td>
-                <td>E+G+K</td><td>−40%</td><td>€405</td><td>—</td>
-                <td class="price-total">€405</td><td>€150</td>
-              </tr>
-              <tr class="cave-row">
-                <td class="combo-label">Entrance + Gallery + Cave</td>
-                <td>E+G+C</td><td>−40%</td><td>€255</td><td>€245</td>
-                <td class="price-total">€500</td><td>€50</td>
-              </tr>
-              <tr class="cave-row">
-                <td class="combo-label">Entrance + Kitchen + Cave</td>
-                <td>E+K+C</td><td>−40%</td><td>€384</td><td>€245</td>
-                <td class="price-total">€629</td><td>€150</td>
-              </tr>
-              <tr class="cave-row">
-                <td class="combo-label">Gallery + Kitchen + Cave</td>
-                <td>G+K+C</td><td>−40%</td><td>€351</td><td>€245</td>
-                <td class="price-total">€596</td><td>€150</td>
-              </tr>
-
-              <!-- Four rooms -->
-              <tr><td colspan="7" class="section-divider">All four rooms &nbsp;<span class="discount-badge">−50%</span></td></tr>
-              <tr class="cave-row">
-                <td class="combo-label">Entrance + Gallery + Kitchen + Cave</td>
-                <td>E+G+K+C</td><td>−50%</td><td>€388</td><td>€245</td>
-                <td class="price-total">€633</td><td>€150</td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- Slot tabs -->
+        <div class="slot-tabs">
+          <button class="slot-tab active" data-slot="half">Half-day · 16:00–23:00</button>
+          <button class="slot-tab" data-slot="full">Full-day · by enquiry</button>
         </div>
 
-        <p class="pricing-note">* The Cave is a host-led space — a Sauvage host is present for the full duration. The host fee (€35/hr) is shown separately. The €245 figure assumes a standard 7-hour half-day slot; actual hours may vary. The host may waive this fee in certain cases.</p>
-        <p class="pricing-note">Deposit is fully refundable after the event if the space is left in good order. The balance is due on or before the event date. A Tier 3 deposit (€250) applies to multi-day bookings of 7+ slots or any multi-day booking with the Kitchen.</p>
+        <!-- Half-day panel -->
+        <div class="slot-panel" id="panel-half">
+          <!-- Hours slider -->
+          <div class="slider-row">
+            <label class="slider-label">Event duration: <strong id="hrs-display">7 hrs</strong></label>
+            <input type="range" id="hrs-slider" min="3" max="12" value="7" step="0.5" class="hrs-range">
+            <span class="slider-hint">Adjusts Cave host fee (€35/hr)</span>
+          </div>
 
-        <p style="margin-top:1.4rem; font-size:0.9rem; color:var(--muted);">Add-ons available on request:</p>
+          <!-- Filter chips -->
+          <div class="filter-chips">
+            <span class="chip-label">Filter:</span>
+            <button class="chip active" data-filter="all">All</button>
+            <button class="chip" data-filter="kitchen">With Kitchen</button>
+            <button class="chip" data-filter="cave">With Cave</button>
+            <button class="chip" data-filter="no-cave">No Cave</button>
+            <button class="chip" data-filter="no-kitchen">No Kitchen</button>
+          </div>
+
+          <div class="table-scroll">
+            <table class="pricing-table" id="half-table">
+              <thead>
+                <tr>
+                  <th>Space</th>
+                  <th>Rooms</th>
+                  <th>Discount</th>
+                  <th>Room rate</th>
+                  <th id="cave-col-header">Cave host fee (€35/hr)*</th>
+                  <th>Total</th>
+                  <th>Deposit</th>
+                </tr>
+              </thead>
+              <tbody id="half-tbody"></tbody>
+            </table>
+          </div>
+
+          <p class="pricing-note">* The Cave is a host-led space — a Sauvage host is present for the full duration. The host fee (€35/hr per person) is a separate line item. The default 7-hour half-day = €245. Drag the slider above to see how other durations affect the total. The host may waive this fee in certain cases.</p>
+          <p class="pricing-note">Deposit is fully refundable after the event if the space is left in good order. Balance due on or before the event date. Tier 3 deposit (€250) applies to multi-day bookings of 7+ slots, or any multi-day booking that includes the Kitchen.</p>
+        </div>
+
+        <!-- Full-day panel -->
+        <div class="slot-panel hidden" id="panel-full">
+          <div class="fullday-notice">Full-day bookings are available on <strong>Mondays and Tuesdays</strong> (other days on request) and are arranged directly with the host. The rates below are per room — combination pricing follows the same bundle discounts. Contact us to get a tailored quote.</div>
+
+          <div class="table-scroll">
+            <table class="pricing-table" id="full-table">
+              <thead>
+                <tr>
+                  <th>Space</th>
+                  <th>Rooms</th>
+                  <th>Discount</th>
+                  <th>Room rate</th>
+                  <th>Cave host fee (€35/hr)*</th>
+                  <th>Total</th>
+                  <th>Deposit</th>
+                </tr>
+              </thead>
+              <tbody id="full-tbody"></tbody>
+            </table>
+          </div>
+          <p class="pricing-note">* Full-day Cave host fee shown at 8 hrs as an estimate. Actual hours agreed with host at booking.</p>
+          <p class="pricing-note">Full-day combination pricing follows the same bundle discount structure (2 rooms −20%, 3 rooms −40%, all 4 −50%). Multi-room full-day quotes are arranged manually — use the chatbot or contact us directly.</p>
+        </div>
+
+        <!-- Add-ons -->
+        <p style="margin-top:1.8rem; font-size:0.9rem; color:var(--muted); font-weight:500;">Add-ons available on request:</p>
         <div class="addons-grid">
           <div class="addon-row"><span class="addon-name">Dishware, cutlery &amp; glass (up to 30)</span><span class="addon-price">€25</span></div>
           <div class="addon-row"><span class="addon-name">Stem wine glassware (up to 30)</span><span class="addon-price">€25</span></div>
@@ -589,5 +649,198 @@
 
   <!-- Chat Widget -->
   <script src="./widget.js" defer></script>
+
+  <!-- Pricing Matrix JS -->
+  <script>
+  (function () {
+    // ── Pricing data ──────────────────────────────────────────────────────────
+    const HALF = { E: 190, G: 135, K: 350, C: 100 };
+    const FULL = { E: 250, G: 140, K: 500, C: 175 };
+    const DISC = { 1: 0, 2: 0.20, 3: 0.40, 4: 0.50 };
+    const CAVE_PER_HR = 35;
+
+    const COMBOS = [
+      { rooms: ['E'],           label: 'Entrance Room' },
+      { rooms: ['G'],           label: 'Upstairs Gallery' },
+      { rooms: ['K'],           label: 'Kitchen' },
+      { rooms: ['C'],           label: 'Cave' },
+      { rooms: ['E','G'],       label: 'Entrance + Gallery' },
+      { rooms: ['E','K'],       label: 'Entrance + Kitchen' },
+      { rooms: ['E','C'],       label: 'Entrance + Cave' },
+      { rooms: ['G','K'],       label: 'Gallery + Kitchen' },
+      { rooms: ['G','C'],       label: 'Gallery + Cave' },
+      { rooms: ['K','C'],       label: 'Kitchen + Cave' },
+      { rooms: ['E','G','K'],   label: 'Entrance + Gallery + Kitchen' },
+      { rooms: ['E','G','C'],   label: 'Entrance + Gallery + Cave' },
+      { rooms: ['E','K','C'],   label: 'Entrance + Kitchen + Cave' },
+      { rooms: ['G','K','C'],   label: 'Gallery + Kitchen + Cave' },
+      { rooms: ['E','G','K','C'], label: 'All four rooms' },
+    ];
+
+    const SECTION_LABELS = {
+      1: 'Single room',
+      2: 'Two rooms',
+      3: 'Three rooms',
+      4: 'All four rooms',
+    };
+    const DISC_LABELS = { 1: '—', 2: '−20%', 3: '−40%', 4: '−50%' };
+    const DISC_BADGES = { 1: '', 2: '−20%', 3: '−40%', 4: '−50%' };
+
+    function roomPrice(rooms, rates) {
+      const n = rooms.length;
+      const sum = rooms.reduce((s, r) => s + (rates[r] || 0), 0);
+      return Math.round(sum * (1 - DISC[n]));
+    }
+
+    function deposit(rooms) {
+      return rooms.includes('K') ? '€150 (T2)' : '€50 (T1)';
+    }
+
+    function fmt(n) { return '€' + n.toLocaleString('nl-NL', { minimumFractionDigits: 0 }); }
+
+    // ── Render table ──────────────────────────────────────────────────────────
+    function renderHalf(hrs, filter) {
+      const tbody = document.getElementById('half-tbody');
+      const rows = [];
+      let lastGroup = 0;
+
+      COMBOS.forEach(function (c) {
+        const n = c.rooms.length;
+        const hasCave = c.rooms.includes('C');
+        const hasKit  = c.rooms.includes('K');
+
+        // Filter logic
+        if (filter === 'kitchen'   && !hasKit)  return;
+        if (filter === 'cave'      && !hasCave) return;
+        if (filter === 'no-cave'   &&  hasCave) return;
+        if (filter === 'no-kitchen'&&  hasKit)  return;
+
+        // Section header
+        if (n !== lastGroup) {
+          const disc = DISC_BADGES[n];
+          rows.push(
+            '<tr><td colspan="7" class="section-divider">' +
+            SECTION_LABELS[n] +
+            (disc ? ' &nbsp;<span class="discount-badge">' + disc + '</span>' : '') +
+            '</td></tr>'
+          );
+          lastGroup = n;
+        }
+
+        const rp      = roomPrice(c.rooms, HALF);
+        const caveFee = hasCave ? Math.round(CAVE_PER_HR * hrs) : null;
+        const total   = rp + (caveFee || 0);
+        const dep     = deposit(c.rooms);
+        const rowCls  = hasCave ? ' class="cave-row"' : '';
+        const abbrRooms = c.rooms.join('+');
+
+        rows.push(
+          '<tr' + rowCls + '>' +
+          '<td class="combo-label">' + c.label + '</td>' +
+          '<td>' + abbrRooms + '</td>' +
+          '<td>' + DISC_LABELS[n] + '</td>' +
+          '<td>' + fmt(rp) + '</td>' +
+          '<td>' + (caveFee !== null ? fmt(caveFee) : '—') + '</td>' +
+          '<td class="price-total">' + fmt(total) + '</td>' +
+          '<td>' + dep + '</td>' +
+          '</tr>'
+        );
+      });
+
+      tbody.innerHTML = rows.join('');
+    }
+
+    function renderFull() {
+      const tbody = document.getElementById('full-tbody');
+      const rows = [];
+      let lastGroup = 0;
+      const FD_HRS = 8; // estimate for full-day cave fee display
+
+      COMBOS.forEach(function (c) {
+        const n = c.rooms.length;
+        const hasCave = c.rooms.includes('C');
+        const hasKit  = c.rooms.includes('K');
+
+        if (n !== lastGroup) {
+          const disc = DISC_BADGES[n];
+          rows.push(
+            '<tr><td colspan="7" class="section-divider">' +
+            SECTION_LABELS[n] +
+            (disc ? ' &nbsp;<span class="discount-badge">' + disc + '</span>' : '') +
+            '</td></tr>'
+          );
+          lastGroup = n;
+        }
+
+        const rp      = roomPrice(c.rooms, FULL);
+        const caveFee = hasCave ? Math.round(CAVE_PER_HR * FD_HRS) : null;
+        const total   = rp + (caveFee || 0);
+        const dep     = deposit(c.rooms);
+        const rowCls  = hasCave ? ' class="cave-row"' : '';
+        const abbrRooms = c.rooms.join('+');
+
+        // Multi-room full-day = enquiry only
+        const rateCell  = n === 1 ? fmt(rp)    : '<span style="color:var(--muted);font-style:italic">enquiry</span>';
+        const feeCell   = n === 1 && caveFee !== null ? fmt(caveFee) + '<span style="color:var(--muted);font-size:0.75em"> est.</span>' : (caveFee !== null ? '—' : '—');
+        const totalCell = n === 1 ? fmt(total)  : '<span style="color:var(--muted);font-style:italic">enquiry</span>';
+        const depCell   = n === 1 ? dep         : '<span style="color:var(--muted);font-style:italic">TBC</span>';
+
+        rows.push(
+          '<tr' + rowCls + '>' +
+          '<td class="combo-label">' + c.label + '</td>' +
+          '<td>' + abbrRooms + '</td>' +
+          '<td>' + DISC_LABELS[n] + '</td>' +
+          '<td>' + rateCell + '</td>' +
+          '<td>' + feeCell + '</td>' +
+          '<td class="price-total">' + totalCell + '</td>' +
+          '<td>' + depCell + '</td>' +
+          '</tr>'
+        );
+      });
+
+      tbody.innerHTML = rows.join('');
+    }
+
+    // ── State ─────────────────────────────────────────────────────────────────
+    let currentHrs    = 7;
+    let currentFilter = 'all';
+
+    // ── Slider ────────────────────────────────────────────────────────────────
+    const slider  = document.getElementById('hrs-slider');
+    const display = document.getElementById('hrs-display');
+
+    slider.addEventListener('input', function () {
+      currentHrs = parseFloat(this.value);
+      const label = Number.isInteger(currentHrs) ? currentHrs + ' hrs' : currentHrs + ' hrs';
+      display.textContent = label;
+      renderHalf(currentHrs, currentFilter);
+    });
+
+    // ── Filter chips ──────────────────────────────────────────────────────────
+    document.querySelectorAll('.chip').forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        document.querySelectorAll('.chip').forEach(function (c) { c.classList.remove('active'); });
+        this.classList.add('active');
+        currentFilter = this.dataset.filter;
+        renderHalf(currentHrs, currentFilter);
+      });
+    });
+
+    // ── Slot tabs ─────────────────────────────────────────────────────────────
+    document.querySelectorAll('.slot-tab').forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        document.querySelectorAll('.slot-tab').forEach(function (t) { t.classList.remove('active'); });
+        this.classList.add('active');
+        const slot = this.dataset.slot;
+        document.getElementById('panel-half').classList.toggle('hidden', slot !== 'half');
+        document.getElementById('panel-full').classList.toggle('hidden', slot !== 'full');
+      });
+    });
+
+    // ── Initial render ────────────────────────────────────────────────────────
+    renderHalf(currentHrs, currentFilter);
+    renderFull();
+  })();
+  </script>
 </body>
 </html>
