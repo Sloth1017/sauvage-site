@@ -251,36 +251,52 @@ def handle_callback(update: dict) -> None:
         print(f"[Telegram] Airtable host update failed: {e}")
 
     # Rebuild the full HTML message from Airtable so all links are preserved.
-    # (message.get("text") is plain text — it strips <a href> links, so we
-    #  never use it directly when re-editing with parse_mode=HTML.)
+    # (message.get("text") is plain text — Telegram strips <a href> links from
+    #  it, so re-sending that with parse_mode=HTML loses all hyperlinks.)
     new_text = None
     try:
         from airtable_client import get_inquiry
-        rec = get_inquiry(record_id)
+        rec    = get_inquiry(record_id)
         fields = rec.get("fields", {})
-        rooms_raw = fields.get("Rooms", [])
-        rooms = rooms_raw if isinstance(rooms_raw, list) else [rooms_raw]
-        cal_link  = fields.get("Calendar Link", "")
-        order_num = fields.get("Shopify Order Number", "") or record_id
 
-        # Reconstruct revenue from session snapshot if available
+        # Rooms — stored as "Rooms Requested" (multi-select list)
+        rooms_raw = fields.get("Rooms Requested", [])
+        rooms = rooms_raw if isinstance(rooms_raw, list) else ([rooms_raw] if rooms_raw else [])
+
+        # Time — stored as "Time Slot" = "HH:MM-HH:MM"
+        time_slot  = fields.get("Time Slot", "")
+        time_parts = time_slot.split("-", 1) if time_slot else []
+        start_time = time_parts[0].strip() if len(time_parts) > 0 else ""
+        end_time   = time_parts[1].strip() if len(time_parts) > 1 else ""
+
+        cal_link  = fields.get("Calendar Link", "")
+        # Order number: parse from Stripe Payment Reference "shopify-order-XXXX"
+        pay_ref   = fields.get("Stripe Payment Reference", "")
+        order_num = pay_ref.replace("shopify-order-", "") if pay_ref else record_id
+
+        # Reconstruct revenue from Airtable fields (rooms + addons + guest count)
         revenue = None
         try:
-            snap = fields.get("Session Snapshot", "")
-            if snap:
-                import json as _json
-                state = _json.loads(snap) if isinstance(snap, str) else snap
-                from invoice_generator import compute_revenue_breakdown
-                revenue = compute_revenue_breakdown(state)
+            addons_raw = fields.get("Add-Ons", [])
+            addons = addons_raw if isinstance(addons_raw, list) else ([addons_raw] if addons_raw else [])
+            at_state = {
+                "rooms":       rooms,
+                "duration":    fields.get("Duration", ""),
+                "hours":       fields.get("Hours"),
+                "guest_count": fields.get("Guest Count", 0),
+                "addons":      addons,
+            }
+            from invoice_generator import compute_revenue_breakdown
+            revenue = compute_revenue_breakdown(at_state)
         except Exception as _re:
             print(f"[Telegram] Revenue rebuild failed (non-fatal): {_re}")
 
         new_text = _build_message(
             client_name  = fields.get("Client Name", ""),
             event_type   = fields.get("Event Type", ""),
-            event_date   = str(fields.get("Date", "")),
-            start_time   = fields.get("Start Time", ""),
-            end_time     = fields.get("End Time", ""),
+            event_date   = str(fields.get("Requested Date", "")),
+            start_time   = start_time,
+            end_time     = end_time,
             guest_count  = fields.get("Guest Count", ""),
             rooms        = rooms,
             order_number = order_num,
@@ -289,6 +305,7 @@ def handle_callback(update: dict) -> None:
             revenue      = revenue,
             host_claimed = host_name,
         )
+        print(f"[Telegram] Message rebuilt from Airtable for {record_id}")
     except Exception as e:
         print(f"[Telegram] Message rebuild from Airtable failed: {e}")
 
