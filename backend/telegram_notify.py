@@ -26,6 +26,7 @@ Environment variables:
 """
 
 import os
+import re
 import requests
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
@@ -67,6 +68,56 @@ def _airtable_url(record_id: str) -> str:
     if base and record_id:
         return f"https://airtable.com/{base}/{_AIRTABLE_TABLE_ID}/{record_id}"
     return ""
+
+
+# ── Entity → HTML reconstruction ─────────────────────────────────────────────
+
+def _html_escape(text: str) -> str:
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def _entities_to_html(text: str, entities: list) -> str:
+    """
+    Reconstruct HTML from Telegram plain text + entities array.
+    Telegram offsets/lengths are in UTF-16 code units, so we work in utf-16-le
+    bytes (2 bytes per code unit) to handle emoji and other non-BMP chars correctly.
+    Supported types: bold, italic, text_link.
+    """
+    if not entities:
+        return _html_escape(text)
+
+    utf16 = text.encode("utf-16-le")
+    result = []
+    pos = 0  # byte position in utf16
+
+    for entity in sorted(entities, key=lambda e: e.get("offset", 0)):
+        start  = entity.get("offset", 0) * 2
+        length = entity.get("length", 0) * 2
+        etype  = entity.get("type", "")
+        url    = entity.get("url", "")
+
+        # plain text before this entity
+        if start > pos:
+            result.append(_html_escape(utf16[pos:start].decode("utf-16-le")))
+
+        chunk = _html_escape(utf16[start:start + length].decode("utf-16-le"))
+
+        if etype == "text_link" and url:
+            result.append(f'<a href="{url}">{chunk}</a>')
+        elif etype == "bold":
+            result.append(f"<b>{chunk}</b>")
+        elif etype == "italic":
+            result.append(f"<i>{chunk}</i>")
+        else:
+            result.append(chunk)
+
+        pos = start + length
+
+    # any trailing plain text
+    if pos < len(utf16):
+        result.append(_html_escape(utf16[pos:].decode("utf-16-le")))
+
+    return "".join(result)
 
 
 # ── Message builder ───────────────────────────────────────────────────────────
@@ -250,68 +301,79 @@ def handle_callback(update: dict) -> None:
     except Exception as e:
         print(f"[Telegram] Airtable host update failed: {e}")
 
-    # Rebuild the full HTML message from Airtable so all links are preserved.
-    # (message.get("text") is plain text — Telegram strips <a href> links from
-    #  it, so re-sending that with parse_mode=HTML loses all hyperlinks.)
+    # ── Strategy 1: reconstruct HTML from Telegram's own entities array ─────────
+    # message.get("text") is plain text — Telegram strips all <a href> links.
+    # But message.get("entities") contains every link URL as a text_link entry.
+    # We rebuild proper HTML from text + entities, then patch the hosting line.
+    orig_text     = message.get("text", "")
+    orig_entities = message.get("entities", [])
+
     new_text = None
     try:
-        from airtable_client import get_inquiry
-        rec    = get_inquiry(record_id)
-        fields = rec.get("fields", {})
-
-        # Rooms — stored as "Rooms Requested" (multi-select list)
-        rooms_raw = fields.get("Rooms Requested", [])
-        rooms = rooms_raw if isinstance(rooms_raw, list) else ([rooms_raw] if rooms_raw else [])
-
-        # Time — stored as "Time Slot" = "HH:MM-HH:MM"
-        time_slot  = fields.get("Time Slot", "")
-        time_parts = time_slot.split("-", 1) if time_slot else []
-        start_time = time_parts[0].strip() if len(time_parts) > 0 else ""
-        end_time   = time_parts[1].strip() if len(time_parts) > 1 else ""
-
-        cal_link  = fields.get("Calendar Link", "")
-        # Order number: parse from Stripe Payment Reference "shopify-order-XXXX"
-        pay_ref   = fields.get("Stripe Payment Reference", "")
-        order_num = pay_ref.replace("shopify-order-", "") if pay_ref else record_id
-
-        # Reconstruct revenue from Airtable fields (rooms + addons + guest count)
-        revenue = None
-        try:
-            addons_raw = fields.get("Add-Ons", [])
-            addons = addons_raw if isinstance(addons_raw, list) else ([addons_raw] if addons_raw else [])
-            at_state = {
-                "rooms":       rooms,
-                "duration":    fields.get("Duration", ""),
-                "hours":       fields.get("Hours"),
-                "guest_count": fields.get("Guest Count", 0),
-                "addons":      addons,
-            }
-            from invoice_generator import compute_revenue_breakdown
-            revenue = compute_revenue_breakdown(at_state)
-        except Exception as _re:
-            print(f"[Telegram] Revenue rebuild failed (non-fatal): {_re}")
-
-        new_text = _build_message(
-            client_name  = fields.get("Client Name", ""),
-            event_type   = fields.get("Event Type", ""),
-            event_date   = str(fields.get("Requested Date", "")),
-            start_time   = start_time,
-            end_time     = end_time,
-            guest_count  = fields.get("Guest Count", ""),
-            rooms        = rooms,
-            order_number = order_num,
-            cal_link     = cal_link,
-            airtable_id  = record_id,
-            revenue      = revenue,
-            host_claimed = host_name,
+        html = _entities_to_html(orig_text, orig_entities)
+        # Replace the "Who's hosting?" section with the claimed host
+        html = re.sub(
+            r"👤\s*<b>Who&#x27;s hosting\?</b>",
+            f"✅ <b>{host_name} is hosting</b>",
+            html,
         )
-        print(f"[Telegram] Message rebuilt from Airtable for {record_id}")
+        # Also handle un-escaped apostrophe variant
+        html = re.sub(
+            r"👤\s*<b>Who's hosting\?</b>",
+            f"✅ <b>{host_name} is hosting</b>",
+            html,
+        )
+        if "is hosting" not in html:
+            html += f"\n\n✅ <b>{host_name} is hosting</b>"
+        new_text = html
+        print(f"[Telegram] Message rebuilt from entities for {record_id}")
     except Exception as e:
-        print(f"[Telegram] Message rebuild from Airtable failed: {e}")
+        print(f"[Telegram] Entity reconstruction failed: {e}")
 
-    # Fallback: patch the plain text if Airtable rebuild failed
+    # ── Strategy 2 (fallback): fetch from Airtable and rebuild fully ─────────
     if not new_text:
-        orig_text = message.get("text", "")
+        try:
+            from airtable_client import get_inquiry
+            rec    = get_inquiry(record_id)
+            fields = rec.get("fields", {})
+
+            rooms_raw  = fields.get("Rooms Requested", [])
+            rooms      = rooms_raw if isinstance(rooms_raw, list) else ([rooms_raw] if rooms_raw else [])
+            time_slot  = fields.get("Time Slot", "")
+            time_parts = time_slot.split("-", 1) if time_slot else []
+            start_time = time_parts[0].strip() if len(time_parts) > 0 else ""
+            end_time   = time_parts[1].strip() if len(time_parts) > 1 else ""
+            cal_link   = fields.get("Calendar Link", "")
+            pay_ref    = fields.get("Stripe Payment Reference", "")
+            order_num  = pay_ref.replace("shopify-order-", "") if pay_ref else record_id
+
+            revenue = None
+            try:
+                addons_raw = fields.get("Add-Ons", [])
+                addons = addons_raw if isinstance(addons_raw, list) else ([addons_raw] if addons_raw else [])
+                at_state = {
+                    "rooms": rooms, "duration": fields.get("Duration", ""),
+                    "hours": fields.get("Hours"), "guest_count": fields.get("Guest Count", 0),
+                    "addons": addons,
+                }
+                from invoice_generator import compute_revenue_breakdown
+                revenue = compute_revenue_breakdown(at_state)
+            except Exception as _re:
+                print(f"[Telegram] Revenue rebuild failed (non-fatal): {_re}")
+
+            new_text = _build_message(
+                client_name=fields.get("Client Name", ""),  event_type=fields.get("Event Type", ""),
+                event_date=str(fields.get("Requested Date", "")), start_time=start_time,
+                end_time=end_time, guest_count=fields.get("Guest Count", ""),
+                rooms=rooms, order_number=order_num, cal_link=cal_link,
+                airtable_id=record_id, revenue=revenue, host_claimed=host_name,
+            )
+            print(f"[Telegram] Message rebuilt from Airtable for {record_id}")
+        except Exception as e:
+            print(f"[Telegram] Airtable rebuild failed: {e}")
+
+    # ── Strategy 3 (last resort): plain-text patch ────────────────────────────
+    if not new_text:
         new_text = orig_text
         if "Who's hosting?" in new_text:
             new_text = new_text.replace("👤 Who's hosting?", f"✅ {host_name} is hosting")
