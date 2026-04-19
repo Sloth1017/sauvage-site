@@ -120,6 +120,9 @@
   </script>
   
   <style>
+    /* Hide the widget's injected nav button — FAQ page already has Book a Space in nav */
+    .sv-nav-btn { display: none !important; }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --cream:   #f7f4ef;
@@ -471,6 +474,13 @@
       margin-left: 0.5rem;
       font-style: italic;
     }
+    .fd-kitchen-divider {
+      background: rgba(184,134,11,0.07) !important;
+      color: #7a5c00 !important;
+      letter-spacing: 0.12em;
+      border-top: 1px solid rgba(184,134,11,0.25) !important;
+    }
+    .fd-kitchen-row td { background: rgba(184,134,11,0.03); }
 
     /* ── Mobile ──────────────────────────────────────── */
     @media (max-width: 768px) {
@@ -485,7 +495,7 @@
 <body>
   <!-- ── Nav ──────────────────────────────────── -->
   <nav id="navbar">
-    <a href="#" class="nav-logo"><img src="./media/sauvage-logo.svg" alt="Sauvage" style="height:40px; width:auto;" /></a>
+    <a href="#" class="nav-logo"><img src="./media/sauvage-logo.svg" alt="Sauvage" style="height:40px; width:auto; filter: invert(1);" /></a>
     <ul class="nav-links">
       <li><a href="/#space">The Space</a></li>
       <li><a href="/#offers">Offerings</a></li>
@@ -754,6 +764,46 @@
           '</tr>'
         );
       });
+
+      // ── Full-day Kitchen section (appended when Kitchen chip is active) ──────
+      if (mustInclude.includes('K')) {
+        rows.push(
+          '<tr><td colspan="7" class="section-divider fd-kitchen-divider">' +
+          'Kitchen — Full-day rates &nbsp;<span class="discount-badge">Mon &amp; Tue · by enquiry</span>' +
+          '</td></tr>'
+        );
+        let fdLastGroup = 0;
+        COMBOS.forEach(function (c) {
+          if (!c.rooms.includes('K')) return;
+          for (var i = 0; i < mustInclude.length; i++) {
+            if (!c.rooms.includes(mustInclude[i])) return;
+          }
+          const n = c.rooms.length;
+          const hasCave = c.rooms.includes('C');
+          if (n !== fdLastGroup) { fdLastGroup = n; }
+          const rp      = n === 1 ? roomPrice(c.rooms, FULL) : null;
+          const caveFee = hasCave ? Math.round(CAVE_PER_HR * hrs) : null;
+          const total   = rp !== null ? rp + (caveFee || 0) : null;
+          const dep     = deposit(c.rooms);
+          const abbrRooms = c.rooms.join('+');
+          const rateCell  = rp !== null ? fmt(rp) : '<span style="color:var(--muted);font-style:italic">enquiry</span>';
+          const feeCell   = rp !== null && caveFee !== null ? fmt(caveFee) : (caveFee !== null ? '—' : '—');
+          const totalCell = total !== null ? fmt(total) : '<span style="color:var(--muted);font-style:italic">enquiry</span>';
+          const depCell   = rp !== null ? dep : '<span style="color:var(--muted);font-style:italic">TBC</span>';
+          const rowCls    = hasCave ? ' class="cave-row fd-kitchen-row"' : ' class="fd-kitchen-row"';
+          rows.push(
+            '<tr' + rowCls + '>' +
+            '<td class="combo-label">' + c.label + '</td>' +
+            '<td>' + abbrRooms + '</td>' +
+            '<td>' + DISC_LABELS[n] + '</td>' +
+            '<td>' + rateCell + '</td>' +
+            '<td>' + feeCell + '</td>' +
+            '<td class="price-total">' + totalCell + '</td>' +
+            '<td>' + depCell + '</td>' +
+            '</tr>'
+          );
+        });
+      }
 
       tbody.innerHTML = rows.join('');
     }
