@@ -873,23 +873,28 @@
     const display = document.getElementById('hrs-display');
     const HALF_DAY_MAX = 7; // half-day slot is 16:00–23:00 = 7 hrs
 
+    // ── Single source of truth: switch tab + re-render ───────────────────────
     function switchSlot(slot) {
       document.querySelectorAll('.slot-tab').forEach(function (t) {
         t.classList.toggle('active', t.dataset.slot === slot);
       });
       document.getElementById('panel-half').classList.toggle('hidden', slot !== 'half');
       document.getElementById('panel-full').classList.toggle('hidden', slot !== 'full');
+      if (slot === 'half') {
+        renderHalf(currentHrs, selectedRooms);
+      } else {
+        renderFull(currentHrs);
+      }
     }
 
+    // ── Slider ────────────────────────────────────────────────────────────────
     slider.addEventListener('input', function () {
       currentHrs = parseFloat(this.value);
       display.textContent = currentHrs + ' hrs';
       if (currentHrs > HALF_DAY_MAX) {
         switchSlot('full');
-        renderFull(currentHrs);
       } else {
         switchSlot('half');
-        renderHalf(currentHrs, selectedRooms);
       }
     });
 
@@ -905,7 +910,6 @@
           selectedRooms.splice(idx, 1);
           this.classList.remove('active');
         }
-        // Update hint text
         const hint = document.getElementById('filter-hint');
         if (selectedRooms.length === 0) {
           hint.textContent = 'showing all combinations';
@@ -913,18 +917,31 @@
           const names = { E: 'Entrance', G: 'Gallery', K: 'Kitchen', C: 'Cave' };
           hint.textContent = 'must include ' + selectedRooms.map(function(r){ return names[r]; }).join(' + ');
         }
-        renderHalf(currentHrs, selectedRooms);
+        // Re-render whichever panel is currently active
+        if (currentHrs > HALF_DAY_MAX) {
+          renderFull(currentHrs);
+        } else {
+          renderHalf(currentHrs, selectedRooms);
+        }
       });
     });
 
-    // ── Slot tabs ─────────────────────────────────────────────────────────────
+    // ── Slot tabs — snap slider to sensible default when clicked manually ─────
     document.querySelectorAll('.slot-tab').forEach(function (tab) {
       tab.addEventListener('click', function () {
-        document.querySelectorAll('.slot-tab').forEach(function (t) { t.classList.remove('active'); });
-        this.classList.add('active');
         const slot = this.dataset.slot;
-        document.getElementById('panel-half').classList.toggle('hidden', slot !== 'half');
-        document.getElementById('panel-full').classList.toggle('hidden', slot !== 'full');
+        if (slot === 'full' && currentHrs <= HALF_DAY_MAX) {
+          // Snap slider to 8hrs when manually entering full-day
+          currentHrs = 8;
+          slider.value = 8;
+          display.textContent = '8 hrs';
+        } else if (slot === 'half' && currentHrs > HALF_DAY_MAX) {
+          // Snap slider back to 7hrs when manually returning to half-day
+          currentHrs = HALF_DAY_MAX;
+          slider.value = HALF_DAY_MAX;
+          display.textContent = HALF_DAY_MAX + ' hrs';
+        }
+        switchSlot(slot);
       });
     });
 
