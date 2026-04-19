@@ -728,6 +728,7 @@
     function fmt(n) { return '€' + n.toLocaleString('nl-NL', { minimumFractionDigits: 0 }); }
 
     // ── Render table ──────────────────────────────────────────────────────────
+    // ── Full rebuild (called on filter change or slot switch) ────────────────
     function renderHalf(hrs, mustInclude) {
       const tbody = document.getElementById('half-tbody');
       const rows = [];
@@ -737,14 +738,12 @@
         const n = c.rooms.length;
         const hasCave = c.rooms.includes('C');
 
-        // Multi-select filter: combo must contain ALL selected rooms
         if (mustInclude.length > 0) {
           for (var i = 0; i < mustInclude.length; i++) {
             if (!c.rooms.includes(mustInclude[i])) return;
           }
         }
 
-        // Section header
         if (n !== lastGroup) {
           const disc = DISC_BADGES[n];
           rows.push(
@@ -761,20 +760,20 @@
         const total   = rp + (caveFee || 0);
         const dep     = deposit(c.rooms);
         const rowCls  = hasCave ? ' class="cave-row"' : '';
-        const abbrRooms = c.rooms.join('+');
+        // data-base stores the room-only price so updateFees can recalc without full rebuild
+        const dataAttrs = hasCave ? ' data-has-cave="1" data-base="' + rp + '"' : '';
 
         rows.push(
-          '<tr' + rowCls + '>' +
+          '<tr' + rowCls + dataAttrs + '>' +
           '<td class="combo-label">' + c.label + '</td>' +
           '<td>' + fmt(rp) + '</td>' +
-          '<td>' + (caveFee !== null ? fmt(caveFee) : '—') + '</td>' +
-          '<td class="price-total">' + fmt(total) + '</td>' +
+          '<td data-type="cave-fee">' + (caveFee !== null ? fmt(caveFee) : '—') + '</td>' +
+          '<td class="price-total" data-type="total">' + fmt(total) + '</td>' +
           '<td>' + dep + '</td>' +
           '</tr>'
         );
       });
 
-      // ── Full-day Kitchen section (appended when Kitchen chip is active) ──────
       if (mustInclude.includes('K')) {
         rows.push(
           '<tr><td colspan="5" class="section-divider fd-kitchen-divider">' +
@@ -790,22 +789,22 @@
           const n = c.rooms.length;
           const hasCave = c.rooms.includes('C');
           if (n !== fdLastGroup) { fdLastGroup = n; }
-          const rp      = n === 1 ? roomPrice(c.rooms, FULL) : null;
-          const caveFee = hasCave ? Math.round(CAVE_PER_HR * hrs) : null;
-          const total   = rp !== null ? rp + (caveFee || 0) : null;
-          const dep     = deposit(c.rooms);
-          const abbrRooms = c.rooms.join('+');
+          const rp        = n === 1 ? roomPrice(c.rooms, FULL) : null;
+          const caveFee   = hasCave ? Math.round(CAVE_PER_HR * hrs) : null;
+          const total     = rp !== null ? rp + (caveFee || 0) : null;
+          const dep       = deposit(c.rooms);
           const rateCell  = rp !== null ? fmt(rp) : '<span style="color:var(--muted);font-style:italic">enquiry</span>';
-          const feeCell   = rp !== null && caveFee !== null ? fmt(caveFee) : (caveFee !== null ? '—' : '—');
+          const feeCell   = rp !== null && caveFee !== null ? fmt(caveFee) : '—';
           const totalCell = total !== null ? fmt(total) : '<span style="color:var(--muted);font-style:italic">enquiry</span>';
           const depCell   = rp !== null ? dep : '<span style="color:var(--muted);font-style:italic">TBC</span>';
           const rowCls    = hasCave ? ' class="cave-row fd-kitchen-row"' : ' class="fd-kitchen-row"';
+          const dataAttrs = hasCave && rp !== null ? ' data-has-cave="1" data-base="' + rp + '"' : '';
           rows.push(
-            '<tr' + rowCls + '>' +
+            '<tr' + rowCls + dataAttrs + '>' +
             '<td class="combo-label">' + c.label + '</td>' +
             '<td>' + rateCell + '</td>' +
-            '<td>' + feeCell + '</td>' +
-            '<td class="price-total">' + totalCell + '</td>' +
+            '<td data-type="cave-fee">' + feeCell + '</td>' +
+            '<td class="price-total" data-type="total">' + totalCell + '</td>' +
             '<td>' + depCell + '</td>' +
             '</tr>'
           );
@@ -819,12 +818,11 @@
       const tbody = document.getElementById('full-tbody');
       const rows = [];
       let lastGroup = 0;
-      const FD_HRS = hrs || 8; // use live slider value for cave fee
+      const FD_HRS = hrs || 8;
 
       COMBOS.forEach(function (c) {
         const n = c.rooms.length;
         const hasCave = c.rooms.includes('C');
-        const hasKit  = c.rooms.includes('K');
 
         if (n !== lastGroup) {
           const disc = DISC_BADGES[n];
@@ -837,31 +835,43 @@
           lastGroup = n;
         }
 
-        const rp      = roomPrice(c.rooms, FULL);
-        const caveFee = hasCave ? Math.round(CAVE_PER_HR * FD_HRS) : null;
-        const total   = rp + (caveFee || 0);
-        const dep     = deposit(c.rooms);
-        const rowCls  = hasCave ? ' class="cave-row"' : '';
-        const abbrRooms = c.rooms.join('+');
+        const rp        = roomPrice(c.rooms, FULL);
+        const caveFee   = hasCave ? Math.round(CAVE_PER_HR * FD_HRS) : null;
+        const total     = rp + (caveFee || 0);
+        const dep       = deposit(c.rooms);
+        const rowCls    = hasCave ? ' class="cave-row"' : '';
+        const dataAttrs = hasCave && n === 1 ? ' data-has-cave="1" data-base="' + rp + '"' : '';
 
-        // Multi-room full-day = enquiry only
-        const rateCell  = n === 1 ? fmt(rp)    : '<span style="color:var(--muted);font-style:italic">enquiry</span>';
+        const rateCell  = n === 1 ? fmt(rp)   : '<span style="color:var(--muted);font-style:italic">enquiry</span>';
         const feeCell   = n === 1 && caveFee !== null ? fmt(caveFee) + '<span style="color:var(--muted);font-size:0.75em"> est.</span>' : (caveFee !== null ? '—' : '—');
-        const totalCell = n === 1 ? fmt(total)  : '<span style="color:var(--muted);font-style:italic">enquiry</span>';
-        const depCell   = n === 1 ? dep         : '<span style="color:var(--muted);font-style:italic">TBC</span>';
+        const totalCell = n === 1 ? fmt(total) : '<span style="color:var(--muted);font-style:italic">enquiry</span>';
+        const depCell   = n === 1 ? dep        : '<span style="color:var(--muted);font-style:italic">TBC</span>';
 
         rows.push(
-          '<tr' + rowCls + '>' +
+          '<tr' + rowCls + dataAttrs + '>' +
           '<td class="combo-label">' + c.label + '</td>' +
           '<td>' + rateCell + '</td>' +
-          '<td>' + feeCell + '</td>' +
-          '<td class="price-total">' + totalCell + '</td>' +
+          '<td data-type="cave-fee">' + feeCell + '</td>' +
+          '<td class="price-total" data-type="total">' + totalCell + '</td>' +
           '<td>' + depCell + '</td>' +
           '</tr>'
         );
       });
 
       tbody.innerHTML = rows.join('');
+    }
+
+    // ── Lightweight fee update — only touches cave fee + total cells ──────────
+    function updateFees(tbodyId, hrs, isFullDay) {
+      const tbody = document.getElementById(tbodyId);
+      tbody.querySelectorAll('tr[data-has-cave]').forEach(function (row) {
+        const base = parseFloat(row.dataset.base);
+        const fee  = Math.round(CAVE_PER_HR * hrs);
+        const feeCell   = row.querySelector('[data-type="cave-fee"]');
+        const totalCell = row.querySelector('[data-type="total"]');
+        if (feeCell)   feeCell.textContent   = fmt(fee) + (isFullDay ? ' est.' : '');
+        if (totalCell) totalCell.textContent  = fmt(base + fee);
+      });
     }
 
     // ── State ─────────────────────────────────────────────────────────────────
@@ -898,15 +908,26 @@
     slider.addEventListener('input', function () {
       currentHrs = parseFloat(this.value);
       display.textContent = currentHrs + ' hrs';
-      // Switch tab only when crossing the threshold
-      switchSlot(currentHrs > HALF_DAY_MAX ? 'full' : 'half');
-      // Throttle table re-render to once per animation frame
-      if (!rafPending) {
-        rafPending = true;
-        requestAnimationFrame(function () {
-          rerender();
-          rafPending = false;
-        });
+
+      const newSlot = currentHrs > HALF_DAY_MAX ? 'full' : 'half';
+
+      if (newSlot !== currentSlot) {
+        // Crossing threshold — full rebuild needed
+        switchSlot(newSlot);
+        rerender();
+      } else {
+        // Same slot — just patch the cave fee + total cells, no DOM rebuild
+        if (!rafPending) {
+          rafPending = true;
+          requestAnimationFrame(function () {
+            updateFees(
+              currentSlot === 'half' ? 'half-tbody' : 'full-tbody',
+              currentHrs,
+              currentSlot === 'full'
+            );
+            rafPending = false;
+          });
+        }
       }
     });
 
