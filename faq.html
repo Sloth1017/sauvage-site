@@ -565,8 +565,6 @@
               <thead>
                 <tr>
                   <th>Space</th>
-                  <th>Rooms</th>
-                  <th>Discount</th>
                   <th>Room rate</th>
                   <th id="cave-col-header">Cave host fee (€35/hr)*</th>
                   <th>Total</th>
@@ -590,8 +588,6 @@
               <thead>
                 <tr>
                   <th>Space</th>
-                  <th>Rooms</th>
-                  <th>Discount</th>
                   <th>Room rate</th>
                   <th>Cave host fee (€35/hr)*</th>
                   <th>Total</th>
@@ -752,7 +748,7 @@
         if (n !== lastGroup) {
           const disc = DISC_BADGES[n];
           rows.push(
-            '<tr><td colspan="7" class="section-divider">' +
+            '<tr><td colspan="5" class="section-divider">' +
             SECTION_LABELS[n] +
             (disc ? ' &nbsp;<span class="discount-badge">' + disc + '</span>' : '') +
             '</td></tr>'
@@ -770,8 +766,6 @@
         rows.push(
           '<tr' + rowCls + '>' +
           '<td class="combo-label">' + c.label + '</td>' +
-          '<td>' + abbrRooms + '</td>' +
-          '<td>' + DISC_LABELS[n] + '</td>' +
           '<td>' + fmt(rp) + '</td>' +
           '<td>' + (caveFee !== null ? fmt(caveFee) : '—') + '</td>' +
           '<td class="price-total">' + fmt(total) + '</td>' +
@@ -783,7 +777,7 @@
       // ── Full-day Kitchen section (appended when Kitchen chip is active) ──────
       if (mustInclude.includes('K')) {
         rows.push(
-          '<tr><td colspan="7" class="section-divider fd-kitchen-divider">' +
+          '<tr><td colspan="5" class="section-divider fd-kitchen-divider">' +
           'Kitchen: Full-day rates &nbsp;<span class="discount-badge">Mon &amp; Tue · by enquiry</span>' +
           '</td></tr>'
         );
@@ -809,8 +803,6 @@
           rows.push(
             '<tr' + rowCls + '>' +
             '<td class="combo-label">' + c.label + '</td>' +
-            '<td>' + abbrRooms + '</td>' +
-            '<td>' + DISC_LABELS[n] + '</td>' +
             '<td>' + rateCell + '</td>' +
             '<td>' + feeCell + '</td>' +
             '<td class="price-total">' + totalCell + '</td>' +
@@ -837,7 +829,7 @@
         if (n !== lastGroup) {
           const disc = DISC_BADGES[n];
           rows.push(
-            '<tr><td colspan="7" class="section-divider">' +
+            '<tr><td colspan="5" class="section-divider">' +
             SECTION_LABELS[n] +
             (disc ? ' &nbsp;<span class="discount-badge">' + disc + '</span>' : '') +
             '</td></tr>'
@@ -861,8 +853,6 @@
         rows.push(
           '<tr' + rowCls + '>' +
           '<td class="combo-label">' + c.label + '</td>' +
-          '<td>' + abbrRooms + '</td>' +
-          '<td>' + DISC_LABELS[n] + '</td>' +
           '<td>' + rateCell + '</td>' +
           '<td>' + feeCell + '</td>' +
           '<td class="price-total">' + totalCell + '</td>' +
