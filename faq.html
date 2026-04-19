@@ -865,22 +865,29 @@
     }
 
     // ── State ─────────────────────────────────────────────────────────────────
-    let currentHrs      = 7;
-    let selectedRooms   = [];   // array of room keys e.g. ['E','K']
+    let currentHrs    = 7;
+    let currentSlot   = 'half';   // track active slot to avoid redundant tab switches
+    let selectedRooms = [];
+    let rafPending    = false;    // requestAnimationFrame throttle
 
     // ── Slider ────────────────────────────────────────────────────────────────
     const slider  = document.getElementById('hrs-slider');
     const display = document.getElementById('hrs-display');
-    const HALF_DAY_MAX = 7; // half-day slot is 16:00–23:00 = 7 hrs
+    const HALF_DAY_MAX = 7;
 
     // ── Single source of truth: switch tab + re-render ───────────────────────
     function switchSlot(slot) {
+      if (slot === currentSlot) return; // no-op if already on this tab
+      currentSlot = slot;
       document.querySelectorAll('.slot-tab').forEach(function (t) {
         t.classList.toggle('active', t.dataset.slot === slot);
       });
       document.getElementById('panel-half').classList.toggle('hidden', slot !== 'half');
       document.getElementById('panel-full').classList.toggle('hidden', slot !== 'full');
-      if (slot === 'half') {
+    }
+
+    function rerender() {
+      if (currentSlot === 'half') {
         renderHalf(currentHrs, selectedRooms);
       } else {
         renderFull(currentHrs);
@@ -891,10 +898,15 @@
     slider.addEventListener('input', function () {
       currentHrs = parseFloat(this.value);
       display.textContent = currentHrs + ' hrs';
-      if (currentHrs > HALF_DAY_MAX) {
-        switchSlot('full');
-      } else {
-        switchSlot('half');
+      // Switch tab only when crossing the threshold
+      switchSlot(currentHrs > HALF_DAY_MAX ? 'full' : 'half');
+      // Throttle table re-render to once per animation frame
+      if (!rafPending) {
+        rafPending = true;
+        requestAnimationFrame(function () {
+          rerender();
+          rafPending = false;
+        });
       }
     });
 
@@ -917,12 +929,7 @@
           const names = { E: 'Entrance', G: 'Gallery', K: 'Kitchen', C: 'Cave' };
           hint.textContent = 'must include ' + selectedRooms.map(function(r){ return names[r]; }).join(' + ');
         }
-        // Re-render whichever panel is currently active
-        if (currentHrs > HALF_DAY_MAX) {
-          renderFull(currentHrs);
-        } else {
-          renderHalf(currentHrs, selectedRooms);
-        }
+        rerender();
       });
     });
 
@@ -942,6 +949,7 @@
           display.textContent = HALF_DAY_MAX + ' hrs';
         }
         switchSlot(slot);
+        rerender();
       });
     });
 
