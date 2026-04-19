@@ -815,11 +815,11 @@
       tbody.innerHTML = rows.join('');
     }
 
-    function renderFull() {
+    function renderFull(hrs) {
       const tbody = document.getElementById('full-tbody');
       const rows = [];
       let lastGroup = 0;
-      const FD_HRS = 8; // estimate for full-day cave fee display
+      const FD_HRS = hrs || 8; // use live slider value for cave fee
 
       COMBOS.forEach(function (c) {
         const n = c.rooms.length;
@@ -871,11 +871,26 @@
     // ── Slider ────────────────────────────────────────────────────────────────
     const slider  = document.getElementById('hrs-slider');
     const display = document.getElementById('hrs-display');
+    const HALF_DAY_MAX = 7; // half-day slot is 16:00–23:00 = 7 hrs
+
+    function switchSlot(slot) {
+      document.querySelectorAll('.slot-tab').forEach(function (t) {
+        t.classList.toggle('active', t.dataset.slot === slot);
+      });
+      document.getElementById('panel-half').classList.toggle('hidden', slot !== 'half');
+      document.getElementById('panel-full').classList.toggle('hidden', slot !== 'full');
+    }
 
     slider.addEventListener('input', function () {
       currentHrs = parseFloat(this.value);
       display.textContent = currentHrs + ' hrs';
-      renderHalf(currentHrs, selectedRooms);
+      if (currentHrs > HALF_DAY_MAX) {
+        switchSlot('full');
+        renderFull(currentHrs);
+      } else {
+        switchSlot('half');
+        renderHalf(currentHrs, selectedRooms);
+      }
     });
 
     // ── Room multi-select chips ───────────────────────────────────────────────
