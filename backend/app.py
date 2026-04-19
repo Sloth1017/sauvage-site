@@ -107,6 +107,28 @@ def serve_invoice(invoice_number):
     )
 
 
+# ── QR / UTM chat redirect ───────────────────────────────────────────────────
+_CHAT_SCANS_LOG = os.path.join(os.path.dirname(__file__), "chat_scans.jsonl")
+
+@app.route("/chat")
+def chat_redirect():
+    """QR-code landing route — logs UTM params then redirects to homepage with chat=open."""
+    from flask import redirect as _redirect
+    data = {
+        "ts":          datetime.datetime.utcnow().isoformat(),
+        "utm_source":  request.args.get("utm_source",   ""),
+        "utm_medium":  request.args.get("utm_medium",   ""),
+        "utm_campaign":request.args.get("utm_campaign", ""),
+        "utm_content": request.args.get("utm_content",  ""),
+        "utm_term":    request.args.get("utm_term",     ""),
+        "ua":          request.user_agent.string,
+    }
+    with open(_CHAT_SCANS_LOG, "a") as f:
+        f.write(json.dumps(data) + "\n")
+    print(f"[ChatScan] {data['utm_source']} / {data['utm_campaign']}")
+    return _redirect("/?chat=open")
+
+
 # ── Wine click tracking ───────────────────────────────────────────────────────
 _WINE_CLICKS_LOG = os.path.join(os.path.dirname(__file__), "wine_clicks.jsonl")
 

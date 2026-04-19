@@ -1961,9 +1961,16 @@
     // injectEventCTA(); // disabled — CTA button removed per user request
   }
 
+  function maybeAutoOpen() {
+    if (new URLSearchParams(window.location.search).get("chat") === "open") {
+      openPanel();
+    }
+  }
+
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
+    document.addEventListener("DOMContentLoaded", function () { init(); maybeAutoOpen(); });
   } else {
     init();
+    maybeAutoOpen();
   }
 })();
