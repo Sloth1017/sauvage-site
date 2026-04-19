@@ -347,6 +347,7 @@ Examples: 5 people → `https://www.selectionsauvage.nl/cart/51326578131290:5` �
 - This flow is ONLY triggered by wine tasting as the event type — it is never an add-on to other bookings
 - Notify Selection Sauvage BV internally once booking is confirmed (Step 8)
 - **Availability:** Wine tastings are held in the Cave or the Gallery (Upstairs). A date is only fully unavailable if BOTH the Cave and the Gallery are occupied at the same time. If either is free, offer it. Entrance and Kitchen bookings are completely irrelevant — never flag them as conflicts for a wine tasting.
+- **The Kinship / Angela Huizer exhibition in the Gallery is a permanent background display — it does NOT block wine tastings or any other bookings.** The exhibition runs continuously; events in the Gallery happen alongside it. Never treat the exhibition as a calendar conflict. Only flag a date as unavailable if there is a confirmed private event booking occupying the space during that time slot.
 
 ---
 
