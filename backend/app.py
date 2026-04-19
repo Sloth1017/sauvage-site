@@ -10,8 +10,13 @@ app.register_blueprint(webhook_bp)
 app.register_blueprint(chat_bp)
 
 # ── Static site directories ───────────────────────────────────────────────────
-# Serve the hub website from the workspace sauvage folder
-SITE_DIR = "/home/greg/.openclaw/workspace/sauvage"
+# Prefer git repo path; fall back to legacy workspace path if not present
+_SITE_CANDIDATES = [
+    "/root/sauvage",                              # git repo (primary)
+    "/home/greg/.openclaw/workspace/sauvage",     # legacy workspace
+]
+SITE_DIR = next((p for p in _SITE_CANDIDATES if os.path.isdir(p)),
+                "/home/greg/.openclaw/workspace/sauvage")
 
 @app.route("/health")
 def health():
@@ -63,6 +68,10 @@ def terms():
 @app.route("/")
 def index():
     return send_from_directory(SITE_DIR, "index.html", mimetype="text/html")
+
+@app.route("/faq")
+def faq():
+    return send_from_directory(SITE_DIR, "faq.html", mimetype="text/html")
 
 @app.route("/media/photos/<path:filename>")
 def photos(filename):
