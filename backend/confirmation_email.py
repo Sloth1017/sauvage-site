@@ -341,8 +341,8 @@ def send_booking_confirmation(
               <table width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td style="vertical-align:middle;">
-                    <img src="{logo_url}" alt="Sauvage Space" width="72" height="72"
-                         style="display:block;width:72px;height:72px;border:0;" />
+                    <img src="{logo_url}" alt="Sauvage Space" width="101" height="101"
+                         style="display:block;width:101px;height:101px;border:0;" />
                   </td>
                   <td style="vertical-align:middle;padding-left:20px;">
                     <p style="margin:0 0 4px;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#666;font-weight:500;">Potgieterstraat 47H, Amsterdam</p>
