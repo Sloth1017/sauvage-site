@@ -60,64 +60,73 @@ _ROOM_ALIASES = {
     "upstairs - gallery":     "gallery",
     "gallery — upstairs":     "gallery",
     "entrance":               "entrance",
-    # Kitchen tiers
-    "kitchen":                "kitchen_full",   # legacy → full stove
-    "kitchen_full":           "kitchen_full",
-    "kitchen (full stove)":   "kitchen_full",
-    "kitchen full stove":     "kitchen_full",
-    "kitchen full":           "kitchen_full",
-    "kitchen_basic":          "kitchen_basic",
-    "kitchen (basic)":        "kitchen_basic",
-    "kitchen basic":          "kitchen_basic",
-    "kitchen (no stove)":     "kitchen_basic",
-    "kitchen no stove":       "kitchen_basic",
+    "entrance room":          "entrance",
+    # Kitchen — single tier (canonical v3)
+    "kitchen":                "kitchen",
+    "kitchen_full":           "kitchen",   # legacy alias
+    "kitchen (full stove)":   "kitchen",
+    "kitchen full stove":     "kitchen",
+    "kitchen full":           "kitchen",
+    "kitchen_basic":          "kitchen",   # legacy alias → now same rate
+    "kitchen (basic)":        "kitchen",
+    "kitchen basic":          "kitchen",
+    "kitchen (no stove)":     "kitchen",
+    "kitchen no stove":       "kitchen",
     # Cave
     "cave":                   "cave",
     "wine cave":              "cave",
 }
 
 _ROOM_LABELS = {
-    "gallery":       "Upstairs (Gallery)",
-    "entrance":      "Entrance",
-    "kitchen_full":  "Kitchen (Full Stove)",
-    "kitchen_basic": "Kitchen (Basic / No Appliances)",
-    "cave":          "Cave",
+    "gallery":  "Upstairs (Gallery)",
+    "entrance": "Entrance Room",
+    "kitchen":  "Kitchen",
+    "cave":     "Cave",
 }
 
 _ROOM_RATES = {
-    # key: (hourly, half_day, full_day)   — all incl VAT
-    "gallery":       (25,  70,  140),
-    "entrance":      (56,  130, 250),
-    "kitchen_full":  (83,  333, 500),   # full stove use
-    "kitchen_basic": (33,  133, 200),   # no dishwasher / no stove
-    "cave":          (35,  100, 175),   # host-accompanied only
+    # key: (half_day, full_day)   — all incl VAT
+    # canonical v3: half-day is the only bot-quoted slot
+    # full-day rates defined but not bot-quoted — kept for reference
+    "gallery":  (135, 140),
+    "entrance": (190, 250),
+    "kitchen":  (350, 500),
+    "cave":     (100, 175),   # host fee added separately — see _CAVE_HOST_FEE
 }
+
+_CAVE_HOST_FEE = 35   # €35/hr incl VAT — added as separate line item when cave booked
 
 _BUNDLE_DISCOUNTS = {1: 0.0, 2: 0.20, 3: 0.40, 4: 0.50}
 
+# Full-day closure fees kept for reference but not used in bot quoting
 _CLOSURE_FEES = {
-    "entrance":      200,   # full-day only, incl VAT
-    "kitchen_full":  100,   # full-day only, incl VAT
-    "kitchen_basic": 100,   # full-day only, incl VAT
+    "entrance": 200,   # full-day only, incl VAT
+    "kitchen":  100,   # full-day only, incl VAT
 }
 
 # Add-on prices incl VAT; "pp" = per person, "hr" = per hour, "flat" = fixed
+# canonical v3 rates
 _ADDON_RATES = {
-    "light snacks fento":           (5,  "pp"),
-    "snacks fento":                 (10, "pp"),
-    "snacks light fento":           (5,  "pp"),
-    "event cleanup":                (60, "flat"),
-    "stemless glassware":           (25, "flat"),
-    "stem glassware":               (35, "flat"),
-    "dishware & cutlery":           (25, "flat"),
-    "dishware and cutlery":         (25, "flat"),
-    "staff support":                (35, "hr"),
-    "sommelier/barista service":    (50, "hr"),
-    "sommelier barista service":    (50, "hr"),
-    "projector/display screen":     (25, "flat"),
-    "projector display screen":     (25, "flat"),
+    "light snacks fento":              (5,  "pp"),
+    "snacks fento":                    (10, "pp"),
+    "snacks light fento":              (5,  "pp"),
+    "event cleanup":                   (60, "flat"),
+    "stemless glassware":              (25, "flat"),
+    "stem glassware":                  (25, "flat"),   # same price as stemless (v3)
+    "dishware & cutlery":              (25, "flat"),
+    "dishware and cutlery":            (25, "flat"),
+    "staff support":                   (35, "hr"),
+    "bar/barista service":             (40, "hr"),     # v3: €40/hr (was €50)
+    "bar barista service":             (40, "hr"),
+    "sommelier/barista service":       (40, "hr"),     # legacy alias
+    "sommelier barista service":       (40, "hr"),
+    "decor/styling package":           (50, "flat"),   # new in v3, from €50
+    "decor styling package":           (50, "flat"),
+    "projector/display screen":        (25, "flat"),
+    "projector display screen":        (25, "flat"),
     "extended hours (after midnight)": (50, "hr"),
     "extended hours after midnight":   (50, "hr"),
+    "cave host fee":                   (35, "hr"),     # cave host presence
 }
 
 def _norm_room(r: str) -> str:
@@ -147,8 +156,8 @@ def _norm_addon(a: str) -> str:
         return "dishware & cutlery"
     if "staff" in s:
         return "staff support"
-    if "sommelier" in s or "barista" in s:
-        return "sommelier/barista service"
+    if "bar" in s or "sommelier" in s or "barista" in s:
+        return "bar/barista service"
     if "projector" in s or "screen" in s or "display" in s:
         return "projector/display screen"
     if "extended" in s or "midnight" in s:
@@ -180,26 +189,25 @@ def compute_line_items(state: dict) -> list[dict]:
     rooms = [_norm_room(r) for r in rooms_raw if _norm_room(r)]
     rooms = list(dict.fromkeys(rooms))   # deduplicate, preserve order
 
-    duration   = str(state.get("duration") or "Hourly").lower()
+    duration   = str(state.get("duration") or "Half-Day").lower()
     hours      = float(state.get("hours") or 0)
-    # Prefer actual start/end times over the LLM-extracted hours field
+    # Derive hours from actual start/end times when available
     if state.get("start_time") and state.get("end_time"):
         try:
             _st = datetime.strptime(str(state["start_time"]).strip(), "%H:%M")
             _et = datetime.strptime(str(state["end_time"]).strip(),   "%H:%M")
             _computed = (_et - _st).seconds / 3600
             if _computed > 0:
-                # Round to nearest 0.5
                 hours = round(_computed * 2) / 2
         except ValueError:
-            pass  # keep the state["hours"] value
+            pass
     dates_val  = state.get("dates")
     guest      = int(state.get("guest_count") or 0)
     addons_raw = state.get("addons") or []
     if isinstance(addons_raw, str):
         addons_raw = [addons_raw]
 
-    # Number of days for multi-day
+    # Number of slots (days) for multi-day bookings
     if isinstance(dates_val, list) and len(dates_val) >= 2:
         try:
             d0 = datetime.strptime(str(dates_val[0]).strip(),  "%Y-%m-%d")
@@ -210,10 +218,11 @@ def compute_line_items(state: dict) -> list[dict]:
     else:
         num_days = 1
 
-    is_hourly   = "hour" in duration or hours > 0
     is_full_day = "full" in duration
-    # half-day if explicitly stated or hours 4-5
-    is_half_day = "half" in duration or (not is_full_day and not is_hourly and 3 <= hours <= 5)
+    # Default is half-day (canonical v3 — bot only quotes half-day)
+    # hours used for cave host fee and add-on per-hour items
+    if hours == 0:
+        hours = 7.0   # standard half-day = 7 hrs (16:00–23:00)
 
     items = []
 
@@ -237,27 +246,21 @@ def compute_line_items(state: dict) -> list[dict]:
 
     # ── Room line items ────────────────────────────────────────────────────────
     room_pre_discount = 0.0
+    has_cave = "cave" in rooms
     for r in rooms:
         label = _ROOM_LABELS.get(r, r.title())
-        rates = _ROOM_RATES.get(r, (0, 0, 0))
-        hourly_rate, half_rate, full_rate = rates
+        rates = _ROOM_RATES.get(r, (0, 0))
+        half_rate, full_rate = rates
 
-        if is_hourly and hours > 0:
-            unit   = hourly_rate
-            qty    = hours * num_days
-            u_str  = f"hr{'s' if qty != 1 else ''}"
-            desc   = f"Space rental: {label}"
-            if num_days > 1:
-                desc += f" ({hours} hrs/day x {num_days} days)"
-        elif is_full_day:
+        if is_full_day:
             unit  = full_rate
             qty   = num_days
             u_str = "day"
             desc  = f"Space rental: {label} (full day)"
-        else:  # half-day default
+        else:  # half-day (canonical default)
             unit  = half_rate
             qty   = num_days
-            u_str = "day"
+            u_str = "slot"
             desc  = f"Space rental: {label} (half day)"
 
         room_pre_discount += unit * qty
@@ -274,7 +277,15 @@ def compute_line_items(state: dict) -> list[dict]:
             is_discount=True,
         )
 
-    # Full-day closure premiums
+    # Cave host fee — separate line item, scales with booked hours
+    if has_cave:
+        cave_hours = hours * num_days
+        _line(
+            f"Cave host fee × {cave_hours:.0f} hrs",
+            cave_hours, "hr", _CAVE_HOST_FEE,
+        )
+
+    # Full-day closure premiums (reference only — not bot-quoted)
     if is_full_day:
         for r in rooms:
             if r in _CLOSURE_FEES:
