@@ -444,21 +444,33 @@
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: var(--muted);
-      margin-right: 0.2rem;
+      margin-right: 0.4rem;
     }
-    .chip {
-      padding: 0.3rem 0.75rem;
-      font-size: 0.75rem;
+    .room-chip {
+      padding: 0.35rem 0.9rem;
+      font-size: 0.78rem;
+      font-weight: 500;
       border: 1px solid var(--border);
       background: transparent;
       color: var(--muted);
       cursor: pointer;
-      border-radius: 20px;
+      border-radius: 3px;
       font-family: var(--sans);
       transition: all 0.18s;
+      letter-spacing: 0.04em;
     }
-    .chip.active { background: var(--ink); color: var(--white); border-color: var(--ink); }
-    .chip:hover:not(.active) { border-color: var(--ink); color: var(--ink); }
+    .room-chip.active {
+      background: var(--ink);
+      color: var(--white);
+      border-color: var(--ink);
+    }
+    .room-chip:hover:not(.active) { border-color: var(--ink); color: var(--ink); }
+    .filter-hint {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-left: 0.5rem;
+      font-style: italic;
+    }
 
     /* ── Mobile ──────────────────────────────────────── */
     @media (max-width: 768px) {
@@ -558,14 +570,14 @@
             <span class="slider-hint">Adjusts Cave host fee (€35/hr)</span>
           </div>
 
-          <!-- Filter chips -->
+          <!-- Room multi-select filter -->
           <div class="filter-chips">
-            <span class="chip-label">Filter:</span>
-            <button class="chip active" data-filter="all">All</button>
-            <button class="chip" data-filter="kitchen">With Kitchen</button>
-            <button class="chip" data-filter="cave">With Cave</button>
-            <button class="chip" data-filter="no-cave">No Cave</button>
-            <button class="chip" data-filter="no-kitchen">No Kitchen</button>
+            <span class="chip-label">Must include:</span>
+            <button class="room-chip" data-room="E">Entrance</button>
+            <button class="room-chip" data-room="G">Gallery</button>
+            <button class="room-chip" data-room="K">Kitchen</button>
+            <button class="room-chip" data-room="C">Cave</button>
+            <span class="filter-hint" id="filter-hint">showing all combinations</span>
           </div>
 
           <div class="table-scroll">
@@ -699,7 +711,7 @@
     function fmt(n) { return '€' + n.toLocaleString('nl-NL', { minimumFractionDigits: 0 }); }
 
     // ── Render table ──────────────────────────────────────────────────────────
-    function renderHalf(hrs, filter) {
+    function renderHalf(hrs, mustInclude) {
       const tbody = document.getElementById('half-tbody');
       const rows = [];
       let lastGroup = 0;
@@ -707,13 +719,13 @@
       COMBOS.forEach(function (c) {
         const n = c.rooms.length;
         const hasCave = c.rooms.includes('C');
-        const hasKit  = c.rooms.includes('K');
 
-        // Filter logic
-        if (filter === 'kitchen'   && !hasKit)  return;
-        if (filter === 'cave'      && !hasCave) return;
-        if (filter === 'no-cave'   &&  hasCave) return;
-        if (filter === 'no-kitchen'&&  hasKit)  return;
+        // Multi-select filter: combo must contain ALL selected rooms
+        if (mustInclude.length > 0) {
+          for (var i = 0; i < mustInclude.length; i++) {
+            if (!c.rooms.includes(mustInclude[i])) return;
+          }
+        }
 
         // Section header
         if (n !== lastGroup) {
@@ -802,8 +814,8 @@
     }
 
     // ── State ─────────────────────────────────────────────────────────────────
-    let currentHrs    = 7;
-    let currentFilter = 'all';
+    let currentHrs      = 7;
+    let selectedRooms   = [];   // array of room keys e.g. ['E','K']
 
     // ── Slider ────────────────────────────────────────────────────────────────
     const slider  = document.getElementById('hrs-slider');
@@ -811,18 +823,31 @@
 
     slider.addEventListener('input', function () {
       currentHrs = parseFloat(this.value);
-      const label = Number.isInteger(currentHrs) ? currentHrs + ' hrs' : currentHrs + ' hrs';
-      display.textContent = label;
-      renderHalf(currentHrs, currentFilter);
+      display.textContent = currentHrs + ' hrs';
+      renderHalf(currentHrs, selectedRooms);
     });
 
-    // ── Filter chips ──────────────────────────────────────────────────────────
-    document.querySelectorAll('.chip').forEach(function (chip) {
+    // ── Room multi-select chips ───────────────────────────────────────────────
+    document.querySelectorAll('.room-chip').forEach(function (chip) {
       chip.addEventListener('click', function () {
-        document.querySelectorAll('.chip').forEach(function (c) { c.classList.remove('active'); });
-        this.classList.add('active');
-        currentFilter = this.dataset.filter;
-        renderHalf(currentHrs, currentFilter);
+        const room = this.dataset.room;
+        const idx  = selectedRooms.indexOf(room);
+        if (idx === -1) {
+          selectedRooms.push(room);
+          this.classList.add('active');
+        } else {
+          selectedRooms.splice(idx, 1);
+          this.classList.remove('active');
+        }
+        // Update hint text
+        const hint = document.getElementById('filter-hint');
+        if (selectedRooms.length === 0) {
+          hint.textContent = 'showing all combinations';
+        } else {
+          const names = { E: 'Entrance', G: 'Gallery', K: 'Kitchen', C: 'Cave' };
+          hint.textContent = 'must include ' + selectedRooms.map(function(r){ return names[r]; }).join(' + ');
+        }
+        renderHalf(currentHrs, selectedRooms);
       });
     });
 
@@ -838,7 +863,7 @@
     });
 
     // ── Initial render ────────────────────────────────────────────────────────
-    renderHalf(currentHrs, currentFilter);
+    renderHalf(currentHrs, selectedRooms);
     renderFull();
   })();
   </script>
