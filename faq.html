@@ -278,12 +278,99 @@
       text-decoration: underline;
     }
     
+    /* ── Pricing Matrix ──────────────────────────────── */
+    .pricing-section {
+      margin-top: 1rem;
+    }
+    .pricing-intro {
+      color: var(--muted);
+      font-size: 0.92rem;
+      margin-bottom: 1.2rem;
+      line-height: 1.7;
+    }
+    .pricing-note {
+      color: var(--muted);
+      font-size: 0.82rem;
+      margin-top: 1rem;
+      line-height: 1.7;
+      font-style: italic;
+    }
+    .table-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin: 0 -0.5rem;
+    }
+    .pricing-table {
+      width: 100%;
+      min-width: 600px;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin-bottom: 0.5rem;
+    }
+    .pricing-table th {
+      text-align: left;
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .pricing-table td {
+      padding: 0.65rem 0.75rem;
+      border-bottom: 1px solid rgba(26,26,24,0.06);
+      color: var(--ink);
+      vertical-align: middle;
+    }
+    .pricing-table tr:last-child td { border-bottom: none; }
+    .pricing-table tr:hover td { background: rgba(26,26,24,0.025); }
+    .pricing-table .combo-label { font-weight: 500; }
+    .pricing-table .price-total { font-weight: 600; }
+    .pricing-table .discount-badge {
+      display: inline-block;
+      font-size: 0.68rem;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      background: rgba(26,26,24,0.06);
+      padding: 0.15rem 0.45rem;
+      border-radius: 2px;
+    }
+    .pricing-table .cave-row td { background: rgba(26,26,24,0.02); }
+    .section-divider {
+      font-size: 0.68rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 0.9rem 0.75rem 0.3rem;
+      font-weight: 500;
+    }
+    .addons-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.4rem 2rem;
+      margin-top: 0.8rem;
+      font-size: 0.85rem;
+    }
+    .addon-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 0.35rem 0;
+      border-bottom: 1px solid rgba(26,26,24,0.06);
+      gap: 1rem;
+    }
+    .addon-name { color: var(--ink); }
+    .addon-price { color: var(--muted); white-space: nowrap; font-size: 0.82rem; }
+
     /* ── Mobile ──────────────────────────────────────── */
     @media (max-width: 768px) {
       nav { padding: 1rem 2rem; }
       .nav-links { gap: 1rem; font-size: 0.65rem; }
       main { padding: 6rem 2rem 2rem; }
       h1 { font-size: 1.8rem; }
+      .addons-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -353,6 +440,134 @@
     <div class="faq-item">
       <h3 class="faq-question">Is Sauvage accessible for people with disabilities?</h3>
       <p class="faq-answer">We strive to be accessible. The space has level entry and accessible facilities. If you have specific accessibility needs, please contact us directly at contact@selectionsauvage.nl or +31 (0)6 [phone] to discuss accommodations.</p>
+    </div>
+
+    <div class="faq-item">
+      <h3 class="faq-question">What does it cost to hire the space?</h3>
+      <div class="faq-answer pricing-section">
+        <p class="pricing-intro">All events run as a <strong>half-day slot: 16:00–23:00</strong> (setup access from ~15:30). All prices include 21% VAT. Book more rooms, pay less per room — multi-room discounts apply automatically. <strong>Prices below are room rental only</strong> and do not include add-ons, event cleanup, or any optional extras.</p>
+
+        <div class="table-scroll">
+          <table class="pricing-table">
+            <thead>
+              <tr>
+                <th>Space</th>
+                <th>Rooms</th>
+                <th>Discount</th>
+                <th>Room rate</th>
+                <th>Cave host fee (€35/hr)*</th>
+                <th>Total</th>
+                <th>Deposit</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Single rooms -->
+              <tr><td colspan="7" class="section-divider">Single room</td></tr>
+              <tr>
+                <td class="combo-label">Entrance Room</td>
+                <td>E</td><td>—</td><td>€190</td><td>—</td>
+                <td class="price-total">€190</td><td>€50</td>
+              </tr>
+              <tr>
+                <td class="combo-label">Upstairs Gallery</td>
+                <td>G</td><td>—</td><td>€135</td><td>—</td>
+                <td class="price-total">€135</td><td>€50</td>
+              </tr>
+              <tr>
+                <td class="combo-label">Kitchen</td>
+                <td>K</td><td>—</td><td>€350</td><td>—</td>
+                <td class="price-total">€350</td><td>€150</td>
+              </tr>
+              <tr class="cave-row">
+                <td class="combo-label">Cave</td>
+                <td>C</td><td>—</td><td>€100</td><td>€245</td>
+                <td class="price-total">€345</td><td>€50</td>
+              </tr>
+
+              <!-- Two rooms -->
+              <tr><td colspan="7" class="section-divider">Two rooms &nbsp;<span class="discount-badge">−20%</span></td></tr>
+              <tr>
+                <td class="combo-label">Entrance + Gallery</td>
+                <td>E+G</td><td>−20%</td><td>€260</td><td>—</td>
+                <td class="price-total">€260</td><td>€50</td>
+              </tr>
+              <tr>
+                <td class="combo-label">Entrance + Kitchen</td>
+                <td>E+K</td><td>−20%</td><td>€432</td><td>—</td>
+                <td class="price-total">€432</td><td>€150</td>
+              </tr>
+              <tr class="cave-row">
+                <td class="combo-label">Entrance + Cave</td>
+                <td>E+C</td><td>−20%</td><td>€232</td><td>€245</td>
+                <td class="price-total">€477</td><td>€50</td>
+              </tr>
+              <tr>
+                <td class="combo-label">Gallery + Kitchen</td>
+                <td>G+K</td><td>−20%</td><td>€388</td><td>—</td>
+                <td class="price-total">€388</td><td>€150</td>
+              </tr>
+              <tr class="cave-row">
+                <td class="combo-label">Gallery + Cave</td>
+                <td>G+C</td><td>−20%</td><td>€188</td><td>€245</td>
+                <td class="price-total">€433</td><td>€50</td>
+              </tr>
+              <tr class="cave-row">
+                <td class="combo-label">Kitchen + Cave</td>
+                <td>K+C</td><td>−20%</td><td>€360</td><td>€245</td>
+                <td class="price-total">€605</td><td>€150</td>
+              </tr>
+
+              <!-- Three rooms -->
+              <tr><td colspan="7" class="section-divider">Three rooms &nbsp;<span class="discount-badge">−40%</span></td></tr>
+              <tr>
+                <td class="combo-label">Entrance + Gallery + Kitchen</td>
+                <td>E+G+K</td><td>−40%</td><td>€405</td><td>—</td>
+                <td class="price-total">€405</td><td>€150</td>
+              </tr>
+              <tr class="cave-row">
+                <td class="combo-label">Entrance + Gallery + Cave</td>
+                <td>E+G+C</td><td>−40%</td><td>€255</td><td>€245</td>
+                <td class="price-total">€500</td><td>€50</td>
+              </tr>
+              <tr class="cave-row">
+                <td class="combo-label">Entrance + Kitchen + Cave</td>
+                <td>E+K+C</td><td>−40%</td><td>€384</td><td>€245</td>
+                <td class="price-total">€629</td><td>€150</td>
+              </tr>
+              <tr class="cave-row">
+                <td class="combo-label">Gallery + Kitchen + Cave</td>
+                <td>G+K+C</td><td>−40%</td><td>€351</td><td>€245</td>
+                <td class="price-total">€596</td><td>€150</td>
+              </tr>
+
+              <!-- Four rooms -->
+              <tr><td colspan="7" class="section-divider">All four rooms &nbsp;<span class="discount-badge">−50%</span></td></tr>
+              <tr class="cave-row">
+                <td class="combo-label">Entrance + Gallery + Kitchen + Cave</td>
+                <td>E+G+K+C</td><td>−50%</td><td>€388</td><td>€245</td>
+                <td class="price-total">€633</td><td>€150</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="pricing-note">* The Cave is a host-led space — a Sauvage host is present for the full duration. The host fee (€35/hr) is shown separately. The €245 figure assumes a standard 7-hour half-day slot; actual hours may vary. The host may waive this fee in certain cases.</p>
+        <p class="pricing-note">Deposit is fully refundable after the event if the space is left in good order. The balance is due on or before the event date. A Tier 3 deposit (€250) applies to multi-day bookings of 7+ slots or any multi-day booking with the Kitchen.</p>
+
+        <p style="margin-top:1.4rem; font-size:0.9rem; color:var(--muted);">Add-ons available on request:</p>
+        <div class="addons-grid">
+          <div class="addon-row"><span class="addon-name">Dishware, cutlery &amp; glass (up to 30)</span><span class="addon-price">€25</span></div>
+          <div class="addon-row"><span class="addon-name">Stem wine glassware (up to 30)</span><span class="addon-price">€25</span></div>
+          <div class="addon-row"><span class="addon-name">Event cleanup</span><span class="addon-price">€60</span></div>
+          <div class="addon-row"><span class="addon-name">Staff support</span><span class="addon-price">€35/hr per person</span></div>
+          <div class="addon-row"><span class="addon-name">Bar / barista service</span><span class="addon-price">€40/hr</span></div>
+          <div class="addon-row"><span class="addon-name">Projector / display screen</span><span class="addon-price">€25</span></div>
+          <div class="addon-row"><span class="addon-name">Decor / styling package</span><span class="addon-price">from €50</span></div>
+          <div class="addon-row"><span class="addon-name">Extended hours (after midnight)</span><span class="addon-price">€50/hr</span></div>
+          <div class="addon-row"><span class="addon-name">Fento Snacks Light</span><span class="addon-price">€5/person</span></div>
+          <div class="addon-row"><span class="addon-name">Fento Snacks</span><span class="addon-price">€10/person</span></div>
+        </div>
+      </div>
     </div>
 
     <div class="faq-item">
