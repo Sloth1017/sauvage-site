@@ -250,14 +250,56 @@ def handle_callback(update: dict) -> None:
     except Exception as e:
         print(f"[Telegram] Airtable host update failed: {e}")
 
-    # Rebuild the original message text with the claimed host, without buttons
-    orig_text = message.get("text", "")
-    # Strip the "Who's hosting?" line and replace with confirmed host
-    new_text = orig_text
-    if "Who's hosting?" in new_text:
-        new_text = new_text.replace("👤 Who's hosting?", f"✅ {host_name} is hosting")
-    elif "is hosting" not in new_text:
-        new_text = new_text + f"\n\n✅ {host_name} is hosting"
+    # Rebuild the full HTML message from Airtable so all links are preserved.
+    # (message.get("text") is plain text — it strips <a href> links, so we
+    #  never use it directly when re-editing with parse_mode=HTML.)
+    new_text = None
+    try:
+        from airtable_client import get_inquiry
+        rec = get_inquiry(record_id)
+        fields = rec.get("fields", {})
+        rooms_raw = fields.get("Rooms", [])
+        rooms = rooms_raw if isinstance(rooms_raw, list) else [rooms_raw]
+        cal_link  = fields.get("Calendar Link", "")
+        order_num = fields.get("Shopify Order Number", "") or record_id
+
+        # Reconstruct revenue from session snapshot if available
+        revenue = None
+        try:
+            snap = fields.get("Session Snapshot", "")
+            if snap:
+                import json as _json
+                state = _json.loads(snap) if isinstance(snap, str) else snap
+                from invoice_generator import compute_revenue_breakdown
+                revenue = compute_revenue_breakdown(state)
+        except Exception as _re:
+            print(f"[Telegram] Revenue rebuild failed (non-fatal): {_re}")
+
+        new_text = _build_message(
+            client_name  = fields.get("Client Name", ""),
+            event_type   = fields.get("Event Type", ""),
+            event_date   = str(fields.get("Date", "")),
+            start_time   = fields.get("Start Time", ""),
+            end_time     = fields.get("End Time", ""),
+            guest_count  = fields.get("Guest Count", ""),
+            rooms        = rooms,
+            order_number = order_num,
+            cal_link     = cal_link,
+            airtable_id  = record_id,
+            revenue      = revenue,
+            host_claimed = host_name,
+        )
+    except Exception as e:
+        print(f"[Telegram] Message rebuild from Airtable failed: {e}")
+
+    # Fallback: patch the plain text if Airtable rebuild failed
+    if not new_text:
+        orig_text = message.get("text", "")
+        new_text = orig_text
+        if "Who's hosting?" in new_text:
+            new_text = new_text.replace("👤 Who's hosting?", f"✅ {host_name} is hosting")
+        elif "is hosting" not in new_text:
+            new_text = new_text + f"\n\n✅ {host_name} is hosting"
 
     # Edit the message — remove keyboard, update text
     _post(
