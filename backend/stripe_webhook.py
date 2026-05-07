@@ -28,6 +28,7 @@ from flask import Blueprint, request, jsonify
 
 stripe.api_key           = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET    = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+STRIPE_WEBHOOK_SECRET_2  = os.getenv("STRIPE_WEBHOOK_SECRET_2", "")
 
 # ── Optional integrations ────────────────────────────────────────────────────
 _AIRTABLE_ENABLED = False
@@ -122,15 +123,21 @@ def handle_stripe_webhook():
     payload   = request.get_data()
     sig       = request.headers.get("Stripe-Signature", "")
 
-    # Verify signature
-    try:
-        event = stripe.Webhook.construct_event(payload, sig, STRIPE_WEBHOOK_SECRET)
-    except stripe.error.SignatureVerificationError:
-        print("[StripeWebhook] Invalid signature")
+    # Verify signature — try both secrets (snapshot + thin destinations)
+    event = None
+    secrets = [s for s in [STRIPE_WEBHOOK_SECRET, STRIPE_WEBHOOK_SECRET_2] if s]
+    for secret in secrets:
+        try:
+            event = stripe.Webhook.construct_event(payload, sig, secret)
+            break
+        except stripe.error.SignatureVerificationError:
+            continue
+        except Exception as e:
+            print(f"[StripeWebhook] Webhook parse error: {e}")
+            return jsonify({"error": "Bad request"}), 400
+    if event is None:
+        print("[StripeWebhook] Invalid signature — no matching secret")
         return jsonify({"error": "Invalid signature"}), 400
-    except Exception as e:
-        print(f"[StripeWebhook] Webhook parse error: {e}")
-        return jsonify({"error": "Bad request"}), 400
 
     event_type = event["type"]
     print(f"[StripeWebhook] {event_type}")
