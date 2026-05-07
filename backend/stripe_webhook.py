@@ -165,6 +165,36 @@ def handle_stripe_webhook():
 
         if not record_id:
             print(f"[StripeWebhook] WARNING: No airtable_record_id in session {stripe_id}")
+            # Send a test Telegram notification so the flow can be verified end-to-end
+            if _TG_ENABLED and cs.get("livemode") is False:
+                try:
+                    _tg_notify(
+                        client_name    = "Test Client",
+                        event_type     = "Birthday Party",
+                        event_date     = "2026-06-01",
+                        start_time     = "14:00",
+                        end_time       = "18:00",
+                        guest_count    = 20,
+                        rooms          = ["Entrance", "Gallery"],
+                        deposit_amount = amount_eur or "50.00",
+                        order_number   = stripe_id,
+                        airtable_id    = "",
+                        cal_link       = "",
+                        state          = {
+                            "client_name": "Test Client",
+                            "event_type":  "Birthday Party",
+                            "email":       "test@example.com",
+                            "phone":       "+31600000000",
+                            "guest_count": 20,
+                            "rooms":       ["Entrance", "Gallery"],
+                            "start_time":  "14:00",
+                            "end_time":    "18:00",
+                            "dates":       "2026-06-01",
+                        },
+                    )
+                    print("[StripeWebhook] Test Telegram notification sent")
+                except Exception as e:
+                    print(f"[StripeWebhook] Test Telegram failed: {e}")
             return jsonify({"status": "skipped — no record ID"}), 200
 
         # 1. Update Airtable
