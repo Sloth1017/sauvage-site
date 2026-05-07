@@ -85,7 +85,7 @@ def run():
         rooms       = rooms_raw if isinstance(rooms_raw, list) else [rooms_raw]
         guest_count = fields.get("Guest Count", "")
         balance_due = float(fields.get("Balance Due", 0) or 0)
-        total_inc   = float(fields.get("Total Price", 0) or 0)
+        total_inc   = float(fields.get("Total Incl VAT", 0) or 0)
         deposit_paid = round(total_inc - balance_due, 2)
         d_until     = days_until(event_date)
 
