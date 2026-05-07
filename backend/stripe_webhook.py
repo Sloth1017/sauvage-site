@@ -29,6 +29,7 @@ from flask import Blueprint, request, jsonify
 stripe.api_key           = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET    = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 STRIPE_WEBHOOK_SECRET_2  = os.getenv("STRIPE_WEBHOOK_SECRET_2", "")
+STRIPE_WEBHOOK_SECRET_TEST = os.getenv("STRIPE_WEBHOOK_SECRET_TEST", "")
 
 # ── Optional integrations ────────────────────────────────────────────────────
 _AIRTABLE_ENABLED = False
@@ -125,7 +126,7 @@ def handle_stripe_webhook():
 
     # Verify signature — try both secrets (snapshot + thin destinations)
     event = None
-    secrets = [s for s in [STRIPE_WEBHOOK_SECRET, STRIPE_WEBHOOK_SECRET_2] if s]
+    secrets = [s for s in [STRIPE_WEBHOOK_SECRET, STRIPE_WEBHOOK_SECRET_2, STRIPE_WEBHOOK_SECRET_TEST] if s]
     for secret in secrets:
         try:
             event = stripe.Webhook.construct_event(payload, sig, secret)
