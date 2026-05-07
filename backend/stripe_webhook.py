@@ -197,6 +197,31 @@ def handle_stripe_webhook():
                     print(f"[StripeWebhook] Test Telegram failed: {e}")
             return jsonify({"status": "skipped — no record ID"}), 200
 
+        # ── Balance payment (from send_balance_request.py cron) ──────────────
+        if payment_type == "balance":
+            if _AIRTABLE_ENABLED:
+                try:
+                    update_inquiry(record_id, {
+                        "Paid In Full":            True,
+                        "Balance Due":             0,
+                        "Stripe Payment Reference": stripe_id,
+                    })
+                    print(f"[StripeWebhook] Balance paid — Airtable updated: {record_id}")
+                except Exception as e:
+                    print(f"[StripeWebhook] Balance Airtable update failed: {e}")
+            if _TG_ENABLED:
+                try:
+                    _tg_notify.__func__ if hasattr(_tg_notify, '__func__') else None
+                    from telegram_notify import send_message as _tg_msg
+                    _tg_msg(
+                        f"✅ <b>Balance received</b>\n"
+                        f"👤 {meta.get('client_name', '')} · {meta.get('event_type', '')} · {meta.get('event_date', '')}\n"
+                        f"💶 €{amount_eur} — booking fully paid"
+                    )
+                except Exception as e:
+                    print(f"[StripeWebhook] Balance Telegram alert failed: {e}")
+            return jsonify({"status": "balance payment recorded"}), 200
+
         # 1. Update Airtable
         if _AIRTABLE_ENABLED:
             try:
