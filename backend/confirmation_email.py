@@ -223,12 +223,12 @@ def send_booking_confirmation(
     if is_wine_tasting:
         greeting_body = (
             "We can't wait to welcome you and your guests for a private wine tasting at Sauvage. "
-            "Your booking is confirmed — everything is set for an intimate evening of natural wine."
+            "Your booking is confirmed. Everything is set for an intimate evening of natural wine."
         )
     else:
         greeting_body = (
-            "Welcome to Sauvage. Your deposit is in and your booking is locked — "
-            "we're looking forward to hosting you."
+            "Welcome to Sauvage. Your deposit is in and your booking is locked. "
+            "We're looking forward to hosting you."
         )
 
     # ── Booking summary rows ─────────────────────────────────────────────────────
@@ -270,7 +270,7 @@ def send_booking_confirmation(
                                font-size:13px;line-height:1.75;color:#666;">
                       Your private tasting runs for two hours in the wine cave beneath Sauvage.
                       A Selection Sauvage host will guide your group through a curated flight of
-                      natural wines — each chosen to tell a story about region, producer, and process.
+                      natural wines. Each is chosen to tell a story about region, producer, and process.
                       Expect honest conversation, no ceremony, and wines you won't find anywhere else in Amsterdam.
                     </p>
                   </td>
@@ -466,7 +466,7 @@ def send_booking_confirmation(
             </td>
           </tr>
 
-          <!-- WiFi — minimal inline row -->
+          <!-- WiFi — minimal inline row with copy toggle -->
           <tr>
             <td style="padding:8px 40px 28px;">
               <table width="100%" cellpadding="0" cellspacing="0" border="0"
@@ -481,7 +481,20 @@ def send_booking_confirmation(
                         </td>
                         <td width="50%" style="vertical-align:middle;">
                           <p style="margin:0 0 3px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:#aaa;">Password</p>
-                          <p style="margin:0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:500;color:#1a1a18;line-height:1;">natural1</p>
+                          <p style="margin:0;font-size:0;line-height:0;">
+                            <span style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:500;color:#1a1a18;vertical-align:middle;">natural1</span>
+                            <a href="{BASE_URL}/copy?text=natural1"
+                               style="display:inline-block;vertical-align:middle;margin-left:8px;text-decoration:none;opacity:0.45;">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                   xmlns="http://www.w3.org/2000/svg"
+                                   style="display:inline-block;vertical-align:middle;">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"
+                                      stroke="#1a1a18" stroke-width="2" fill="none"/>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                                      stroke="#1a1a18" stroke-width="2" fill="none"/>
+                              </svg>
+                            </a>
+                          </p>
                         </td>
                       </tr>
                     </table>
@@ -551,8 +564,8 @@ def send_booking_confirmation(
         plain_tasting_note = (
             "\nABOUT YOUR TASTING\n"
             "Your private tasting runs for two hours in the wine cave beneath Sauvage. "
-            "A Selection Sauvage host will guide your group through a curated flight of natural wines — "
-            "each chosen to tell a story about region, producer, and process.\n"
+            "A Selection Sauvage host will guide your group through a curated flight of natural wines. "
+            "Each is chosen to tell a story about region, producer, and process.\n"
         )
     else:
         plain_summary_lines = (
@@ -572,7 +585,7 @@ SPACE: {rooms_str}
 GUESTS: {guest_count}
 {plain_summary_lines}{plain_tasting_note}
 SHARED SPACE NOTE
-Sauvage is home to several independent businesses — Ikinari Coffee, the Sauvage Gallery, Fento kitchen, and Selection Sauvage wines. Please treat all shared areas with care, stay within your booked zones, and leave the space as you found it.
+Sauvage is home to several independent businesses: Ikinari Coffee, the Sauvage Gallery, Fento kitchen, and Selection Sauvage wines. Please treat all shared areas with care, stay within your booked zones, and leave the space as you found it.
 
 CONFIRM YOUR ARRIVAL TIME
 Let us know when you're planning to arrive for setup:

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sauvage Coaster — Print</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #e8e4de;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: 'Plein', 'Cormorant Garamond', Georgia, serif;
+    }
+
+    /* ── Print sheet ─────────────────────────────────────── */
+    .sheet {
+      width: 210mm;
+      min-height: 297mm;
+      background: white;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10mm;
+      padding: 20mm;
+    }
+
+    /* ── Single coaster ──────────────────────────────────── */
+    /* 90mm standard coaster */
+    .coaster {
+      width: 90mm;
+      height: 90mm;
+      border-radius: 6mm;
+      background: #f7f4ef;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      gap: 0;
+
+      /* bleed / crop guide — remove before final print */
+      outline: 0.3pt dashed #bbb;
+      outline-offset: 3mm;
+    }
+
+    /* subtle grain texture overlay */
+    .coaster::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: url('https://sauvage.amsterdam/media/grain-bg.svg');
+      background-size: 200px;
+      opacity: 0.25;
+      pointer-events: none;
+    }
+
+    /* thin gold border ring */
+    .coaster::after {
+      content: '';
+      position: absolute;
+      inset: 4mm;
+      border-radius: 3mm;
+      border: 0.4pt solid rgba(26,26,24,0.18);
+      pointer-events: none;
+    }
+
+    /* ── Inner layout ────────────────────────────────────── */
+    .coaster-inner {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      padding: 7mm;
+      gap: 3.5mm;
+    }
+
+    /* eyebrow */
+    .eyebrow {
+      font-family: 'Plein', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 5.5pt;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #8b6f47;
+      font-weight: 400;
+    }
+
+    /* wordmark */
+    .wordmark {
+      font-family: 'Plein', 'Cormorant Garamond', Georgia, serif;
+      font-size: 21pt;
+      font-weight: 300;
+      letter-spacing: 0.06em;
+      color: #1a1a18;
+      line-height: 1;
+    }
+
+    /* rule */
+    .rule {
+      width: 12mm;
+      height: 0.4pt;
+      background: rgba(26,26,24,0.25);
+    }
+
+    /* QR wrapper */
+    .qr-wrap {
+      background: #ffffff;
+      padding: 2.5mm;
+      border-radius: 1.5mm;
+      box-shadow: 0 0.5mm 2mm rgba(26,26,24,0.08);
+      line-height: 0;
+    }
+
+    .qr-wrap img {
+      width: 24mm;
+      height: 24mm;
+      display: block;
+    }
+
+    /* CTA line */
+    .cta {
+      font-family: 'Plein', 'Cormorant Garamond', Georgia, serif;
+      font-size: 7pt;
+      font-style: italic;
+      font-weight: 300;
+      color: #6b6560;
+      letter-spacing: 0.02em;
+      text-align: center;
+      line-height: 1.45;
+    }
+
+    /* domain line */
+    .domain {
+      font-family: 'Plein', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 5pt;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(26,26,24,0.35);
+    }
+
+    /* ── Print rules ─────────────────────────────────────── */
+    @media print {
+      body { background: white; }
+      .sheet { box-shadow: none; }
+      .coaster { outline: none; }
+
+      /* show bleed marks as crop marks instead */
+      .coaster::before { opacity: 0.18; }
+    }
+
+    /* ── Screen preview note ─────────────────────────────── */
+    .print-note {
+      width: 210mm;
+      text-align: center;
+      padding: 6mm 0 2mm;
+      font-family: system-ui, sans-serif;
+      font-size: 11px;
+      color: #999;
+      letter-spacing: 0.03em;
+    }
+    @media print { .print-note { display: none; } }
+  </style>
+</head>
+<body>
+
+  <div>
+    <p class="print-note">Print preview — A4 · 4 coasters · 90 × 90 mm · Cmd+P → Save as PDF</p>
+    <div class="sheet">
+
+      <!-- Coaster 1 -->
+      <div class="coaster">
+        <div class="coaster-inner">
+          <span class="eyebrow">Amsterdam</span>
+          <span class="wordmark">Sauvage</span>
+          <div class="rule"></div>
+          <div class="qr-wrap">
+            <img
+              src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&color=1a1a18&bgcolor=ffffff&data=https%3A%2F%2Fsauvage.amsterdam%2Fchat%3Futm_source%3Dqr%26utm_campaign%3Dcoaster"
+              alt="Scan to book"
+            />
+          </div>
+          <p class="cta">Book a private event<br>or enquire about the space</p>
+          <span class="domain">sauvage.amsterdam</span>
+        </div>
+      </div>
+
+      <!-- Coaster 2 -->
+      <div class="coaster">
+        <div class="coaster-inner">
+          <span class="eyebrow">Amsterdam</span>
+          <span class="wordmark">Sauvage</span>
+          <div class="rule"></div>
+          <div class="qr-wrap">
+            <img
+              src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&color=1a1a18&bgcolor=ffffff&data=https%3A%2F%2Fsauvage.amsterdam%2Fchat%3Futm_source%3Dqr%26utm_campaign%3Dcoaster"
+              alt="Scan to book"
+            />
+          </div>
+          <p class="cta">Book a private event<br>or enquire about the space</p>
+          <span class="domain">sauvage.amsterdam</span>
+        </div>
+      </div>
+
+      <!-- Coaster 3 -->
+      <div class="coaster">
+        <div class="coaster-inner">
+          <span class="eyebrow">Amsterdam</span>
+          <span class="wordmark">Sauvage</span>
+          <div class="rule"></div>
+          <div class="qr-wrap">
+            <img
+              src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&color=1a1a18&bgcolor=ffffff&data=https%3A%2F%2Fsauvage.amsterdam%2Fchat%3Futm_source%3Dqr%26utm_campaign%3Dcoaster"
+              alt="Scan to book"
+            />
+          </div>
+          <p class="cta">Book a private event<br>or enquire about the space</p>
+          <span class="domain">sauvage.amsterdam</span>
+        </div>
+      </div>
+
+      <!-- Coaster 4 -->
+      <div class="coaster">
+        <div class="coaster-inner">
+          <span class="eyebrow">Amsterdam</span>
+          <span class="wordmark">Sauvage</span>
+          <div class="rule"></div>
+          <div class="qr-wrap">
+            <img
+              src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&color=1a1a18&bgcolor=ffffff&data=https%3A%2F%2Fsauvage.amsterdam%2Fchat%3Futm_source%3Dqr%26utm_campaign%3Dcoaster"
+              alt="Scan to book"
+            />
+          </div>
+          <p class="cta">Book a private event<br>or enquire about the space</p>
+          <span class="domain">sauvage.amsterdam</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

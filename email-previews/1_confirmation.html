@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Booking Confirmed - Sauvage Space</title>
+</head>
+<body style="margin:0;padding:0;background:#f5f3ef;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#1a1a1a;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f5f3ef;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:4px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+
+          <!-- Header with logo -->
+          <tr>
+            <td style="background:#1a1a1a;padding:28px 40px 24px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="vertical-align:middle;">
+                    <img src="data:image/png;base64,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" alt="Sauvage Space" width="101" height="101"
+                         style="display:block;width:101px;height:101px;border:0;" />
+                  </td>
+                  <td style="vertical-align:middle;padding-left:20px;">
+                    <p style="margin:0 0 4px;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#666;font-weight:500;">Potgieterstraat 47H, Amsterdam</p>
+                    <h1 style="margin:0;font-size:24px;font-weight:400;color:#ffffff;letter-spacing:-0.2px;">Booking Confirmed</h1>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Gold accent line -->
+          <tr>
+            <td style="background:#b8860b;height:3px;font-size:0;line-height:0;">&nbsp;</td>
+          </tr>
+
+          <!-- Greeting -->
+          <tr>
+            <td style="padding:36px 40px 24px;">
+              <p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#1a1a1a;">
+                Hi Anna Schmidt,
+              </p>
+              <p style="margin:0;font-size:16px;line-height:1.6;color:#333;">
+                Welcome to Sauvage. Your deposit is in and your booking is locked. We're looking forward to hosting you.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Booking summary -->
+          <tr>
+            <td style="padding:0 40px 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f5f3ef;border-radius:4px;padding:24px;">
+                <tr>
+                  <td style="padding:0 24px;">
+                    <p style="margin:0 0 4px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#999;font-weight:600;">Your Event</p>
+                    <p style="margin:0 0 20px;font-size:17px;font-weight:500;color:#1a1a1a;">Birthday</p>
+
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td width="50%" style="padding:0 0 12px;vertical-align:top;">
+                          <p style="margin:0 0 2px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;">Date</p>
+                          <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">Sunday 10 May 2026</p>
+                          <p style="margin:8px 0 0;font-size:0;line-height:0;"><a href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=Birthday%20at%20Sauvage&dates=20260510T180000/20260510T230000&location=Potgieterstraat%2047H%2C%20Amsterdam%2C%20Netherlands&details=Sauvage%20Space%20%C2%B7%20Potgieterstraat%2047H%2C%20Amsterdam" style="display:inline-block;vertical-align:middle;margin-right:8px;text-decoration:none;"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAMAAAC5zwKfAAABDlBMVEUAAABAg/NChfUyeOcaaNIZZ9EZZtJAh+9BhfRChfQyeugZZ9IZZ9MYaM9ChfQZZ9JDg/IYaNNBg/NBhPIYZ9KJs/i40fuyvbimnFGgmlf////+5aH7vAT8vAXP4PyVuvhlnPZZlPVxo/fn7/7D2PuUuvmVuvnz9/6Is/hxo/agwvpalPXb6P2Vu/jc6P19q/jo8P7n8P59q/esyvpOjPWgwvl9qvfQ4PyhwvnE2ftOjfWsyvtmnPaJsvhNjPWtyvrE2Pswg6cyg62Au7iz3r/KvXr6hRD6ihAYgDgYgDgqmUk0qFN9eUL3KiX4KSX/ICAYgDgYgDgYgDgXgDkWgDYXgDkYgDgomEg1qFOCdUBZSPkrAAAAWnRSTlMAQJ+fn5BQIL/////PIM+/UECQoJ//////n////5///////////////////////////////////////////////6D//////5Cg///////PEEC/IM9QkJ+fn5/9kq+gAAABeElEQVR4Ae3VhVLEQBBFURwerivNursL7u4u//8jVFetBZsK0/jcWFlOPNP1wzKZunts1NvXqn/gVW5wCHYaHulodOwVcBwfBLmJl94kdMCRqRfgtB7Y/wKc0QNn/yVoQAPOORQ5XZbcKtBBiuY9lrwG/MWgzx8IhvxhahVx+HTAKAAu1uDiCSCpAaYAi+hLQwvMAMjGKZcHUGicrxZYLGGOuBBQpngIQEUHZLJIXAKoEvmBrEMTbFTjM6R4sk4iICsoEicA5qr+EIAFkgId4BZJGEznxMBivV4OAks5GbCRHwiJgnEABQkws9wQg0BGAAwBdeLCfIYyYDrMV7wCBEkAzFUArFb9vHFIgLw7J/ilFJPg1tZJBmRyo+qom3H5j4CbW5a2dxTt7lnafwEeHFo6OlZ0ctrZ2bkoyJ4kyJ4kyJ4kyJ4kyJ4kyJ4kyJ4kyJ4kyJ4cqPC6LuyDLz1Ll3ZBhdd1dW0PZE/Rze1dq/sHRY/smUw/tCdnzuasx0N6SQAAAABJRU5ErkJggg==" alt="Add to Google Calendar" width="32" height="32" style="display:inline-block;border:0;border-radius:6px;vertical-align:middle;"></a><a href="file:///Users/gregpolinger/sauvage-site/calendar.ics?title=Birthday+at+Sauvage&start=20260510T180000&end=20260510T230000&location=Potgieterstraat+47H%2C+Amsterdam%2C+Netherlands&description=Sauvage+Space+%C2%B7+Potgieterstraat+47H%2C+Amsterdam" style="display:inline-block;vertical-align:middle;text-decoration:none;"><img src="data:image/png;base64,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" alt="Add to Apple Calendar" width="26" height="26" style="display:inline-block;border:0;border-radius:5px;vertical-align:middle;"></a></p>
+                        </td>
+                        <td width="50%" style="padding:0 0 12px;vertical-align:top;">
+                          <p style="margin:0 0 2px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;">Time</p>
+                          <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">18:00 to 23:00</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td width="50%" style="padding:0 0 12px;vertical-align:top;">
+                          <p style="margin:0 0 2px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;">Space</p>
+                          <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">Upstairs (Gallery), Entrance</p>
+                        </td>
+                        <td width="50%" style="padding:0 0 12px;vertical-align:top;">
+                          <p style="margin:0 0 2px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;">Guests</p>
+                          <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">25</p>
+                        </td>
+                      </tr>
+                      
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          
+
+          <!-- ① ARRIVAL — dominant CTA -->
+          <tr>
+            <td style="padding:0 40px 12px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background:#1a1a18;border-radius:2px;overflow:hidden;">
+                <tr>
+                  <td style="background:#b8860b;height:3px;font-size:0;line-height:0;"></td>
+                </tr>
+                <tr>
+                  <td style="padding:32px 36px 36px;">
+                    <p style="margin:0 0 8px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                               font-size:9px;letter-spacing:0.22em;text-transform:uppercase;color:#b8860b;">
+                      One thing from you
+                    </p>
+                    <p style="margin:0 0 10px;font-family:Georgia,serif;font-size:22px;
+                               font-weight:300;color:#ffffff;line-height:1.3;">
+                      When are you planning to arrive?
+                    </p>
+                    <p style="margin:0 0 28px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                               font-size:13px;line-height:1.7;color:rgba(255,255,255,0.5);">
+                      Let us know your setup arrival time so we can coordinate with the other residents.
+                      Takes 10 seconds.
+                    </p>
+                    <a href="file:///Users/gregpolinger/sauvage-site/arrival?record=recPREVIEW123&token=41ad4bc245b6f04c317c9772d8ad2492"
+                       style="display:block;background:#ffffff;color:#1a1a18;text-decoration:none;
+                              padding:16px 0;border-radius:1px;text-align:center;
+                              font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                              font-size:10px;font-weight:700;letter-spacing:0.22em;
+                              text-transform:uppercase;">
+                      Confirm arrival time
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          
+          <!-- ② WINES — secondary -->
+          <tr>
+            <td style="padding:12px 40px 12px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="border:1px solid #e8e4de;border-radius:2px;">
+                <tr>
+                  <td style="padding:24px 28px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="vertical-align:middle;">
+                          <p style="margin:0 0 4px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                                     font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:#b8860b;">
+                            Selection Sauvage
+                          </p>
+                          <p style="margin:0;font-family:Georgia,serif;font-size:16px;
+                                     font-weight:300;color:#1a1a18;line-height:1.4;">
+                            Pre-order natural wines for your event
+                          </p>
+                          <p style="margin:6px 0 0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                                     font-size:12px;color:#888;line-height:1.6;">
+                            Use code <strong style="color:#555;">IN-HOUSE</strong> at checkout
+                          </p>
+                        </td>
+                        <td align="right" style="vertical-align:middle;padding-left:20px;white-space:nowrap;">
+                          <a href="file:///Users/gregpolinger/sauvage-site/wines?booking=recPREVIEW123&name=Anna+Schmidt&email=preview%40example.com&event=Birthday&ref=confirmation"
+                             style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                                    font-size:10px;font-weight:700;letter-spacing:0.18em;
+                                    text-transform:uppercase;color:#1a1a18;text-decoration:none;
+                                    display:inline-block;border-bottom:2px solid #b8860b;
+                                    padding-bottom:2px;">
+                            Order wines &rarr;
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Community space note -->
+          <tr>
+            <td style="padding:24px 40px 0px;">
+              <p style="margin:0 0 6px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                         font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:#aaa;">
+                A shared space
+              </p>
+              <p style="margin:0 0 10px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                         font-size:13px;line-height:1.75;color:#666;">
+                Sauvage is home to several independent businesses. On your event day you may share the
+                building with Ikinari Coffee, the Gallery, Fento kitchen, and Selection Sauvage wines.
+                Please treat shared areas with care and leave every space exactly as you found it.
+              </p>
+            </td>
+          </tr>
+
+          <!-- WiFi — minimal inline row with copy toggle -->
+          <tr>
+            <td style="padding:8px 40px 28px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="border:1px solid #e8e4de;border-radius:2px;">
+                <tr>
+                  <td style="padding:18px 24px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td width="50%" style="vertical-align:middle;">
+                          <p style="margin:0 0 3px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:#aaa;">Wi-Fi Network</p>
+                          <p style="margin:0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:500;color:#1a1a18;line-height:1;">@Sauvage</p>
+                        </td>
+                        <td width="50%" style="vertical-align:middle;">
+                          <p style="margin:0 0 3px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:#aaa;">Password</p>
+                          <p style="margin:0;font-size:0;line-height:0;">
+                            <span style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:500;color:#1a1a18;vertical-align:middle;">natural1</span>
+                            <a href="file:///Users/gregpolinger/sauvage-site/copy?text=natural1"
+                               style="display:inline-block;vertical-align:middle;margin-left:8px;text-decoration:none;opacity:0.45;">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                   xmlns="http://www.w3.org/2000/svg"
+                                   style="display:inline-block;vertical-align:middle;">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"
+                                      stroke="#1a1a18" stroke-width="2" fill="none"/>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                                      stroke="#1a1a18" stroke-width="2" fill="none"/>
+                              </svg>
+                            </a>
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ③ INVOICE — tertiary -->
+          
+          <!-- Invoice — tertiary, text-level only -->
+          <tr>
+            <td style="padding:0 40px 28px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="border-top:1px solid #e8e4de;">
+                <tr>
+                  <td style="padding:20px 0 0;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="vertical-align:middle;">
+                          <p style="margin:0;font-size:10px;letter-spacing:0.18em;
+                                     text-transform:uppercase;color:#aaa;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                            Invoice
+                          </p>
+                          <p style="margin:4px 0 0;font-size:13px;color:#555;
+                                     font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                            INV-2026-001
+                          </p>
+                        </td>
+                        <td align="right" style="vertical-align:middle;">
+                          <a href="https://sauvage.amsterdam/invoice/INV-2026-001?t=preview"
+                             style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                                    font-size:11px;letter-spacing:0.14em;text-transform:uppercase;
+                                    color:#b8860b;text-decoration:none;font-weight:600;">
+                            View &rarr;
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Website link + T&C -->
+          <tr>
+            <td style="padding:0 40px 32px;">
+              <hr style="border:none;border-top:1px solid #e8e4de;margin:0 0 24px;">
+              <p style="margin:0 0 14px;font-size:14px;line-height:1.7;color:#666;">
+                Everything you need to know about the space is at
+                <a href="https://sauvage.amsterdam" style="color:#1a1a1a;font-weight:600;text-decoration:underline;">sauvage.amsterdam</a>.
+                Questions before your event? Reach Greg directly:
+                <a href="https://wa.me/31634742988" style="color:#1a1a1a;font-weight:600;text-decoration:underline;">WhatsApp</a>
+                or <a href="tel:+31634742988" style="color:#1a1a1a;text-decoration:underline;">+31 634 742 988</a>.
+              </p>
+              <p style="margin:0;font-size:12px;line-height:1.6;color:#999;">
+                By completing this booking you agreed to our
+                <a href="https://sauvage.amsterdam/terms" style="color:#666;text-decoration:underline;">Terms &amp; Conditions</a>.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background:#b8860b;height:2px;font-size:0;line-height:0;">&nbsp;</td>
+          </tr>
+          <tr>
+            <td style="background:#111111;padding:24px 40px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="vertical-align:middle;">
+                    <img src="data:image/png;base64,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" alt="Sauvage Space" width="36" height="36"
+                         style="display:inline-block;width:36px;height:36px;border:0;opacity:0.7;vertical-align:middle;" />
+                    <span style="font-size:12px;color:#555;margin-left:12px;vertical-align:middle;letter-spacing:1px;text-transform:uppercase;">Sauvage Space</span>
+                  </td>
+                  <td align="right" style="vertical-align:middle;">
+                    <p style="margin:0;font-size:11px;color:#555;line-height:1.6;">
+                      Potgieterstraat 47H, Amsterdam<br>
+                      <a href="https://sauvage.amsterdam" style="color:#888;text-decoration:none;">sauvage.amsterdam</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+  <img src="file:///Users/gregpolinger/sauvage-site/track/open?tid="
+       width="1" height="1" border="0" style="display:block;width:1px;height:1px;" alt="">
+</body>
+</html>

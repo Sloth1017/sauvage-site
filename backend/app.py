@@ -1,12 +1,12 @@
 from flask import Flask, send_from_directory, make_response, abort, send_file, request, Response
-from shopify_webhook import webhook_bp
+from stripe_webhook import stripe_bp
 from chat_backend import chat_bp
 import os
 import json
 import datetime
 
 app = Flask(__name__)
-app.register_blueprint(webhook_bp)
+app.register_blueprint(stripe_bp)
 app.register_blueprint(chat_bp)
 
 # ── Static site directories ───────────────────────────────────────────────────

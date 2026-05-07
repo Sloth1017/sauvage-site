@@ -902,7 +902,7 @@ def send_day_after(state: dict) -> bool:
                          font-size:11px;color:{C_MUTED};line-height:1.7;">
                 Form not showing?
                 <a href="{mailto_fallback}" style="color:{C_INK};font-weight:600;">Reply by email</a>
-                — it goes straight to {host['name']}.
+                and it goes straight to {host['name']}.
               </p>
             </td>
           </tr>

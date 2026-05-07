@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Preview Collection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 50px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.95;
+        }
+
+        .email-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .email-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 250px;
+        }
+
+        .email-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+        }
+
+        .email-number {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 40px;
+            font-weight: 700;
+            font-size: 18px;
+            margin-bottom: 12px;
+        }
+
+        .email-card h2 {
+            font-size: 1.3em;
+            margin-bottom: 8px;
+            color: #1a1a1a;
+        }
+
+        .email-card .description {
+            color: #666;
+            font-size: 0.95em;
+            line-height: 1.5;
+            margin-bottom: 16px;
+            flex-grow: 1;
+        }
+
+        .email-card .timing {
+            display: inline-block;
+            background: #f0f0f0;
+            color: #666;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            margin-bottom: 14px;
+        }
+
+        .btn-open {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .btn-open:hover {
+            opacity: 0.9;
+            transform: scale(1.02);
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 50px;
+            opacity: 0.8;
+            font-size: 0.9em;
+        }
+
+        .info-box {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            color: white;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .info-box h3 {
+            margin-bottom: 8px;
+        }
+
+        .info-box p {
+            margin: 4px 0;
+            font-size: 0.95em;
+            opacity: 0.95;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📧 Email Preview Collection</h1>
+            <p>Sauvage Space Email Flow</p>
+        </div>
+
+        <div class="info-box">
+            <h3>How to Use</h3>
+            <p>Click any email below to preview it in full. Each preview uses realistic sample data.</p>
+            <p><strong>To regenerate previews:</strong> Run <code style="background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 3px;">python3 generate_email_previews.py</code></p>
+        </div>
+
+        <div class="email-grid">
+            <!-- Booking Confirmation -->
+            <a href="1_confirmation.html" class="email-card" target="_blank">
+                <div>
+                    <div class="email-number">1</div>
+                    <h2>Booking Confirmation</h2>
+                    <p class="description">
+                        Welcome email sent immediately after payment is confirmed. Includes booking summary, arrival time form, calendar links, and invoice.
+                    </p>
+                    <div class="timing">⚡ Sent on payment</div>
+                </div>
+                <div class="btn-open">Preview →</div>
+            </a>
+
+            <!-- Day Before -->
+            <a href="2_day_before.html" class="email-card" target="_blank">
+                <div>
+                    <div class="email-number">2</div>
+                    <h2>Day Before Reminder</h2>
+                    <p class="description">
+                        Reminder email sent the morning before the event. Includes location details, WiFi info, host contact details, and last-minute checklist.
+                    </p>
+                    <div class="timing">📅 Day before @ 9:00 AM</div>
+                </div>
+                <div class="btn-open">Preview →</div>
+            </a>
+
+            <!-- Day Of -->
+            <a href="3_day_of.html" class="email-card" target="_blank">
+                <div>
+                    <div class="email-number">3</div>
+                    <h2>Day Of Event</h2>
+                    <p class="description">
+                        Event day confirmation sent in the morning. Updated with time reminders, host WhatsApp contact, and location map.
+                    </p>
+                    <div class="timing">☀️ Day of @ 8:00 AM</div>
+                </div>
+                <div class="btn-open">Preview →</div>
+            </a>
+
+            <!-- Day After -->
+            <a href="4_day_after.html" class="email-card" target="_blank">
+                <div>
+                    <div class="email-number">4</div>
+                    <h2>Day After Follow-up</h2>
+                    <p class="description">
+                        Post-event thank you email with photos, feedback form, wine selection upsell, and testimonial request.
+                    </p>
+                    <div class="timing">💌 Day after @ 10:00 AM</div>
+                </div>
+                <div class="btn-open">Preview →</div>
+            </a>
+        </div>
+
+        <div class="footer">
+            <p>Sauvage Space Email System</p>
+            <p style="margin-top: 8px; opacity: 0.6;">All emails render with embedded images for full offline preview</p>
+        </div>
+    </div>
+</body>
+</html>

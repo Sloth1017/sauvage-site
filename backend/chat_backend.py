@@ -129,13 +129,13 @@ def _session_delete(session_id: str):
         conn.execute("DELETE FROM sessions WHERE session_id = ?", (session_id,))
         conn.commit()
 
-# ── Static deposit URLs (used by the bot, replaced with dynamic links) ────────
+# ── Static deposit URL placeholder (replaced with dynamic Stripe links) ──────
 DEPOSIT_URL_STD = "https://www.selectionsauvage.nl/products/event-deposit"
 DEPOSIT_URL_KIT = "https://www.selectionsauvage.nl/products/event-deposit-copy"
 
 # ── Optional integrations (graceful degradation if not configured) ────────────
 _AIRTABLE_ENABLED = False
-_SHOPIFY_ENABLED  = False
+_STRIPE_ENABLED   = False
 
 # send_confirmation_email removed — replaced by confirmation_email.send_booking_confirmation
 
@@ -150,10 +150,11 @@ except ImportError as e:
     print(f"[Airtable] Import failed: {e}")
 
 try:
-    from shopify_client import create_checkout_session as _shopify_create_checkout
-    _SHOPIFY_ENABLED = bool(os.getenv("SHOPIFY_ADMIN_API_TOKEN"))
-except ImportError:
-    pass
+    from stripe_client import create_checkout_session as _stripe_create_checkout, is_within_payment_window
+    _STRIPE_ENABLED = bool(os.getenv("STRIPE_SECRET_KEY"))
+    print(f"[Stripe] {'Enabled ✓' if _STRIPE_ENABLED else 'DISABLED — STRIPE_SECRET_KEY not set'}")
+except ImportError as e:
+    print(f"[Stripe] Import failed: {e}")
 
 # ── Google Calendar integration ───────────────────────────────────────────────
 _GCAL_ENABLED = False
@@ -598,32 +599,33 @@ def _sync_airtable(session_id: str, state: dict, meta: dict) -> None:
         except Exception as e:
             print(f"Airtable sync error: {e}")
 
-# ── Shopify checkout injection ────────────────────────────────────────────────
+# ── Stripe checkout injection ─────────────────────────────────────────────────
 
 def _inject_checkout_url(session_id: str, state: dict, meta: dict, bot_response: str) -> str:
     """
     If the bot's response contains a static deposit URL, replace it with a
-    session-linked Shopify Draft Order invoice URL — creating the draft order
-    on first call, reusing it on subsequent renders.
+    session-linked Stripe Checkout URL — creating the session on first call,
+    reusing it on subsequent renders.
 
-    Falls back to the static URL if Shopify/Airtable isn't configured or
-    if required client details (email) aren't yet known.
+    Full-payment rule: if the event is within 7 days of today, the full event
+    total is charged in one payment instead of a deposit.
+
+    Falls back to the static URL if Stripe/Airtable isn't configured or if
+    required client details (email) aren't yet known.
     """
-    # Only act when the bot has included a payment link
     if DEPOSIT_URL_STD not in bot_response and DEPOSIT_URL_KIT not in bot_response:
         return bot_response
 
-    if not _SHOPIFY_ENABLED or not _AIRTABLE_ENABLED:
+    if not _STRIPE_ENABLED or not _AIRTABLE_ENABLED:
         return bot_response
 
-    # Reuse an existing draft order URL if already created for this session
+    # Reuse an existing Stripe URL if already created for this session
     if meta.get("payment_url"):
         url = meta["payment_url"]
         bot_response = bot_response.replace(DEPOSIT_URL_KIT, url)
         bot_response = bot_response.replace(DEPOSIT_URL_STD, url)
         return bot_response
 
-    # Need email to create a Shopify checkout
     client_email = state.get("email", "")
     if not client_email:
         return bot_response
@@ -632,41 +634,57 @@ def _inject_checkout_url(session_id: str, state: dict, meta: dict, bot_response:
     if not record_id:
         return bot_response
 
-    kitchen_booked = DEPOSIT_URL_KIT in bot_response
-    client_name    = state.get("client_name", "Guest")
-    event_type     = state.get("event_type", "Event")
-    event_date     = state.get("dates", "")
+    client_name  = state.get("client_name", "Guest")
+    event_type   = state.get("event_type", "Event")
+    event_date   = state.get("dates", "")
+    rooms        = state.get("rooms", [])
+    if isinstance(rooms, str):
+        rooms = [rooms]
+    is_multiday  = isinstance(state.get("dates"), list) and len(state.get("dates", [])) > 1
+
+    # Full-payment rule: compute total if event is within 7 days
+    full_amount_cents = None
+    if is_within_payment_window(event_date[0] if isinstance(event_date, list) else event_date):
+        try:
+            from invoice_generator import build_line_items, _sum_items
+            items = build_line_items(state)
+            totals = _sum_items(items)
+            full_amount_cents = int(round(totals["total_inc"] * 100))
+        except Exception as e:
+            print(f"[Stripe] Full-amount calculation failed (non-fatal): {e}")
 
     try:
-        result = _shopify_create_checkout(
+        result = _stripe_create_checkout(
             airtable_record_id = record_id,
             client_email       = client_email,
             client_name        = client_name,
             event_type         = event_type,
             event_date         = event_date,
-            kitchen_booked     = kitchen_booked,
+            rooms              = rooms,
             session_id         = session_id,
+            full_amount_cents  = full_amount_cents,
+            is_multiday        = is_multiday,
         )
         payment_url = result["payment_url"]
-        meta["draft_order_id"] = result["draft_order_id"]
-        meta["payment_url"]    = payment_url
+        meta["stripe_session_id"] = result["checkout_session_id"]
+        meta["payment_url"]       = payment_url
+        meta["payment_type"]      = result["payment_type"]
         _session_update(session_id, meta=meta)
 
-        # Replace both static URLs in case the bot included both
         bot_response = bot_response.replace(DEPOSIT_URL_KIT, payment_url)
         bot_response = bot_response.replace(DEPOSIT_URL_STD, payment_url)
 
-        # Mark pending in Airtable
         try:
-            mark_deposit_pending(record_id, f"shopify-draft-{result['draft_order_id']}")
+            mark_deposit_pending(record_id, f"stripe-{result['checkout_session_id']}")
         except Exception as e:
-            print(f"mark_deposit_pending error: {e}")
+            print(f"[Stripe] mark_deposit_pending error: {e}")
 
-        print(f"Shopify draft order {result['draft_order_id']} linked to session {session_id}")
+        print(f"[Stripe] Checkout {result['checkout_session_id']} ({result['payment_type']}) "
+              f"linked to session {session_id}")
 
     except Exception as e:
-        print(f"Shopify checkout creation error: {e}")
-        # Return original response — static URL is still valid as fallback
+        print(f"[Stripe] Checkout creation error: {e}")
+        # Static URL is still valid as fallback
 
     return bot_response
 
