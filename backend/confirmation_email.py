@@ -167,6 +167,13 @@ def send_booking_confirmation(
     arrival_token = generate_arrival_token(record_id)
     arrival_url   = f"{BASE_URL}/arrival?record={record_id}&token={arrival_token}"
 
+    # Add-ons modification link (same HMAC secret as arrival)
+    import hmac as _hmac, hashlib as _hashlib
+    addons_token = _hmac.new(
+        ARRIVAL_SECRET.encode(), record_id.encode(), _hashlib.sha256
+    ).hexdigest()[:32]
+    addons_url = f"{BASE_URL}/addons?record={record_id}&token={addons_token}" if record_id else ""
+
     # Invoice section (optional) — minimal, tertiary weight
     # Never shown for wine tastings (Shopify receipt is the invoice)
     inv_html = ""
@@ -449,6 +456,48 @@ def send_booking_confirmation(
           </tr>
 
           {wines_upsell_html}
+
+          <!-- ③ ADD-ONS — modify link -->
+          {"" if is_wine_tasting or not addons_url else f"""
+          <tr>
+            <td style="padding:12px 40px 12px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="border:1px solid #e8e4de;border-radius:2px;">
+                <tr>
+                  <td style="padding:20px 28px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="vertical-align:middle;">
+                          <p style="margin:0 0 4px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                                     font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:#b8860b;">
+                            Add-ons
+                          </p>
+                          <p style="margin:0;font-family:Georgia,serif;font-size:15px;
+                                     font-weight:300;color:#1a1a18;line-height:1.4;">
+                            Need to add or change anything?
+                          </p>
+                          <p style="margin:4px 0 0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                                     font-size:12px;color:#888;line-height:1.6;">
+                            Staff, glassware, snacks, projector &amp; more
+                          </p>
+                        </td>
+                        <td align="right" style="vertical-align:middle;padding-left:20px;white-space:nowrap;">
+                          <a href="{addons_url}"
+                             style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                                    font-size:10px;font-weight:700;letter-spacing:0.18em;
+                                    text-transform:uppercase;color:#1a1a18;text-decoration:none;
+                                    display:inline-block;border-bottom:2px solid #b8860b;
+                                    padding-bottom:2px;">
+                            Modify &rarr;
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>"""}
 
           <!-- Community space note -->
           <tr>

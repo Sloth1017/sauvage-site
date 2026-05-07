@@ -1,6 +1,7 @@
 from flask import Flask, send_from_directory, make_response, abort, send_file, request, Response
 from stripe_webhook import stripe_bp
 from chat_backend import chat_bp
+from addons_page import addons_bp
 import os
 import json
 import datetime
@@ -8,6 +9,7 @@ import datetime
 app = Flask(__name__)
 app.register_blueprint(stripe_bp)
 app.register_blueprint(chat_bp)
+app.register_blueprint(addons_bp)
 
 # ── Static site directories ───────────────────────────────────────────────────
 # Prefer git repo path; fall back to legacy workspace path if not present
