@@ -30,7 +30,6 @@ ADDONS = [
     ("glassware",       "Stem (wine) Glassware (25 pax)",               "€25",      "flat",   25,   "",                                   "Stem Glassware"),
     ("staff",           "Staff Support",                                 "€35/hr pp","hr_pp",  35,   "Per person, per hour",               "Staff Support"),
     ("bar",             "Bar / Barista Service",                         "€50/hr",   "hr",     50,   "Drinks charged on site separately",  "Sommelier/Barista Service"),
-    ("extended_hours",  "Extended Hours (after midnight)",               "€50/hr",   "hr",     50,   "",                                   None),
     ("cleanup",         "Event Cleanup",                                 "€60",      "flat",   60,   "",                                   "Event Cleanup"),
     ("snacks_light",    "Light Snacks — seasonal bites (Fento)",        "€5/pp",    "pp",     5,    "Must order ≥7 days before event",    "Light Snacks Fento"),
     ("snacks",          "Snacks — borrel-style spread (Fento)",         "€10/pp",   "pp",     10,   "Must order ≥7 days before event",    "Snacks Fento"),
