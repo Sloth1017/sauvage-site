@@ -169,7 +169,7 @@ def handle_stripe_webhook():
             if _TG_ENABLED and cs.get("livemode") is False:
                 try:
                     _tg_notify(
-                        client_name    = "Test Client",
+                        client_name    = "TEST — Test Client",
                         event_type     = "Birthday Party",
                         event_date     = "2026-06-01",
                         start_time     = "14:00",
@@ -181,7 +181,7 @@ def handle_stripe_webhook():
                         airtable_id    = "",
                         cal_link       = "",
                         state          = {
-                            "client_name": "Test Client",
+                            "client_name": "TEST — Test Client",
                             "event_type":  "Birthday Party",
                             "email":       "test@example.com",
                             "phone":       "+31600000000",
