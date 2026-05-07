@@ -46,7 +46,7 @@ def is_within_payment_window(event_date) -> bool:
         if isinstance(event_date, str):
             event_date = date.fromisoformat(str(event_date)[:10])
         delta = (event_date - date.today()).days
-        return 0 <= delta < FULL_PAYMENT_WINDOW_DAYS
+        return 0 <= delta <= FULL_PAYMENT_WINDOW_DAYS
     except Exception:
         return False
 
