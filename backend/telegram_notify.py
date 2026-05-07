@@ -325,8 +325,14 @@ def handle_callback(update: dict) -> None:
         )
         if "is hosting" not in html:
             html += f"\n\n✅ <b>{host_name} is hosting</b>"
-        new_text = html
-        print(f"[Telegram] Message rebuilt from entities for {record_id}")
+        # Only accept if entity reconstruction actually preserved the hyperlinks.
+        # If orig_entities was empty, _entities_to_html returns plain text with no
+        # <a href> tags, and Strategy 2 (Airtable rebuild) must run instead.
+        if "href=" in html:
+            new_text = html
+            print(f"[Telegram] Message rebuilt from entities for {record_id}")
+        else:
+            print(f"[Telegram] Entity reconstruction yielded no links — falling back to Airtable rebuild")
     except Exception as e:
         print(f"[Telegram] Entity reconstruction failed: {e}")
 
@@ -433,6 +439,48 @@ def register_webhook() -> None:
         print(f"[Telegram] Webhook registered → {webhook_url}")
     else:
         print(f"[Telegram] Webhook registration failed: {result}")
+
+
+def notify_payment_failed(
+    client_name: str = "",
+    event_type: str = "",
+    event_date: str = "",
+    amount_eur: str = "",
+    failure_reason: str = "",
+    stripe_pi_id: str = "",
+    airtable_id: str = "",
+) -> None:
+    """Send a Telegram alert when a Stripe payment fails."""
+    if not TELEGRAM_CHAT_ID:
+        return
+
+    name_str   = _html_escape(client_name or "Unknown")
+    ev_str     = _html_escape(event_type  or "Event")
+    date_str   = _html_escape(event_date  or "—")
+    reason_str = _html_escape(failure_reason or "Unknown reason")
+    amt_str    = f"€{amount_eur}" if amount_eur else "—"
+
+    lines = [
+        "⚠️ <b>Payment Failed</b>",
+        "",
+        f"👤 <b>{name_str}</b>",
+        f"🎉 {ev_str}  ·  📅 {date_str}",
+        f"💶 {amt_str}",
+        f"❌ {reason_str}",
+    ]
+
+    if airtable_id:
+        at_url = _airtable_url(airtable_id)
+        lines += ["", f'<a href="{at_url}">Open in Airtable</a>']
+    if stripe_pi_id:
+        pi_url = f"https://dashboard.stripe.com/payments/{stripe_pi_id}"
+        lines += [f'<a href="{pi_url}">View in Stripe</a>']
+
+    _post("sendMessage",
+          chat_id=TELEGRAM_CHAT_ID,
+          text="\n".join(lines),
+          parse_mode="HTML",
+          disable_web_page_preview=True)
 
 
 def send_message(text: str, chat_id: str = None) -> dict:

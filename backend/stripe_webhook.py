@@ -51,7 +51,10 @@ except Exception as e:
     print(f"[StripeWebhook] Calendar not available: {e}")
 
 try:
-    from telegram_notify import notify_booking_confirmed as _tg_notify
+    from telegram_notify import (
+        notify_booking_confirmed as _tg_notify,
+        notify_payment_failed    as _tg_failed,
+    )
     _TG_ENABLED = True
 except Exception as e:
     print(f"[StripeWebhook] Telegram not available: {e}")
@@ -274,6 +277,34 @@ def handle_stripe_webhook():
                 )
             except Exception as e:
                 print(f"[StripeWebhook] Telegram notification failed (non-fatal): {e}")
+
+    # ── Payment failed ────────────────────────────────────────────────────────
+    elif event_type == "payment_intent.payment_failed":
+        pi        = event["data"]["object"]
+        meta      = pi.get("metadata", {})
+        record_id = meta.get("airtable_record_id", "")
+        pi_id     = pi.get("id", "")
+        amount_eur = f"{pi.get('amount', 0) / 100:.2f}"
+
+        # Extract failure reason
+        last_err = pi.get("last_payment_error") or {}
+        reason   = last_err.get("message") or last_err.get("code") or "Payment failed"
+
+        print(f"[StripeWebhook] Payment failed: {pi_id} — {reason}")
+
+        if _TG_ENABLED:
+            try:
+                _tg_failed(
+                    client_name    = meta.get("client_name", ""),
+                    event_type     = meta.get("event_type",  ""),
+                    event_date     = meta.get("event_date",  ""),
+                    amount_eur     = amount_eur,
+                    failure_reason = reason,
+                    stripe_pi_id   = pi_id,
+                    airtable_id    = record_id,
+                )
+            except Exception as e:
+                print(f"[StripeWebhook] Telegram failure alert error: {e}")
 
     # ── Session expired (client abandoned) ───────────────────────────────────
     elif event_type == "checkout.session.expired":
