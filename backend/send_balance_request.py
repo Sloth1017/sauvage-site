@@ -79,8 +79,10 @@ def run():
         client_email = fields.get("Email", "")
         event_type  = fields.get("Event Type", "Event")
         event_date  = fields.get("Requested Date", "")
-        start_time  = fields.get("Start Time", "")
-        end_time    = fields.get("End Time", "")
+        time_slot   = fields.get("Time Slot", "")
+        parts       = time_slot.split("-", 1) if "-" in time_slot else ["", ""]
+        start_time  = parts[0].strip()
+        end_time    = parts[1].strip() if len(parts) > 1 else ""
         rooms_raw   = fields.get("Rooms", [])
         rooms       = rooms_raw if isinstance(rooms_raw, list) else [rooms_raw]
         guest_count = fields.get("Guest Count", "")

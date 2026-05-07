@@ -84,30 +84,27 @@ def addons_form():
     event_type      = fields.get("Event Type", "Event")
     raw_date        = fields.get("Requested Date", "")
     event_date      = _fmt_date(raw_date)
-    start_time      = fields.get("Start Time", "")
-    end_time        = fields.get("End Time", "")
     rooms_str       = _fmt_rooms(fields.get("Rooms", []))
     guest_count     = fields.get("Guest Count", "")
     balance_due     = fields.get("Balance Due", 0) or 0
     total_incl      = fields.get("Total Incl VAT", 0) or 0
 
+    # Parse Time Slot (e.g. "16:00-20:00") into start/end
+    time_slot  = fields.get("Time Slot", "")
+    ts_parts   = time_slot.split("-", 1) if "-" in time_slot else ["", ""]
+    start_time = ts_parts[0].strip()
+    end_time   = ts_parts[1].strip() if len(ts_parts) > 1 else ""
+    time_str   = f"{start_time} – {end_time}" if start_time and end_time else time_slot or "TBC"
+
     # Check if Fento snacks are still orderable (must be ≥7 days before event)
     fento_available = True
     fento_days_left = None
     try:
-        event_dt    = _date.fromisoformat(str(raw_date).strip()[:10])
+        event_dt        = _date.fromisoformat(str(raw_date).strip()[:10])
         fento_days_left = (event_dt - _date.today()).days
         fento_available = fento_days_left >= 7
     except Exception:
         pass
-
-    # Parse Time Slot into start/end if dedicated fields not present
-    time_slot = fields.get("Time Slot", "")
-    if not start_time and not end_time and time_slot and "-" in time_slot:
-        parts = time_slot.split("-", 1)
-        start_time = parts[0].strip()
-        end_time   = parts[1].strip()
-    time_str = f"{start_time} – {end_time}" if start_time and end_time else time_slot or "TBC"
 
     # Build add-on rows HTML
     addon_rows = ""
