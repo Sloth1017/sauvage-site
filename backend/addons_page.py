@@ -15,7 +15,7 @@ import hmac
 import hashlib
 import json
 from flask import Blueprint, request, abort, Response
-from datetime import datetime as _dt
+from datetime import datetime as _dt, date as _date
 
 ADDONS_SECRET = os.getenv("ARRIVAL_SECRET", "sauvage-arrival-secret-change-me")
 BASE_URL      = os.getenv("BASE_URL", "https://sauvage.amsterdam")
@@ -79,16 +79,27 @@ def addons_form():
     if not record_id or not _verify(record_id, token):
         abort(403)
 
-    fields      = _get_booking(record_id)
-    client_name = fields.get("Name", "")
-    event_type  = fields.get("Event Type", "Event")
-    event_date  = _fmt_date(fields.get("Requested Date", ""))
-    start_time  = fields.get("Start Time", "")
-    end_time    = fields.get("End Time", "")
-    rooms_str   = _fmt_rooms(fields.get("Rooms", []))
-    guest_count = fields.get("Guest Count", "")
-    balance_due = fields.get("Balance Due", 0) or 0
-    total_incl  = fields.get("Total Incl VAT", 0) or 0
+    fields          = _get_booking(record_id)
+    client_name     = fields.get("Name", "")
+    event_type      = fields.get("Event Type", "Event")
+    raw_date        = fields.get("Requested Date", "")
+    event_date      = _fmt_date(raw_date)
+    start_time      = fields.get("Start Time", "")
+    end_time        = fields.get("End Time", "")
+    rooms_str       = _fmt_rooms(fields.get("Rooms", []))
+    guest_count     = fields.get("Guest Count", "")
+    balance_due     = fields.get("Balance Due", 0) or 0
+    total_incl      = fields.get("Total Incl VAT", 0) or 0
+
+    # Check if Fento snacks are still orderable (must be ≥7 days before event)
+    fento_available = True
+    fento_days_left = None
+    try:
+        event_dt    = _date.fromisoformat(str(raw_date).strip()[:10])
+        fento_days_left = (event_dt - _date.today()).days
+        fento_available = fento_days_left >= 7
+    except Exception:
+        pass
 
     # Parse Time Slot into start/end if dedicated fields not present
     time_slot = fields.get("Time Slot", "")
@@ -101,12 +112,25 @@ def addons_form():
     # Build add-on rows HTML
     addon_rows = ""
     for aid, label, price_label, unit, unit_price, note, _at_option in ADDONS:
-        note_html = f'<span class="note">{note}</span>' if note else ""
+        is_fento   = aid in ("snacks_light", "snacks")
+        disabled   = is_fento and not fento_available
+        dis_attr   = 'disabled' if disabled else ''
+        dis_style  = 'opacity:0.45;pointer-events:none;' if disabled else ''
+
+        if disabled:
+            deadline_note = (
+                f"Ordering closed — event is in {fento_days_left} day{'s' if fento_days_left != 1 else ''} "
+                f"(must order ≥7 days before)"
+            )
+            note_html = f'<span class="note" style="color:#e07070;">{deadline_note}</span>'
+        else:
+            note_html = f'<span class="note">{note}</span>' if note else ""
+
         if unit == "flat":
             addon_rows += f"""
-        <div class="addon-row" data-id="{aid}" data-unit="flat" data-price="{unit_price}">
+        <div class="addon-row" data-id="{aid}" data-unit="flat" data-price="{unit_price}" style="{dis_style}">
           <label class="addon-label">
-            <input type="checkbox" name="addon_{aid}" value="1" onchange="recalc()">
+            <input type="checkbox" name="addon_{aid}" value="1" onchange="recalc()" {dis_attr}>
             <span class="addon-name">{label}</span>
             <span class="addon-price">{price_label}</span>
           </label>
@@ -114,9 +138,9 @@ def addons_form():
         </div>"""
         elif unit == "pp":
             addon_rows += f"""
-        <div class="addon-row" data-id="{aid}" data-unit="pp" data-price="{unit_price}">
+        <div class="addon-row" data-id="{aid}" data-unit="pp" data-price="{unit_price}" style="{dis_style}">
           <label class="addon-label">
-            <input type="checkbox" name="addon_{aid}_check" value="1" onchange="recalc()">
+            <input type="checkbox" name="addon_{aid}_check" value="1" onchange="recalc()" {dis_attr}>
             <span class="addon-name">{label}</span>
             <span class="addon-price">{price_label}</span>
           </label>
@@ -128,9 +152,9 @@ def addons_form():
         </div>"""
         elif unit == "hr":
             addon_rows += f"""
-        <div class="addon-row" data-id="{aid}" data-unit="hr" data-price="{unit_price}">
+        <div class="addon-row" data-id="{aid}" data-unit="hr" data-price="{unit_price}" style="{dis_style}">
           <label class="addon-label">
-            <input type="checkbox" name="addon_{aid}_check" value="1" onchange="recalc()">
+            <input type="checkbox" name="addon_{aid}_check" value="1" onchange="recalc()" {dis_attr}>
             <span class="addon-name">{label}</span>
             <span class="addon-price">{price_label}</span>
           </label>
@@ -142,9 +166,9 @@ def addons_form():
         </div>"""
         elif unit == "hr_pp":
             addon_rows += f"""
-        <div class="addon-row" data-id="{aid}" data-unit="hr_pp" data-price="{unit_price}">
+        <div class="addon-row" data-id="{aid}" data-unit="hr_pp" data-price="{unit_price}" style="{dis_style}">
           <label class="addon-label">
-            <input type="checkbox" name="addon_{aid}_check" value="1" onchange="recalc()">
+            <input type="checkbox" name="addon_{aid}_check" value="1" onchange="recalc()" {dis_attr}>
             <span class="addon-name">{label}</span>
             <span class="addon-price">{price_label}</span>
           </label>
