@@ -124,23 +124,26 @@ def handle_stripe_webhook():
     payload   = request.get_data()
     sig       = request.headers.get("Stripe-Signature", "")
 
-    # Verify signature — try both secrets (snapshot + thin destinations)
-    event = None
+    # Verify signature — try all secrets (snapshot + thin + test destinations)
+    verified = False
     secrets = [s for s in [STRIPE_WEBHOOK_SECRET, STRIPE_WEBHOOK_SECRET_2, STRIPE_WEBHOOK_SECRET_TEST] if s]
     for secret in secrets:
         try:
-            event = stripe.Webhook.construct_event(payload, sig, secret)
+            stripe.Webhook.construct_event(payload, sig, secret)
+            verified = True
             break
         except stripe.error.SignatureVerificationError:
             continue
         except Exception as e:
             print(f"[StripeWebhook] Webhook parse error: {e}")
             return jsonify({"error": "Bad request"}), 400
-    if event is None:
+    if not verified:
         print("[StripeWebhook] Invalid signature — no matching secret")
         return jsonify({"error": "Invalid signature"}), 400
 
-    event_type = event["type"]
+    # Parse raw payload as plain dict (avoids StripeObject .get() issues)
+    event      = json.loads(payload)
+    event_type = event.get("type", "")
     print(f"[StripeWebhook] {event_type}")
 
     # ── Payment completed ─────────────────────────────────────────────────────
