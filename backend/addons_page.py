@@ -23,16 +23,18 @@ BASE_URL      = os.getenv("BASE_URL", "https://sauvage.amsterdam")
 addons_bp = Blueprint("addons", __name__)
 
 # ── Add-on catalogue ──────────────────────────────────────────────────────────
+# (id, label, price_label, unit, unit_price, note, airtable_option)
+# airtable_option = exact Multiple Select value, or None to write to Notes instead
 ADDONS = [
-    # (id, label, price_label, unit, unit_price, note)
-    ("glassware",       "Glassware — stemless or stem (up to 30 pax)", "€25",      "flat",   25,   ""),
-    ("cleanup",         "Event cleanup",                                "€60",      "flat",   60,   ""),
-    ("projector",       "Projector & display screen",                  "€25",      "flat",   25,   ""),
-    ("staff",           "Staff support",                               "€35/hr pp","hr_pp",  35,   "Per person, per hour"),
-    ("bar",             "Bar / barista service",                       "€40/hr",   "hr",     40,   "Drinks charged on site separately"),
-    ("extended_hours",  "Extended hours (after midnight)",             "€50/hr",   "hr",     50,   ""),
-    ("snacks_light",    "Snacks Light — seasonal bites (Fento)",       "€5/pp",    "pp",     5,    "Must order ≥7 days before event"),
-    ("snacks",          "Snacks — borrel-style spread (Fento)",        "€10/pp",   "pp",     10,   "Must order ≥7 days before event"),
+    ("dishware",        "Dishware & Cutlery & Glass (25 pax)",          "€25",      "flat",   25,   "",                                   "Dishware & Cutlery"),
+    ("glassware",       "Stem (wine) Glassware (25 pax)",               "€25",      "flat",   25,   "",                                   "Stem Glassware"),
+    ("staff",           "Staff Support",                                 "€35/hr pp","hr_pp",  35,   "Per person, per hour",               "Staff Support"),
+    ("bar",             "Bar / Barista Service",                         "€50/hr",   "hr",     50,   "Drinks charged on site separately",  "Sommelier/Barista Service"),
+    ("extended_hours",  "Extended Hours (after midnight)",               "€50/hr",   "hr",     50,   "",                                   None),
+    ("cleanup",         "Event Cleanup",                                 "€60",      "flat",   60,   "",                                   "Event Cleanup"),
+    ("snacks_light",    "Light Snacks — seasonal bites (Fento)",        "€5/pp",    "pp",     5,    "Must order ≥7 days before event",    "Light Snacks Fento"),
+    ("snacks",          "Snacks — borrel-style spread (Fento)",         "€10/pp",   "pp",     10,   "Must order ≥7 days before event",    "Snacks Fento"),
+    ("projector",       "Projector / Display Screen",                   "€25",      "flat",   25,   "",                                   "Projector/Display Screen"),
 ]
 
 
@@ -89,11 +91,17 @@ def addons_form():
     balance_due = fields.get("Balance Due", 0) or 0
     total_incl  = fields.get("Total Incl VAT", 0) or 0
 
-    time_str = f"{start_time} – {end_time}" if start_time and end_time else start_time or "TBC"
+    # Parse Time Slot into start/end if dedicated fields not present
+    time_slot = fields.get("Time Slot", "")
+    if not start_time and not end_time and time_slot and "-" in time_slot:
+        parts = time_slot.split("-", 1)
+        start_time = parts[0].strip()
+        end_time   = parts[1].strip()
+    time_str = f"{start_time} – {end_time}" if start_time and end_time else time_slot or "TBC"
 
     # Build add-on rows HTML
     addon_rows = ""
-    for aid, label, price_label, unit, unit_price, note in ADDONS:
+    for aid, label, price_label, unit, unit_price, note, _at_option in ADDONS:
         note_html = f'<span class="note">{note}</span>' if note else ""
         if unit == "flat":
             addon_rows += f"""
@@ -382,12 +390,18 @@ def addons_submit():
     except Exception:
         abort(400)
 
-    # Build add-ons summary string
-    lines = []
+    # Build summary lines and map to Airtable Multiple Select options
+    _at_map = {a[0]: a[6] for a in ADDONS}   # id → airtable_option (or None)
+    lines        = []   # human-readable summary
+    at_options   = []   # Airtable Multiple Select values
+    notes_extras = []   # items with no Airtable option (e.g. Extended Hours)
+
     for item in selected:
-        unit = item.get("unit")
+        aid   = item.get("id", "")
+        unit  = item.get("unit")
         label = item.get("label", "")
         amt   = item.get("amt", 0)
+
         if unit == "flat":
             lines.append(f"{label}: €{amt:.0f}")
         elif unit == "pp":
@@ -397,9 +411,15 @@ def addons_submit():
         elif unit == "hr_pp":
             lines.append(f"{label} {item.get('hrs',1)}hr × {item.get('ppl',1)} staff: €{amt:.0f}")
 
+        at_opt = _at_map.get(aid)
+        if at_opt:
+            at_options.append(at_opt)
+        else:
+            notes_extras.append(lines[-1])   # store detail in Notes instead
+
     addons_summary = " | ".join(lines) if lines else "None"
 
-    # Update Airtable: add to existing Balance Due
+    # Update Airtable: Balance Due + Add-ons (array) + Notes for unmapped items
     try:
         from airtable_client import get_inquiry, update_inquiry
         fields      = (get_inquiry(record_id) or {}).get("fields", {})
@@ -407,10 +427,19 @@ def addons_submit():
         new_balance = round(current_bal + total_addons, 2)
 
         update_fields = {"Balance Due": new_balance}
-        if lines:
-            existing_addons = fields.get("Add-ons", "") or ""
-            separator = " | " if existing_addons else ""
-            update_fields["Add-ons"] = existing_addons + separator + addons_summary
+
+        if at_options:
+            existing = fields.get("Add-ons", []) or []
+            if isinstance(existing, str):
+                existing = [existing] if existing else []
+            merged = list(dict.fromkeys(existing + at_options))   # dedupe, preserve order
+            update_fields["Add-ons"] = merged
+
+        if notes_extras:
+            existing_notes = fields.get("Notes", "") or ""
+            extras_str = "; ".join(notes_extras)
+            update_fields["Notes"] = (existing_notes + "\n" if existing_notes else "") + f"Add-ons: {extras_str}"
+
         update_inquiry(record_id, update_fields)
         print(f"[Addons] {record_id} — +€{total_addons:.2f} → balance now €{new_balance:.2f}")
     except Exception as e:
