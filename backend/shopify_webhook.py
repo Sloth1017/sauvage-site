@@ -407,20 +407,51 @@ def handle_wines_order():
         return jsonify({"status": "skipped — no email"}), 200
 
     # Match to a confirmed Airtable booking by email
+    record_id   = ""
+    stripe_ref  = ""
+    client_name = ""
+    event_type  = ""
+    event_date  = ""
+    matched     = False
+
     try:
         from airtable_client import get_confirmed_inquiry_by_email, update_inquiry
         record = get_confirmed_inquiry_by_email(customer_email)
         if record:
-            record_id = record["id"]
+            matched     = True
+            record_id   = record["id"]
+            fields      = record.get("fields", {})
+            client_name = fields.get("Name", "") or fields.get("Client Name", "")
+            event_type  = fields.get("Event Type", "")
+            event_date  = fields.get("Requested Date", "")
+            stripe_ref  = fields.get("Stripe Payment Reference", "")
+
             update_inquiry(record_id, {
                 "Wine Purchase":    purchase_summary,
                 "Wine Order Total": round(total, 2),
                 "Wine Order #":     order_number,
             })
-            print(f"[WinesWebhook] Airtable updated: {record_id}")
+            print(f"[WinesWebhook] Airtable updated: {record_id} (Stripe ref: {stripe_ref or '—'})")
         else:
             print(f"[WinesWebhook] No confirmed booking found for {customer_email}")
     except Exception as e:
         print(f"[WinesWebhook] Airtable update failed: {e}")
+
+    # Telegram alert — fire whether or not we found a booking (so unmatched orders are visible)
+    try:
+        from telegram_notify import notify_wine_order
+        notify_wine_order(
+            client_name      = client_name or customer_email,
+            client_email     = customer_email,
+            event_type       = event_type,
+            event_date       = event_date,
+            order_number     = order_number,
+            purchase_summary = purchase_summary,
+            total_eur        = total,
+            stripe_ref       = stripe_ref,
+            airtable_id      = record_id,
+        )
+    except Exception as e:
+        print(f"[WinesWebhook] Telegram alert failed (non-fatal): {e}")
 
     return jsonify({"status": "ok"}), 200

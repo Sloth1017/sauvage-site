@@ -104,14 +104,21 @@ def _set_payment_confirmed(session_id: str) -> None:
         print(f"[StripeWebhook] _set_payment_confirmed error: {e}")
 
 
-def _build_dt(date_val, time_str: str) -> Optional[datetime]:
+def _build_dt(date_val, time_str: str, start_dt: Optional[datetime] = None) -> Optional[datetime]:
+    """Parse a date + time string into a datetime.
+    If start_dt is provided and the result is before it, add 1 day (past-midnight end times).
+    """
     try:
         if isinstance(date_val, list):
             date_val = date_val[0]
         date_str = str(date_val).strip()
         time_str = str(time_str).strip()
         if date_str and time_str:
-            return datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+            from datetime import timedelta
+            dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+            if start_dt and dt <= start_dt:
+                dt += timedelta(days=1)
+            return dt
     except Exception as e:
         print(f"[StripeWebhook] _build_dt error: {e}")
     return None
@@ -222,6 +229,18 @@ def handle_stripe_webhook():
                     print(f"[StripeWebhook] Balance Telegram alert failed: {e}")
             return jsonify({"status": "balance payment recorded"}), 200
 
+        # 0. Idempotency guard — Stripe fires one event per destination (snapshot + thin)
+        #    If this booking is already confirmed, skip all processing silently.
+        if _AIRTABLE_ENABLED:
+            try:
+                from airtable_client import get_inquiry
+                existing = get_inquiry(record_id)
+                if existing.get("fields", {}).get("Booking Status") == "confirmed":
+                    print(f"[StripeWebhook] Idempotency skip — {record_id} already confirmed")
+                    return jsonify({"status": "already confirmed"}), 200
+            except Exception as e:
+                print(f"[StripeWebhook] Idempotency check failed (proceeding): {e}")
+
         # 1. Update Airtable
         if _AIRTABLE_ENABLED:
             try:
@@ -313,7 +332,7 @@ def handle_stripe_webhook():
                     cal_link = events[0].get("htmlLink", "") if events else ""
                 elif start_time and end_time:
                     start = _build_dt(dates_val, start_time)
-                    end   = _build_dt(dates_val, end_time)
+                    end   = _build_dt(dates_val, end_time, start_dt=start)
                     if start and end:
                         ev = _gcal_create(start_dt=start, end_dt=end, **common_kwargs)
                         cal_link = ev.get("htmlLink", "")

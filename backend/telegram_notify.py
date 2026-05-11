@@ -185,7 +185,10 @@ def _build_message(
     else:
         lines.append("👤 <b>Who's hosting?</b>")
 
-    lines.append(f"\n<i>Order #{order_number}</i>")
+    if order_number:
+        stripe_url = f"https://dashboard.stripe.com/payments/{order_number}"
+        short_ref  = order_number[-8:] if len(order_number) > 8 else order_number
+        lines.append(f'\n<a href="{stripe_url}">Stripe ...{short_ref}</a>')
     return "\n".join(lines)
 
 
@@ -475,6 +478,51 @@ def notify_payment_failed(
     if stripe_pi_id:
         pi_url = f"https://dashboard.stripe.com/payments/{stripe_pi_id}"
         lines += [f'<a href="{pi_url}">View in Stripe</a>']
+
+    _post("sendMessage",
+          chat_id=TELEGRAM_CHAT_ID,
+          text="\n".join(lines),
+          parse_mode="HTML",
+          disable_web_page_preview=True)
+
+
+def notify_wine_order(
+    client_name: str = "",
+    client_email: str = "",
+    event_type: str = "",
+    event_date: str = "",
+    order_number: str = "",
+    purchase_summary: str = "",
+    total_eur: float = 0.0,
+    stripe_ref: str = "",
+    airtable_id: str = "",
+) -> None:
+    """Send a Telegram alert when a Shopify wine order is linked to a booking."""
+    if not TELEGRAM_CHAT_ID:
+        return
+
+    name_str  = _html_escape(client_name  or "Unknown")
+    ev_str    = _html_escape(event_type   or "Event")
+    date_str  = _html_escape(event_date   or "—")
+    email_str = _html_escape(client_email or "—")
+    items_str = _html_escape(purchase_summary or "—")
+
+    lines = [
+        "🍷 <b>Wine order linked to booking</b>",
+        "",
+        f"👤 <b>{name_str}</b>  ·  {email_str}",
+        f"🎉 {ev_str}  ·  📅 {date_str}",
+        f"🛒 Shopify order <b>#{order_number}</b>  ·  💶 <b>€{total_eur:.2f}</b>",
+        "",
+        f"<pre>{items_str}</pre>",
+    ]
+
+    if stripe_ref:
+        stripe_url = f"https://dashboard.stripe.com/search?query={stripe_ref}"
+        lines += [f'🔗 <a href="{stripe_url}">Stripe booking: {_html_escape(stripe_ref)}</a>']
+    if airtable_id:
+        at_url = _airtable_url(airtable_id)
+        lines += [f'<a href="{at_url}">Open in Airtable</a>']
 
     _post("sendMessage",
           chat_id=TELEGRAM_CHAT_ID,

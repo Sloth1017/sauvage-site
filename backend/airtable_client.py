@@ -116,18 +116,14 @@ def update_inquiry(record_id: str, fields: dict) -> dict:
 
     Example:
         update_inquiry(record_id, {
-            "Client Name": "Anna",
-            "Email": "anna@example.com",
-            "Phone": "+31612345678",
+            "Name":         "Anna",
+            "Email":        "anna@example.com",
+            "Phone":        "+31612345678",
             "Funnel Stage": "3_contact",
         })
     """
     table = _get_table(INQUIRIES_TABLE)
     MULTI_FIELDS = ["Rooms Requested", "Add-Ons", "Special Flags"]
-
-    # Fields that don't exist in the live base — strip before every call
-    _BLOCKED_FIELDS = {"Deposit Amount Due"}
-    fields = {k: v for k, v in fields.items() if k not in _BLOCKED_FIELDS}
 
     # Ensure multi-select fields are lists
     for mf in MULTI_FIELDS:
@@ -214,10 +210,9 @@ def save_contact_details(record_id: str, name: str, email: str, phone: str,
 def save_rooms_and_date(record_id: str, rooms: list, requested_date: str,
                          time_slot: str, duration: str,
                          hours: Optional[int] = None,
-                         guest_count: Optional[int] = None,
-                         booking_block: Optional[str] = None) -> dict:
+                         guest_count: Optional[int] = None) -> dict:
     """
-    Save date/time, guest count, booking block, and room selection —
+    Save date/time, guest count, and room selection —
     call when stage moves to 4_rooms.
 
     Args:
@@ -227,8 +222,6 @@ def save_rooms_and_date(record_id: str, rooms: list, requested_date: str,
         duration:       "Hourly", "Half-Day", or "Full-Day"
         hours:          number of hours if duration == "Hourly"
         guest_count:    number of guests (max 30)
-        booking_block:  "Single Day", "Weekend (3 days)", "Week (7+ days)",
-                        or "Month (28+ days)"
     """
     fields = {
         "Rooms Requested": rooms,
@@ -240,8 +233,6 @@ def save_rooms_and_date(record_id: str, rooms: list, requested_date: str,
         fields["Hours"] = hours
     if guest_count is not None:
         fields["Guest Count"] = guest_count
-    if booking_block is not None:
-        fields["Booking Block"] = booking_block
     return advance_stage(record_id, "4_rooms", fields)
 
 
@@ -260,20 +251,15 @@ def save_addons(record_id: str, addons: list, special_flags: list = None) -> dic
 
 
 def save_quote(record_id: str, total_incl_vat: float, total_ex_vat: float,
-               vat_amount: float, deposit_amount: float,
-               bundle_discount_pct: int = 0,
-               closure_premiums_applied: bool = False) -> dict:
+               vat_amount: float) -> dict:
     """
     Save the calculated quote — call when stage moves to 6_quoted.
     All amounts in EUR.
     """
     return advance_stage(record_id, "6_quoted", {
-        "Total Incl VAT":           total_incl_vat,
-        "Total Ex VAT":             total_ex_vat,
-        "VAT Amount":               vat_amount,
-        "Deposit Amount Due":       deposit_amount,
-        "Bundle Discount %":        bundle_discount_pct,
-        "Closure Premiums Applied": closure_premiums_applied,
+        "Total Incl VAT": total_incl_vat,
+        "Total Ex VAT":   total_ex_vat,
+        "VAT Amount":     vat_amount,
     })
 
 

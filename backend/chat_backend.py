@@ -449,7 +449,6 @@ def _sync_airtable(session_id: str, state: dict, meta: dict) -> None:
             updates["Total Ex VAT"]   = ex_vat
             updates["VAT Amount"]     = vat_amount
             deposit = 50.0 if not (state.get("rooms") and "Kitchen" in str(state.get("rooms", []))) else 300.0
-            # Note: "Deposit Amount Due" field does not exist in the live Airtable base
             print(f"[Airtable] Quote sync: €{incl_vat} incl VAT, deposit €{deposit}")
 
     # Time Slot — combine start + end into "HH:MM-HH:MM"

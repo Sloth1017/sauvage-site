@@ -317,6 +317,9 @@ def create_booking_series(
         try:
             start_dt = datetime.strptime(f"{ds} {start_time_str}", "%Y-%m-%d %H:%M")
             end_dt   = datetime.strptime(f"{ds} {end_time_str}",   "%Y-%m-%d %H:%M")
+            # Handle past-midnight end times (e.g. start 21:00, end 02:00 next day)
+            if end_dt <= start_dt:
+                end_dt += timedelta(days=1)
         except ValueError as e:
             print(f"[Calendar] Skipping date {ds}: {e}")
             continue
