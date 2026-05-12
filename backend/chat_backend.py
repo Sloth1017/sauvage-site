@@ -32,7 +32,10 @@ client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 # ── SQLite session store ───────────────────────────────────────────────────────
 # Persists across server restarts and gunicorn worker recycling.
-_DB_PATH = os.path.join(os.path.dirname(__file__), "sessions.db")
+# Use /app/data/ (Docker volume) so sessions survive container restarts.
+_DATA_DIR = os.environ.get("DATA_DIR", os.path.join(os.path.dirname(__file__), "data"))
+os.makedirs(_DATA_DIR, exist_ok=True)
+_DB_PATH = os.path.join(_DATA_DIR, "sessions.db")
 _db_local = threading.local()
 
 @contextmanager
