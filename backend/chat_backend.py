@@ -749,7 +749,7 @@ def _determine_widget(state: dict, bot_text: str, sent_widgets: list) -> Optiona
 
     # Contact form — only if we're genuinely missing at least one contact field
     # Phone is optional — name + email is enough to not re-ask
-    has_all_contact = state.get("client_name") and state.get("email")
+    has_all_contact = state.get("client_name") and state.get("email") and state.get("phone")
     if not has_all_contact:
         contact_triggers = [
             "what's your name", "your name?", "best email",

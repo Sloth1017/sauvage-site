@@ -885,11 +885,10 @@
     function update() {
       var nameOk  = valName(document.getElementById("sv-c-name").value);
       var emailOk = valEmail(document.getElementById("sv-c-email").value);
-      var phoneVal = document.getElementById("sv-c-phone").value;
-      var phoneOk = phoneVal.trim() === "" || valPhone(phoneVal);
+      var phoneOk = valPhone(document.getElementById("sv-c-phone").value);
       setField("sv-c-name",  "sv-ck-name",  nameOk);
       setField("sv-c-email", "sv-ck-email", emailOk);
-      setField("sv-c-phone", "sv-ck-phone", phoneVal.trim() !== "" && valPhone(phoneVal));
+      setField("sv-c-phone", "sv-ck-phone", phoneOk);
       var btn = document.getElementById("sv-c-submit");
       if (btn) btn.disabled = !(nameOk && emailOk && phoneOk);
     }
@@ -903,8 +902,7 @@
       var name  = document.getElementById("sv-c-name")  ? document.getElementById("sv-c-name").value.trim()  : "";
       var email = document.getElementById("sv-c-email") ? document.getElementById("sv-c-email").value.trim() : "";
       var phone = document.getElementById("sv-c-phone") ? document.getElementById("sv-c-phone").value.trim() : "";
-      if (!valName(name) || !valEmail(email)) return;
-      if (phone && !valPhone(phone)) return;
+      if (!valName(name) || !valEmail(email) || !valPhone(phone)) return;
       if (window.gtag) {
         gtag('event', 'contact_submitted', { 'event_category': 'booking', 'event_label': 'funnel_contact' });
       }
