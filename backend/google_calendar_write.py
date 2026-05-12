@@ -21,8 +21,14 @@ AIRTABLE_BASE_ID = "app4rCwUqnJ5A28YH"
 AIRTABLE_TABLE_ID = "tbledNkWpyzbT8J27"  # Inquiries
 
 # Credentials — loaded from env or file
-_CREDS_PATH = os.path.join(os.path.dirname(__file__), ".secrets", "google-calendar-credentials.json")
-_TOKEN_PATH = os.path.join(os.path.dirname(__file__), ".secrets", "google-calendar-token.json")
+_SECRETS_DIR = os.path.join(os.path.dirname(__file__), ".secrets")
+_CREDS_PATH  = os.path.join(_SECRETS_DIR, "google-calendar-credentials.json")
+# Token is written on refresh — store in /app/data so it survives on the volume
+# but fall back to .secrets for local dev
+_TOKEN_PATH  = os.environ.get(
+    "GCAL_TOKEN_PATH",
+    os.path.join(os.path.dirname(__file__), ".secrets", "google-calendar-token.json")
+)
 
 # In-memory token cache
 _token_cache: dict = {"access_token": None, "expires_at": 0}
