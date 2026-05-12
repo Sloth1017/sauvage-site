@@ -745,7 +745,8 @@ def _determine_widget(state: dict, bot_text: str, sent_widgets: list) -> Optiona
             return "datetime"
 
     # Contact form — only if we're genuinely missing at least one contact field
-    has_all_contact = state.get("client_name") and state.get("email") and state.get("phone")
+    # Phone is optional — name + email is enough to not re-ask
+    has_all_contact = state.get("client_name") and state.get("email")
     if not has_all_contact:
         contact_triggers = [
             "what's your name", "your name?", "best email",
@@ -1196,7 +1197,7 @@ def chat():
             if _static in assistant_text:
                 _url_candidates.append(_static)
         # Also look for any Shopify invoice/payment URL the injector may have substituted
-        _dyn = re.search(r'https?://[^\s\)\]>\"\']+(?:invoice|checkouts|payment)[^\s\)\]>\"\']*', assistant_text)
+        _dyn = re.search(r'https?://(?:checkout\.stripe\.com|[^\s\)\]>\"\']+(?:invoice|checkouts|payment))[^\s\)\]>\"\']*', assistant_text)
         if _dyn:
             _url_candidates.insert(0, _dyn.group(0))
         if _url_candidates:
