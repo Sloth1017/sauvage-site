@@ -14,11 +14,12 @@ app.register_blueprint(addons_bp)
 # ── Static site directories ───────────────────────────────────────────────────
 # Prefer git repo path; fall back to legacy workspace path if not present
 _SITE_CANDIDATES = [
+    "/app",                                       # Docker container
     "/root/sauvage",                              # git repo (primary)
     "/home/greg/.openclaw/workspace/sauvage",     # legacy workspace
 ]
 SITE_DIR = next((p for p in _SITE_CANDIDATES if os.path.isdir(p)),
-                "/home/greg/.openclaw/workspace/sauvage")
+                "/app")
 
 @app.route("/health")
 def health():

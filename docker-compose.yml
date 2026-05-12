@@ -1,0 +1,28 @@
+services:
+  sauvage:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./backend/.secrets:/app/.secrets:ro
+      - sauvage-data:/app/data
+      - sauvage-invoices:/app/invoices
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sauvage.rule=Host(`sauvage.amsterdam`) || Host(`www.sauvage.amsterdam`)"
+      - "traefik.http.routers.sauvage.entrypoints=websecure"
+      - "traefik.http.routers.sauvage.tls.certresolver=letsencrypt"
+      - "traefik.http.services.sauvage.loadbalancer.server.port=5000"
+      # Redirect www → non-www
+      - "traefik.http.middlewares.sauvage-www-redirect.redirectregex.regex=^https://www\\.sauvage\\.amsterdam(.*)"
+      - "traefik.http.middlewares.sauvage-www-redirect.redirectregex.replacement=https://sauvage.amsterdam$${1}"
+      - "traefik.http.routers.sauvage.middlewares=sauvage-www-redirect"
+      # HTTP → HTTPS redirect
+      - "traefik.http.routers.sauvage-http.rule=Host(`sauvage.amsterdam`) || Host(`www.sauvage.amsterdam`)"
+      - "traefik.http.routers.sauvage-http.entrypoints=web"
+      - "traefik.http.routers.sauvage-http.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+
+volumes:
+  sauvage-data:
+  sauvage-invoices:
